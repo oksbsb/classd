@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -29,3 +30,4 @@ extern "C"
 }
 
 #include "vineyard/api/navl.h"
+#include "inifile.h"

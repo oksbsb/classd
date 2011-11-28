@@ -132,11 +132,11 @@ ret = nfq_bind_pf(nfqh,AF_INET);
 	}
 
 // create a new queue handler
-qh = nfq_create_queue(nfqh,cfg_navl_queue,&netq_callback,NULL);
+qh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
 
 	if (qh == 0)
 	{
-	logmessage(LOG_ERR,"Error returned from nfq_create_queue(%u)\n",cfg_navl_queue);
+	logmessage(LOG_ERR,"Error returned from nfq_create_queue(%u)\n",cfg_net_queue);
 	g_shutdown = 1;
 	return;
 	}

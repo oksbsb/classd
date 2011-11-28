@@ -18,21 +18,8 @@ fd_set				tester;
 time_t				currtime,lasttime;
 int					ret,x;
 
-// initialize our global configuration variables
-strcpy(cfg_temp_path,"/dev/shm");
-strcpy(cfg_navl_plugins,"/opt/vineyard/plugins");
-strcpy(cfg_log_path,"/var/log/untangle-classd");
-strcpy(cfg_log_file,"/var/log/untangle-classd/classd.log");
-cfg_hash_buckets = 99991;
-cfg_hash_buckets = 10007;
-cfg_tcp_timeout = 3600;
-cfg_udp_timeout = 300;
-cfg_navl_queue = 1967;
-cfg_navl_flows = 4096;
-cfg_navl_defrag = 1;
-cfg_share_port = 8123;
-
 gettimeofday(&g_runtime,NULL);
+load_configuration();
 
 	for(x = 1;x < argc;x++)
 	{
@@ -318,6 +305,56 @@ if (value == LOG_DEBUG)		return(strcpy(dest,"DEBUG"));
 
 sprintf(dest,"LOG_%d",value);
 return(dest);
+}
+/*--------------------------------------------------------------------------*/
+void load_configuration(void)
+{
+INIFile		*ini = NULL;
+
+	if (access("./classd.ini",R_OK) == 0)
+	{
+	printf("\n== CLASSD %s\n","Using ./classd.ini for configuration ==");
+	ini = new INIFile("./classd.ini");
+	}
+
+	else if (access("/etc/classd.ini",R_OK) == 0)
+	{
+	printf("\n== CLASSD %s\n","Using /etc/classd.ini for configuration ==");
+	ini = new INIFile("/etc/classd.ini");
+	}
+
+	else
+	{
+	printf("\n== CLASSD %s\n","Using default configuration ==");
+	ini = new INIFile("/etc/classd.ini");
+	}
+
+
+strcpy(cfg_navl_plugins,"/opt/vineyard/plugins");
+cfg_navl_flows = 4096;
+cfg_navl_defrag = 1;
+
+cfg_tcp_timeout = 3600;
+cfg_udp_timeout = 300;
+cfg_share_port = 8123;
+cfg_net_queue = 1967;
+
+
+ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
+ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");
+ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
+ini->GetItem("General","HashBuckets",cfg_hash_buckets,99991);
+
+ini->GetItem("Vineyard","PluginPath",cfg_navl_plugins,"/opt/vineyard/plugins");
+ini->GetItem("Vineyard","Connections",cfg_navl_flows,4096);
+ini->GetItem("Vineyard","Defragment",cfg_navl_defrag,1);
+
+ini->GetItem("Network","TCPTimeout",cfg_tcp_timeout,3600);
+ini->GetItem("Network","UDPTimeout",cfg_udp_timeout,300);
+ini->GetItem("Network","ServerPort",cfg_share_port,8123);
+ini->GetItem("Network","NetfilterQueue",cfg_net_queue,1967);
+
+delete(ini);
 }
 /*--------------------------------------------------------------------------*/
 

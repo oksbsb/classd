@@ -167,6 +167,7 @@ struct callback_info
 /*--------------------------------------------------------------------------*/
 void logmessage(int priority,const char *format,...);
 void logproblem(Problem *aProblem);
+void load_configuration(void);
 void* netfilter_thread(void *arg);
 void sighandler(int sigval);
 void timestring(char *target);
@@ -193,13 +194,13 @@ DATALOC char				cfg_temp_path[256];
 DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
-DATALOC int					cfg_navl_queue;
 DATALOC int					cfg_navl_flows;
 DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
 DATALOC int					cfg_share_port;
+DATALOC int					cfg_net_queue;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;
 DATALOC int					err_nobufs;
