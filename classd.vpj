@@ -207,6 +207,7 @@
 			<F N="classd.cpp"/>
 			<F N="hashobject.cpp"/>
 			<F N="hashtable.cpp"/>
+			<F N="inifile.cpp"/>
 			<F N="netclient.cpp"/>
 			<F N="netfilter.cpp"/>
 			<F N="netserver.cpp"/>
@@ -216,6 +217,7 @@
 			Filters="*.h;*.H;*.hh;*.hpp;*.hxx;*.inc;*.sh;*.cpy;*.if">
 			<F N="classd.h"/>
 			<F N="common.h"/>
+			<F N="inifile.h"/>
 		</Folder>
 		<Folder
 			Name="Resource Files"

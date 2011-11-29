@@ -18,7 +18,10 @@ fd_set				tester;
 time_t				currtime,lasttime;
 int					ret,x;
 
+printf("[ CLASSD ] Untangle Traffic Classification Engine Version %s\n",VERSION);
+
 gettimeofday(&g_runtime,NULL);
+strcpy(g_cfgfile,"untangle-classd.conf");
 load_configuration();
 
 	for(x = 1;x < argc;x++)
@@ -29,8 +32,6 @@ load_configuration();
 
 	if (g_console == 0)
 	{
-	printf(";; Traffic Classification Engine Version %s\n",VERSION);
-
 	// not running on the console so open our log file
 	mkdir(cfg_log_path,0755);
 	g_logfile = fopen(cfg_log_file,"a");
@@ -42,13 +43,13 @@ load_configuration();
 
 		if (ret > 0)
 		{
-		printf(";; Daemon %d started successfully\n\n",ret);
+		printf("[ CLASSD ] Daemon %d started successfully\n\n",ret);
 		return(0);
 		}
 
 		if (ret < 0)
 		{
-		printf(";; Error %d on fork daemon process\n\n",errno);
+		printf("[ CLASSD ] Error %d on fork daemon process\n\n",errno);
 		return(2);
 		}
 
@@ -72,7 +73,7 @@ signal(SIGFPE,sighandler);
 getitimer(ITIMER_PROF,&g_itimer);
 
 logmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
-if (g_console != 0) logmessage(LOG_NOTICE,"=== Running on console - Use ENTER or CTRL+C to terminate ===\n");
+if (g_console != 0) logmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 
 // allocate our connection hashtable
 g_conntable = new HashTable(cfg_hash_buckets);
@@ -310,35 +311,29 @@ return(dest);
 void load_configuration(void)
 {
 INIFile		*ini = NULL;
+char		dotfile[256];
+char		etcfile[256];
 
-	if (access("./classd.ini",R_OK) == 0)
+sprintf(dotfile,"./%s",g_cfgfile);
+sprintf(etcfile,"/etc/%s",g_cfgfile);
+
+	if (access(dotfile,R_OK) == 0)
 	{
-	printf("\n== CLASSD %s\n","Using ./classd.ini for configuration ==");
-	ini = new INIFile("./classd.ini");
+	printf("[ CLASSD ] Using %s for configuration\n",dotfile);
+	ini = new INIFile(dotfile);
 	}
 
-	else if (access("/etc/classd.ini",R_OK) == 0)
+	else if (access(etcfile,R_OK) == 0)
 	{
-	printf("\n== CLASSD %s\n","Using /etc/classd.ini for configuration ==");
+	printf("[ CLASSD ] Using %s for configuration ==\n",etcfile);
 	ini = new INIFile("/etc/classd.ini");
 	}
 
 	else
 	{
-	printf("\n== CLASSD %s\n","Using default configuration ==");
-	ini = new INIFile("/etc/classd.ini");
+	printf("[ CLASSD ] %s\n","Using default configuration values");
+	ini = new INIFile(etcfile);
 	}
-
-
-strcpy(cfg_navl_plugins,"/opt/vineyard/plugins");
-cfg_navl_flows = 4096;
-cfg_navl_defrag = 1;
-
-cfg_tcp_timeout = 3600;
-cfg_udp_timeout = 300;
-cfg_share_port = 8123;
-cfg_net_queue = 1967;
-
 
 ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
 ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");

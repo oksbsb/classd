@@ -184,6 +184,7 @@ DATALOC struct timeval		g_runtime;
 DATALOC NetworkServer		*g_netserver;
 DATALOC HashTable			*g_conntable;
 DATALOC FILE				*g_logfile;
+DATALOC char				g_cfgfile[256];
 DATALOC int					g_tcp_cleanup;
 DATALOC int					g_udp_cleanup;
 DATALOC int					g_shutdown;
