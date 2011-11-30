@@ -1,0 +1,11 @@
+#!/bin/sh
+
+case $1 in
+  purge)
+    rm -f /etc/init.d/$SERVICE
+    update-rc.d untangle-classd remove >/dev/null
+    ;;
+esac
+
+exit 0
+

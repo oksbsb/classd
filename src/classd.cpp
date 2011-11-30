@@ -16,6 +16,7 @@ int main(int argc,char *argv[])
 struct timeval		tv;
 fd_set				tester;
 time_t				currtime,lasttime;
+FILE				*out;
 int					ret,x;
 
 printf("[ CLASSD ] Untangle Traffic Classification Engine Version %s\n",VERSION);
@@ -44,6 +45,10 @@ load_configuration();
 		if (ret > 0)
 		{
 		printf("[ CLASSD ] Daemon %d started successfully\n\n",ret);
+		out = fopen(cfg_pid_file,"w");
+		if (out == NULL) return(1);
+		fprintf(out,"%d\n",ret);
+		fclose(out);
 		return(0);
 		}
 
@@ -146,6 +151,7 @@ logmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BU
 	{
 	if (g_logfile != NULL) fclose(g_logfile);
 	else closelog();
+	unlink(cfg_pid_file);
 	}
 
 return(0);
@@ -335,9 +341,10 @@ sprintf(etcfile,"/etc/%s",g_cfgfile);
 	ini = new INIFile(etcfile);
 	}
 
+ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
+ini->GetItem("General","PidFile",cfg_pid_file,"/var/run/untangle-classd.pid");
 ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
 ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");
-ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
 ini->GetItem("General","HashBuckets",cfg_hash_buckets,99991);
 
 ini->GetItem("Vineyard","PluginPath",cfg_navl_plugins,"/opt/vineyard/plugins");

@@ -1,12 +1,12 @@
-# DNS Proxy Filter Server
-# Copyright (c) 2010 Untangle, Inc.
+# Untangle Traffic Classification Daemon
+# Copyright (c) 2011 Untangle, Inc.
 # All Rights Reserved
 # Written by Michael A. Hotz
 
 VERSION = 1.0.0
-DEBUG = -g3 -ggdb
+#DEBUG = -g3 -ggdb
 #GPROF = -pg
-#SPEED = -O2
+SPEED = -O2
 
 BUILDID := "$(shell date -u "+%G/%m/%d %H:%M:%S UTC")"
 SYSTEM := $(shell uname)
@@ -14,7 +14,7 @@ ARCH := $(shell uname -m)
 
 ifeq ($(SYSTEM),Linux)
   PLATFORM = -D__LINUX__
-  LIBFILES = -lpthread -lrt -ldl -lnetfilter_queue
+  LIBFILES = -Lsrc/vineyard/lib -lpthread -lrt -ldl -lnetfilter_queue -lnavl
 else
   $(error ERROR: Unsupported platform '$(SYSTEM)')
 endif
@@ -25,21 +25,16 @@ CXXFLAGS += -DVERSION=\"$(VERSION)\"
 CXXFLAGS += -DBUILDID=\"$(BUILDID)\"
 CXXFLAGS += -DPLATFORM=\"$(PLATFORM)\"
 
-OBJFILES := $(patsubst %.cpp,%.o,$(wildcard *.cpp))
-OBJFILES += vineyard/lib/libnavl.so
+OBJFILES := $(patsubst src/%.cpp,src/%.o,$(wildcard src/*.cpp))
 
 classd : $(OBJFILES)
 	$(CXX) $(DEBUG) $(GPROF) $(SPEED) $(OBJFILES) $(LIBFILES) -o classd
 
-$(OBJFILES) : Makefile *.h
+$(OBJFILES) : Makefile src/*.h
 
 clean : force
-	rm -r -f Release
-	rm -r -f Debug
 	rm -f classd
-	rm -f gmon.out
-	rm -f *.vtg
-	rm -f *.o
+	rm -f src/*.o
 
 force :
 
