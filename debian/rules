@@ -1,6 +1,15 @@
 #!/usr/bin/make -f
 
 DESTDIR := debian/tmp
+ARCH := $(shell uname -m)
+
+ifeq ($(ARCH),x86_64)
+  LIBDIR := src/vineyard/lib64/
+  PLUGDIR := src/vineyard/plugins64/
+else
+  LIBDIR := src/vineyard/lib/
+  PLUGDIR := src/vineyard/plugins/
+endif
 
 configure: configure-stamp
 configure-stamp:
@@ -21,9 +30,9 @@ install: build
 	cp -a classd $(DESTDIR)/usr/bin
 	find $(DESTDIR) -name "\.svn" | xargs rm -rf
 	mkdir -p $(DESTDIR)/usr/lib/untangle-classd
-	find src/vineyard/lib/ -name '*.so' | xargs cp -t $(DESTDIR)/usr/lib/untangle-classd
+	find $(LIBDIR) -name '*.so' | xargs cp -t $(DESTDIR)/usr/lib/untangle-classd
 	mkdir -p $(DESTDIR)/usr/share/untangle-classd/plugins
-	find src/vineyard/plugins/ -name '*.plg' | xargs cp -t $(DESTDIR)/usr/share/untangle-classd/plugins
+	find $(PLUGDIR) -name '*.plg' | xargs cp -t $(DESTDIR)/usr/share/untangle-classd/plugins
 
 clean:
 	dh_testdir

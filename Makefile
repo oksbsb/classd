@@ -14,7 +14,12 @@ ARCH := $(shell uname -m)
 
 ifeq ($(SYSTEM),Linux)
   PLATFORM = -D__LINUX__
-  LIBFILES = -Lsrc/vineyard/lib -lpthread -lrt -ldl -lnetfilter_queue -lnavl
+  LIBFILES = -lpthread -lrt -ldl -lnetfilter_queue -lnavl
+    ifeq ($(ARCH),x86_64)
+      LIBPATH = -Lsrc/vineyard/lib64
+    else
+      LIBPATH = -Lsrc/vineyard/lib
+  endif
 else
   $(error ERROR: Unsupported platform '$(SYSTEM)')
 endif
@@ -28,7 +33,7 @@ CXXFLAGS += -DPLATFORM=\"$(PLATFORM)\"
 OBJFILES := $(patsubst src/%.cpp,src/%.o,$(wildcard src/*.cpp))
 
 classd : $(OBJFILES)
-	$(CXX) $(DEBUG) $(GPROF) $(SPEED) $(OBJFILES) $(LIBFILES) -o classd
+	$(CXX) $(DEBUG) $(GPROF) $(SPEED) $(OBJFILES) $(LIBPATH) $(LIBFILES) -o classd
 
 $(OBJFILES) : Makefile src/*.h
 
