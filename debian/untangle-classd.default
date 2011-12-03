@@ -1,0 +1,11 @@
+## --------------------------------------------------
+## NOTE: All of the reall cool configuration stuff
+## is located in /etc/untangle-classd.conf
+## --------------------------------------------------
+
+## Path to the classd binary.
+# CLASSD_BIN=/usr/bin/classd
+
+## Addition flags to pass on the command line
+## Use -d to enable debug log messages
+CLASSD_FLAGS=-d

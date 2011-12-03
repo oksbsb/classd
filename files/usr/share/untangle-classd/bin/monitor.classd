@@ -5,6 +5,11 @@ mkdir -p /var/log/untangle-classd
 exec 2>&1 | logger -t untangle-classd
 
 LD_LIBRARY_PATH=/usr/lib/untangle-classd
+CLASSD_BIN=/usr/bin/classd
+
+if [ -f /etc/default/untangle-classd ] ; then
+    . /etc/default/untangle-classd
+fi
 
 reap_child_hardest()
 {
@@ -41,7 +46,7 @@ reap_child()
 
 start_classd()
 {
-    /usr/bin/classd -f &
+    $CLASSD_BIN -f $CLASSD_FLAGS &
     CLASSD_PID=$!
     echo "[`date`] Started ClassD    (monitor: $$) (classd: $CLASSD_PID)"
 }

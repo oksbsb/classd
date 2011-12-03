@@ -327,7 +327,7 @@ sprintf(etcfile,"/etc/%s",g_cfgfile);
 	else if (access(etcfile,R_OK) == 0)
 	{
 	printf("[ CLASSD ] Using %s for configuration ==\n",etcfile);
-	ini = new INIFile("/etc/classd.ini");
+	ini = new INIFile(etcfile);
 	}
 
 	else
@@ -336,12 +336,12 @@ sprintf(etcfile,"/etc/%s",g_cfgfile);
 	ini = new INIFile(etcfile);
 	}
 
-ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
 ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
 ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");
+ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
 ini->GetItem("General","HashBuckets",cfg_hash_buckets,99991);
 
-ini->GetItem("Vineyard","PluginPath",cfg_navl_plugins,"/opt/vineyard/plugins");
+ini->GetItem("Vineyard","PluginPath",cfg_navl_plugins,"/usr/share/untangle-classd/plugins");
 ini->GetItem("Vineyard","Connections",cfg_navl_flows,4096);
 ini->GetItem("Vineyard","Defragment",cfg_navl_defrag,1);
 
