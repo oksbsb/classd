@@ -1,0 +1,60 @@
+#!/bin/dash
+
+UNTANGLE_CLASSD_QUEUE_NUM=1967
+
+IPTABLES=${IPTABLES:-iptables}
+
+debug()
+{
+    echo "[DEBUG:`date`] $*"
+}
+
+is_queue_open()
+{
+    local t_classd_pid
+    local t_queue_pid
+
+    t_classd_pid="invalid"
+
+    if [ ! -f /proc/net/netfilter/nfnetlink_queue ] ; then
+        echo "[`date`] The nfnetlink_queue does not exist.  Not inserting rules for classd"
+        return 1
+    fi
+
+    t_queue_pid=`awk -v queue=${UNTANGLE_CLASSD_QUEUE_NUM} '{ if ( $1 == queue ) print $2 }' /proc/net/netfilter/nfnetlink_queue`
+
+    if [ -z "${t_queue_pid}" ]; then
+        echo "[`date`] The classd nfnetlink_queue is not open.  Not inserting rules for classd"
+        return 1
+    fi
+
+    t_classd_pid=${t_queue_pid}
+
+    grep -q classd /proc/${t_classd_pid}/cmdline 2>| /dev/null || return 1
+
+    return 0
+}
+
+insert_classd_iptables_rules()
+{
+    # Only capture traffic coming from non-WAN interfaces
+    # Insert one rule for each non-WAN
+
+    /usr/share/untangle-net-alpaca/scripts/uvm/netConfig.py non_wan | while read net ; do
+        ${IPTABLES} -i ${net} -t mangle -A PREROUTING -j NFQUEUE --queue-num ${UNTANGLE_CLASSD_QUEUE_NUM}
+    done
+    return 0
+}
+
+## Start of script
+if [ -f /etc/default/untangle-classd ]; then
+    . /etc/default/untangle-classd
+fi
+
+## If the queue is open generate the new rules
+is_queue_open && {
+    insert_classd_iptables_rules
+}
+
+true
+

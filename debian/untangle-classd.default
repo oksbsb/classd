@@ -6,6 +6,11 @@
 ## Path to the classd binary.
 # CLASSD_BIN=/usr/bin/classd
 
+## Network filter queue where we listen but only used by
+## the update rules script to see if daemon is running.
+## To change the actual queue used modify the .conf file
+#UNTANGLE_CLASSD_QUEUE_NUM=1967
+
 ## Addition flags to pass on the command line
 ## Use -d to enable debug log messages
 CLASSD_FLAGS=-d
