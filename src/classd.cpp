@@ -16,18 +16,17 @@ int main(int argc,char *argv[])
 struct timeval		tv;
 fd_set				tester;
 time_t				currtime,lasttime;
-FILE				*out;
 int					ret,x;
 
 printf("[ CLASSD ] Untangle Traffic Classification Engine Version %s\n",VERSION);
-
-gettimeofday(&g_runtime,NULL);
 strcpy(g_cfgfile,"untangle-classd.conf");
+gettimeofday(&g_runtime,NULL);
 load_configuration();
 
 	for(x = 1;x < argc;x++)
 	{
 	if (strncasecmp(argv[x],"-D",2) == 0) g_debug++;
+	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
 	}
 
@@ -40,25 +39,22 @@ load_configuration();
 	// if there was an error then fallback to using syslog
 	if (g_logfile == NULL) openlog("classd",LOG_NDELAY,LOG_DAEMON);
 
-	ret = fork();
+	if (g_nofork == 0) ret = fork();
+	else ret = 0;
 
 		if (ret > 0)
 		{
 		printf("[ CLASSD ] Daemon %d started successfully\n\n",ret);
-		out = fopen(cfg_pid_file,"w");
-		if (out == NULL) return(1);
-		fprintf(out,"%d\n",ret);
-		fclose(out);
 		return(0);
 		}
 
 		if (ret < 0)
 		{
 		printf("[ CLASSD ] Error %d on fork daemon process\n\n",errno);
-		return(2);
+		return(1);
 		}
 
-	// since we are forking we need to disconnect from the console
+	// since we are running as a daemon we need to disconnect from the console
 	freopen("/dev/null","r",stdin);
 	freopen("/dev/null","w",stdout);
 	freopen("/dev/null","w",stderr);
@@ -151,7 +147,6 @@ logmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BU
 	{
 	if (g_logfile != NULL) fclose(g_logfile);
 	else closelog();
-	unlink(cfg_pid_file);
 	}
 
 return(0);
@@ -342,7 +337,6 @@ sprintf(etcfile,"/etc/%s",g_cfgfile);
 	}
 
 ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
-ini->GetItem("General","PidFile",cfg_pid_file,"/var/run/untangle-classd.pid");
 ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
 ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");
 ini->GetItem("General","HashBuckets",cfg_hash_buckets,99991);
