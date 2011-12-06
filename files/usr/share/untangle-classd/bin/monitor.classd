@@ -4,7 +4,6 @@ mkdir -p /var/log/untangle-classd
 
 exec 2>&1 | logger -t untangle-classd
 
-LD_LIBRARY_PATH=/usr/lib/untangle-classd
 CLASSD_BIN=/usr/bin/classd
 
 if [ -f /etc/default/untangle-classd ] ; then

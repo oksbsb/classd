@@ -29,8 +29,8 @@ install: build
 	mkdir -p $(DESTDIR)/usr/bin
 	cp -a classd $(DESTDIR)/usr/bin
 	find $(DESTDIR) -name "\.svn" | xargs rm -rf
-	mkdir -p $(DESTDIR)/usr/lib/untangle-classd
-	find $(LIBDIR) -name '*.so' | xargs cp -t $(DESTDIR)/usr/lib/untangle-classd
+	mkdir -p $(DESTDIR)/usr/lib
+	find $(LIBDIR) -name '*.so' | xargs cp -t $(DESTDIR)/usr/lib
 	mkdir -p $(DESTDIR)/usr/share/untangle-classd/plugins
 	find $(PLUGDIR) -name '*.plg' | xargs cp -t $(DESTDIR)/usr/share/untangle-classd/plugins
 
