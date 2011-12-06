@@ -13,15 +13,7 @@ void qclassify_exit(void);
 void qclassify_loop(void);
 int qclassify_init(void);
 /*--------------------------------------------------------------------------*/
-static int l_attr_tcp_sport = 0;
-static int l_attr_tcp_dport = 0;
-static int l_attr_udp_sport = 0;
-static int l_attr_udp_dport = 0;
-static int l_attr_ip_saddr = 0;
-static int l_attr_ip_daddr = 0;
-static int l_attr_conn_id = 0;
-static int l_attr_fbook_app = 0;
-static int l_attr_tls_host = 0;
+// vars for all of the protocol and application id values
 static int l_proto_eth = 0;
 static int l_proto_ip = 0;
 static int l_proto_tcp = 0;
@@ -32,16 +24,39 @@ static int l_proto_sip = 0;
 static int l_proto_ctrxica = 0;
 static int l_proto_fbookapp = 0;
 static int l_proto_ymsgfile = 0;
+
+// vars for the dynamic attributes we use
+static int l_attr_tcp_sport = 0;
+static int l_attr_tcp_dport = 0;
+static int l_attr_udp_sport = 0;
+static int l_attr_udp_dport = 0;
+static int l_attr_ip_saddr = 0;
+static int l_attr_ip_daddr = 0;
+static int l_attr_conn_id = 0;
+static int l_attr_fbook_app = 0;
+static int l_attr_tls_host = 0;
+static int l_attr_http_info = 0;
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
+int		ret;
+
 logmessage(LOG_INFO,"The netfilter thread is starting\n");
 
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
 
-qclassify_init();
+ret = qclassify_init();
+
+	if (ret != 0)
+	{
+	logmessage(LOG_ERR,"Error %d returned from qclassify_init()\n",ret);
+	qclassify_exit();
+	g_shutdown = 1;
+	return(NULL);
+	}
+
 qclassify_loop();
 qclassify_exit();
 
@@ -51,40 +66,52 @@ return(NULL);
 /*--------------------------------------------------------------------------*/
 int qclassify_init(void)
 {
+char	buffer[256];
+int		marker = 0;
+
+/*
+** The goofy marker math at the beginning of each line just gives us
+** a quick and easy way to increment a return code value that will
+** tell us which call failed if any of these calls return an error
+*/
+
 // spin up the vineyard engine
-if (navl_open(cfg_navl_flows,1,cfg_navl_plugins) == -1) return(0);
+if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
 
 // enable fragment processing
-if (navl_ip_defrag(cfg_navl_defrag) != 0) return(0);
+if ((++marker) && (navl_ip_defrag(cfg_navl_defrag) != 0)) return(marker);
 
 // set the TCP and UDP timeout values
-if (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0) return(0);
-if (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0) return(0);
+if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0)) return(marker);
+if ((++marker) && (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0)) return(marker);
 
 // grab the id values for all protocols
-if ((l_proto_eth = navl_proto_find_id("ETH")) == -1) return(0);
-if ((l_proto_ip = navl_proto_find_id("IP")) == -1) return(0);
-if ((l_proto_tcp = navl_proto_find_id("TCP")) == -1) return(0);
-if ((l_proto_udp = navl_proto_find_id("UDP")) == -1) return(0);
-if ((l_proto_http = navl_proto_find_id("HTTP")) == -1) return(0);
-if ((l_proto_ssl = navl_proto_find_id("SSL")) == -1) return(0);
-if ((l_proto_sip = navl_proto_find_id("SIP")) == -1) return(0);
-if ((l_proto_ctrxica = navl_proto_find_id("CTRXICA")) == -1) return(0);
-if ((l_proto_fbookapp = navl_proto_find_id("FBOOKAPP")) == -1) return(0);
-if ((l_proto_ymsgfile = navl_proto_find_id("YMSGFILE")) == -1) return(0);
+if ((++marker) && ((l_proto_eth = navl_proto_find_id("ETH")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ip = navl_proto_find_id("IP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_tcp = navl_proto_find_id("TCP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_udp = navl_proto_find_id("UDP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_http = navl_proto_find_id("HTTP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ssl = navl_proto_find_id("SSL")) < 1)) return(marker);
+if ((++marker) && ((l_proto_sip = navl_proto_find_id("SIP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ctrxica = navl_proto_find_id("CTRXICA")) < 1)) return(marker);
+if ((++marker) && ((l_proto_fbookapp = navl_proto_find_id("FBOOKAPP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ymsgfile = navl_proto_find_id("YMSGFILE")) < 1)) return(marker);
 
-// grab the id values of the attributes we care about
-if ((l_attr_conn_id = navl_attr("conn.id",1)) == -1) return(0);
-if ((l_attr_ip_saddr = navl_attr("ip.src_addr",1)) == -1) return(0);
-if ((l_attr_ip_daddr = navl_attr("ip.dst_addr",1)) == -1) return(0);
-if ((l_attr_tcp_sport = navl_attr("tcp.src_port",1)) == -1) return(0);
-if ((l_attr_tcp_dport = navl_attr("tcp.dst_port",1)) == -1) return(0);
-if ((l_attr_udp_sport = navl_attr("udp.src_port",1)) == -1) return(0);
-if ((l_attr_udp_dport = navl_attr("udp.dst_port",1)) == -1) return(0);
-if ((l_attr_fbook_app = navl_attr("facebook.app",1)) == -1) return(0);
-if ((l_attr_tls_host = navl_attr("tls.host",1)) == -1) return(0);
+// enable and grab the id values of the attributes we care about
+if ((++marker) && ((l_attr_conn_id = navl_attr("conn.id",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_ip_saddr = navl_attr("ip.src_addr",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_ip_daddr = navl_attr("ip.dst_addr",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tcp_sport = navl_attr("tcp.src_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tcp_dport = navl_attr("tcp.dst_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_udp_sport = navl_attr("udp.src_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_udp_dport = navl_attr("udp.dst_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_fbook_app = navl_attr("facebook.app",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tls_host = navl_attr("tls.host",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_http_info = navl_attr("http.response.content-type",1)) < 1)) return(marker);
 
-return(1);
+if ((++marker) && (navl_command("classification http persistence set","0",buffer,sizeof(buffer))) != 0) return(marker);
+
+return(0);
 }
 /*--------------------------------------------------------------------------*/
 void qclassify_exit()
@@ -203,8 +230,8 @@ char							detail[256];
 char							finder[64];
 char							source[32];
 char							target[32];
+char							xtra[256];
 char							work[32];
-char							xtra[32];
 
 application[0] = 0;
 protocol[0] = 0;
@@ -260,6 +287,13 @@ navl_proto_get_name(appid,application,sizeof(application));
 		ipproto = IPPROTO_UDP;
 		}
 
+		// get the content type for HTTP connections
+		if (value == l_proto_http)
+		{
+		ret = navl_attr_get(it,l_attr_http_info,xtra,sizeof(xtra));
+		if (ret == 0) strcpy(detail,xtra);
+		}
+
 		// get the application name for facebook apps
 		if (value == l_proto_fbookapp)
 		{
@@ -275,6 +309,7 @@ navl_proto_get_name(appid,application,sizeof(application));
 		}
 
 	// append the protocol name to the protocol
+	work[0] = 0;
 	navl_proto_get_name(value,work,sizeof(work));
 	idx+=sprintf(&protocol[idx],"/%s",work);
 	}
@@ -294,7 +329,7 @@ if (ipproto == IPPROTO_UDP) sprintf(finder,"UDP-%s:%d-%s:%d",source,sport,target
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
 	{
-	logmessage(LOG_DEBUG,"REMOVE %s %s\n",finder,protocol);
+	logmessage(LOG_DEBUG,"REMOVE %s\n",finder);
 	ret = g_conntable->DeleteObject(finder);
 	return(0);
 	}
@@ -305,7 +340,7 @@ local = g_conntable->SearchObject(finder);
 	// not found so create new object in hashtable
 	if (local == NULL)
 	{
-	logmessage(LOG_DEBUG,"INSERT %s %s %s %s %d %d\n",finder,application,protocol,detail,confidence,state);
+	logmessage(LOG_DEBUG,"INSERT %s [%s|%s|%s|%d|%d]\n",finder,application,protocol,detail,confidence,state);
 	local = new HashObject(ipproto,finder,application,protocol,detail,confidence,state);
 	ret = g_conntable->InsertObject(local);
 	}
@@ -313,7 +348,7 @@ local = g_conntable->SearchObject(finder);
 	// existing session so update the object
 	else
 	{
-	logmessage(LOG_DEBUG,"UPDATE %s %s %s %s %d %d\n",finder,application,protocol,detail,confidence,state);
+	logmessage(LOG_DEBUG,"UPDATE %s [%s|%s|%s|%d|%d]\n",finder,application,protocol,detail,confidence,state);
 	local->UpdateObject(application,protocol,detail,confidence,state);
 	}
 

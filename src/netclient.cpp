@@ -145,7 +145,12 @@ local = g_conntable->SearchObject(querybuff);
 	// if we have a hit return the found result
 	if (local != NULL)
 	{
-	logmessage(LOG_DEBUG,"NETCLIENT REPLY = %s (%s)\n",querybuff,local->GetProtocol());
+	logmessage(LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
+		local->GetApplication(),
+		local->GetProtocol(),
+		local->GetDetail(),
+		local->GetConfidence(),
+		local->GetState());
 
 	replyoff = 0;
 	replyoff+=sprintf(&replybuff[replyoff],"FOUND: %s\r\n",querybuff);
