@@ -7,7 +7,7 @@ LOG_FILE=/var/log/untangle-classd/classd.log
 echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
 
 if [ -x "/etc/init.d/untangle-classd" ]; then
-    update-rc.d untangle-classd defaults 25 > /dev/null
+    update-rc.d untangle-classd defaults 25
     /etc/init.d/untangle-classd restart
 fi
 

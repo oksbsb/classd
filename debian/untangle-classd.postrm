@@ -1,0 +1,13 @@
+#!/bin/bash
+
+LOG_PATH=/var/log/untangle-classd
+
+case $1 in
+  purge)
+    update-rc.d untangle-classd remove
+    rm -f $LOG_PATH/classd.*
+    ;;
+esac
+
+exit 0
+

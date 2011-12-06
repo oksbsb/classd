@@ -1,10 +1,5 @@
 #!/bin/bash
 
-LOG_PATH=/var/log/untangle-classd
-
 /etc/init.d/untangle-classd stop
-update-rc.d untangle-classd remove > /dev/null
-rm -f $LOG_PATH/classd.*
 
 exit 0
-
