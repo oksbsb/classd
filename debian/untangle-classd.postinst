@@ -1,23 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 LOG_FILE=/var/log/untangle-classd/classd.log
 
-ourInit() {
-    if [ -x /usr/sbin/invoke-rc.d ] && [ ! "`readlink /usr/sbin/invoke-rc.d`" = /bin/true ] ; then
-        invoke-rc.d $1 $2
-    else
-        /etc/init.d/$1 $2
-    fi
-}
+-mkdir -p `dirname ${LOG_FILE}`
 
-mkdir -p `dirname ${LOG_FILE}`
-
-echo "[`date`] DEBUG debian upgrade." >> ${LOG_FILE}
+echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
 
 if [ -x "/etc/init.d/untangle-classd" ]; then
-    ourInit untangle-classd stop > /dev/null 2>&1 || exit 0
-    ourInit untangle-classd start || exit 0
+    update-rc.d untangle-classd defaults 25 > /dev/null
+    /etc/init.d/untangle-classd restart
 fi
 
 exit 0
-
