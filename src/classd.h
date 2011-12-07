@@ -105,7 +105,7 @@ public:
 	HashObject(unsigned short aNetwork,
 		const char *aHashname,
 		const char *aApplication,
-		const char *aProtocol,
+		const char *aProtochain,
 		const char *aDetail,
 		short aConfidence,
 		short aState);
@@ -113,14 +113,16 @@ public:
 	virtual ~HashObject(void);
 
 	void UpdateObject(const char *aApplication,
-		const char * aProtocol,
+		const char * aProtochain,
 		const char *aDetail,
 		short aConfidence,
 		short aState);
 
+	void GetObjectString(char *target,int maxlen);
+
 	inline const char *GetHashname(void)	{ return(hashname); }
 	inline const char *GetApplication(void)	{ return(application); }
-	inline const char *GetProtocol(void)	{ return(protocol); }
+	inline const char *GetProtochain(void)	{ return(protochain); }
 	inline const char *GetDetail(void)		{ return(detail); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
@@ -133,7 +135,7 @@ private:
 	time_t					timestamp;
 	char					*hashname;
 	char					*application;
-	char					*protocol;
+	char					*protochain;
 	char					*detail;
 	short					confidence;
 	short					state;

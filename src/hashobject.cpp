@@ -10,7 +10,7 @@
 HashObject::HashObject(unsigned short aNetwork,
 	const char *aHashname,
 	const char *aApplication,
-	const char *aProtocol,
+	const char *aProtochain,
 	const char *aDetail,
 	short aConfidence,
 	short aState)
@@ -23,8 +23,8 @@ strcpy(hashname,aHashname);
 application = (char *)malloc(strlen(aApplication)+1);
 strcpy(application,aApplication);
 
-protocol = (char *)malloc(strlen(aProtocol)+1);
-strcpy(protocol,aProtocol);
+protochain = (char *)malloc(strlen(aProtochain)+1);
+strcpy(protochain,aProtochain);
 
 detail = (char *)malloc(strlen(aDetail)+1);
 strcpy(detail,aDetail);
@@ -40,12 +40,12 @@ HashObject::~HashObject(void)
 {
 free(hashname);
 free(application);
-free(protocol);
+free(protochain);
 free(detail);
 }
 /*--------------------------------------------------------------------------*/
 void HashObject::UpdateObject(const char *aApplication,
-	const char *aProtocol,
+	const char *aProtochain,
 	const char *aDetail,
 	short aConfidence,
 	short aState)
@@ -53,8 +53,8 @@ void HashObject::UpdateObject(const char *aApplication,
 application = (char *)realloc(application,strlen(aApplication)+1);
 strcpy(application,aApplication);
 
-protocol = (char *)realloc(protocol,strlen(aProtocol)+1);
-strcpy(protocol,aProtocol);
+protochain = (char *)realloc(protochain,strlen(aProtochain)+1);
+strcpy(protochain,aProtochain);
 
 detail = (char *)realloc(detail,strlen(aDetail)+1);
 strcpy(detail,aDetail);
@@ -72,9 +72,14 @@ int			mysize;
 mysize = sizeof(*this);
 if (hashname != NULL) mysize+=(strlen(hashname) + 1);
 if (application != NULL) mysize+=(strlen(application) + 1);
-if (protocol != NULL) mysize+=(strlen(protocol) + 1);
+if (protochain != NULL) mysize+=(strlen(protochain) + 1);
 if (detail != NULL) mysize+=(strlen(detail) + 1);
 return(mysize);
+}
+/*--------------------------------------------------------------------------*/
+void HashObject::GetObjectString(char *target,int maxlen)
+{
+snprintf(target,maxlen,"N:%s A:%s P:%s D:%s C:%d S:%d",hashname,application,protochain,detail,confidence,state);
 }
 /*--------------------------------------------------------------------------*/
 

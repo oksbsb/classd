@@ -225,7 +225,7 @@ int								confidence,ipproto;
 int								appid,value;
 int								ret,idx;
 char							application[32];
-char							protocol[256];
+char							protochain[256];
 char							detail[256];
 char							finder[64];
 char							source[32];
@@ -234,7 +234,7 @@ char							xtra[256];
 char							work[32];
 
 application[0] = 0;
-protocol[0] = 0;
+protochain[0] = 0;
 detail[0] = 0;
 confidence = 0;
 ipproto = 0;
@@ -259,7 +259,7 @@ nfq_set_verdict(ci->handle,(hdr ? ntohl(hdr->packet_id) : 0),NF_ACCEPT,0,NULL);
 appid = navl_app_get(result,&confidence);
 navl_proto_get_name(appid,application,sizeof(application));
 
-	// build the protocol chain grabbing extra info for certain protocols
+	// build the protochain grabbing extra info for certain protocols
 	for(it = navl_proto_first(result);navl_proto_valid(it);navl_proto_next(it))
 	{
 	value = navl_proto_get_id(it);
@@ -308,10 +308,10 @@ navl_proto_get_name(appid,application,sizeof(application));
 		if (ret == 0) strcpy(detail,xtra);
 		}
 
-	// append the protocol name to the protocol
+	// append the protocol name to the chain
 	work[0] = 0;
 	navl_proto_get_name(value,work,sizeof(work));
-	idx+=sprintf(&protocol[idx],"/%s",work);
+	idx+=sprintf(&protochain[idx],"/%s",work);
 	}
 
 // only TCP or UDP packets will set this flag allowing
@@ -326,30 +326,30 @@ strcpy(target,inet_ntoa(daddr));
 if (ipproto == IPPROTO_TCP) sprintf(finder,"TCP-%s:%d-%s:%d",source,sport,target,dport);
 if (ipproto == IPPROTO_UDP) sprintf(finder,"UDP-%s:%d-%s:%d",source,sport,target,dport);
 
-	// clean up terminated connections
-	if (state == NAVL_STATE_TERMINATED)
-	{
-	logmessage(LOG_DEBUG,"REMOVE %s\n",finder);
-	ret = g_conntable->DeleteObject(finder);
-	return(0);
-	}
-
 // search the hash table for the entry
 local = g_conntable->SearchObject(finder);
 
 	// not found so create new object in hashtable
 	if (local == NULL)
 	{
-	logmessage(LOG_DEBUG,"INSERT %s [%s|%s|%s|%d|%d]\n",finder,application,protocol,detail,confidence,state);
-	local = new HashObject(ipproto,finder,application,protocol,detail,confidence,state);
+	logmessage(LOG_DEBUG,"INSERT %s [%s|%s|%s|%d|%d]\n",finder,application,protochain,detail,confidence,state);
+	local = new HashObject(ipproto,finder,application,protochain,detail,confidence,state);
 	ret = g_conntable->InsertObject(local);
 	}
 
 	// existing session so update the object
 	else
 	{
-	logmessage(LOG_DEBUG,"UPDATE %s [%s|%s|%s|%d|%d]\n",finder,application,protocol,detail,confidence,state);
-	local->UpdateObject(application,protocol,detail,confidence,state);
+	logmessage(LOG_DEBUG,"UPDATE %s [%s|%s|%s|%d|%d]\n",finder,application,protochain,detail,confidence,state);
+	local->UpdateObject(application,protochain,detail,confidence,state);
+	}
+
+	// clean up terminated connections
+	if (state == NAVL_STATE_TERMINATED)
+	{
+	logmessage(LOG_DEBUG,"REMOVE %s\n",finder);
+	ret = g_conntable->DeleteObject(finder);
+	return(0);
 	}
 
 // increment counter and continue tracking the flow

@@ -278,6 +278,7 @@ aBytes+=(buckets * sizeof(sem_t));
 void HashTable::DumpDetail(FILE *aFile)
 {
 HashObject	*work;
+char		buffer[256];
 int			count,bytes;
 int			x;
 
@@ -300,7 +301,8 @@ bytes+=(buckets * sizeof(sem_t));
 		{
 			for(work = table[x];work != NULL;work = work->next)
 			{
-			fprintf(aFile,"  %d | %s | %s\n",x,work->GetHashname(),work->GetProtocol());
+			work->GetObjectString(buffer,sizeof(buffer));
+			fprintf(aFile,"  %d = %s\n",x,buffer);
 			bytes+=work->GetObjectSize();
 			count++;
 			}

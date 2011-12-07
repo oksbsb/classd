@@ -147,7 +147,7 @@ local = g_conntable->SearchObject(querybuff);
 	{
 	logmessage(LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
 		local->GetApplication(),
-		local->GetProtocol(),
+		local->GetProtochain(),
 		local->GetDetail(),
 		local->GetConfidence(),
 		local->GetState());
@@ -155,7 +155,7 @@ local = g_conntable->SearchObject(querybuff);
 	replyoff = 0;
 	replyoff+=sprintf(&replybuff[replyoff],"FOUND: %s\r\n",querybuff);
 	replyoff+=sprintf(&replybuff[replyoff],"APPLICATION: %s\r\n",local->GetApplication());
-	replyoff+=sprintf(&replybuff[replyoff],"PROTOCOL: %s\r\n",local->GetProtocol());
+	replyoff+=sprintf(&replybuff[replyoff],"PROTOCHAIN: %s\r\n",local->GetProtochain());
 	replyoff+=sprintf(&replybuff[replyoff],"DETAIL: %s\r\n",local->GetDetail());
 	replyoff+=sprintf(&replybuff[replyoff],"CONFIDENCE: %d\r\n",local->GetConfidence());
 	replyoff+=sprintf(&replybuff[replyoff],"STATE: %d\r\n",local->GetState());
