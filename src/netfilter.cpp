@@ -7,11 +7,10 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *tb,void *arg);
+int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *nfad,void *data);
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
-void qclassify_exit(void);
-void qclassify_loop(void);
-int qclassify_init(void);
+void netfilter_shutdown(void);
+int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 // vars for all of the protocol and application id values
 static int l_proto_eth = 0;
@@ -36,10 +35,16 @@ static int l_attr_conn_id = 0;
 static int l_attr_fbook_app = 0;
 static int l_attr_tls_host = 0;
 static int l_attr_http_info = 0;
+
+// vars for our netfilter queue
+struct nfq_handle *nfqh;
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
-int		ret;
+struct nfq_q_handle		*qh;
+struct pollfd			pollinfo;
+char					buffer[2048];
+int						fd,ret;
 
 logmessage(LOG_INFO,"The netfilter thread is starting\n");
 
@@ -47,115 +52,14 @@ logmessage(LOG_INFO,"The netfilter thread is starting\n");
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
 
-ret = qclassify_init();
+// call the main startup function
+ret = netfilter_startup();
 
 	if (ret != 0)
 	{
-	logmessage(LOG_ERR,"Error %d returned from qclassify_init()\n",ret);
-	qclassify_exit();
+	logmessage(LOG_ERR,"Error %d returned from netfilter_startup()\n",ret);
 	g_shutdown = 1;
 	return(NULL);
-	}
-
-qclassify_loop();
-qclassify_exit();
-
-logmessage(LOG_INFO,"The netfilter thread has terminated\n");
-return(NULL);
-}
-/*--------------------------------------------------------------------------*/
-int qclassify_init(void)
-{
-char	buffer[256];
-int		marker = 0;
-
-/*
-** The goofy marker math at the beginning of each line just gives us
-** a quick and easy way to increment a return code value that will
-** tell us which call failed if any of these calls return an error
-*/
-
-// spin up the vineyard engine
-if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
-
-// enable fragment processing
-if ((++marker) && (navl_ip_defrag(cfg_navl_defrag) != 0)) return(marker);
-
-// set the TCP and UDP timeout values
-if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0)) return(marker);
-if ((++marker) && (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0)) return(marker);
-
-// grab the id values for all protocols
-if ((++marker) && ((l_proto_eth = navl_proto_find_id("ETH")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ip = navl_proto_find_id("IP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_tcp = navl_proto_find_id("TCP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_udp = navl_proto_find_id("UDP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_http = navl_proto_find_id("HTTP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ssl = navl_proto_find_id("SSL")) < 1)) return(marker);
-if ((++marker) && ((l_proto_sip = navl_proto_find_id("SIP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ctrxica = navl_proto_find_id("CTRXICA")) < 1)) return(marker);
-if ((++marker) && ((l_proto_fbookapp = navl_proto_find_id("FBOOKAPP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ymsgfile = navl_proto_find_id("YMSGFILE")) < 1)) return(marker);
-
-// enable and grab the id values of the attributes we care about
-if ((++marker) && ((l_attr_conn_id = navl_attr("conn.id",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_ip_saddr = navl_attr("ip.src_addr",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_ip_daddr = navl_attr("ip.dst_addr",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tcp_sport = navl_attr("tcp.src_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tcp_dport = navl_attr("tcp.dst_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_udp_sport = navl_attr("udp.src_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_udp_dport = navl_attr("udp.dst_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_fbook_app = navl_attr("facebook.app",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tls_host = navl_attr("tls.host",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_http_info = navl_attr("http.response.content-type",1)) < 1)) return(marker);
-
-if ((++marker) && (navl_command("classification http persistence set","0",buffer,sizeof(buffer))) != 0) return(marker);
-
-return(0);
-}
-/*--------------------------------------------------------------------------*/
-void qclassify_exit()
-{
-// shut down the vineyard engine
-navl_close();
-}
-/*--------------------------------------------------------------------------*/
-void qclassify_loop()
-{
-struct nfq_q_handle		*qh;
-struct nfq_handle		*nfqh;
-struct pollfd			pollinfo;
-char					buffer[2048];
-int						fd,ret;
-
-//open a new netqueue handler
-nfqh = nfq_open();
-
-	if (nfqh == 0)
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_open()\n");
-	g_shutdown = 1;
-	return;
-	}
-
-// unbind any existing queue handler
-ret = nfq_unbind_pf(nfqh,AF_INET);
-
-	if (ret < 0)
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_unbind_pf()\n");
-	g_shutdown = 1;
-	return;
-	}
-
-// bind the queue handler for AF_INET
-ret = nfq_bind_pf(nfqh,AF_INET);
-
-	if (ret < 0)
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_bind_pf()\n");
-	g_shutdown = 1;
-	return;
 	}
 
 // create a new queue handler
@@ -165,7 +69,7 @@ qh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
 	{
 	logmessage(LOG_ERR,"Error returned from nfq_create_queue(%u)\n",cfg_net_queue);
 	g_shutdown = 1;
-	return;
+	return(NULL);
 	}
 
 // set the queue data copy mode
@@ -173,9 +77,9 @@ ret = nfq_set_mode(qh,NFQNL_COPY_PACKET,0xFFFF);
 
 	if (ret < 0)
 	{
-	logmessage(LOG_ERR,"failed to set NFQNL_COPY_PACKET\n");
+	logmessage(LOG_ERR,"Error returned from nfq_set_mode(NFQNL_COPY_PACKET)\n");
 	g_shutdown = 1;
-	return;
+	return(NULL);
 	}
 
 // get the file descriptor for netlink queue
@@ -185,13 +89,17 @@ fd = nfnl_fd(nfq_nfnlh(nfqh));
 	{
 	pollinfo.fd = fd;
 	pollinfo.events = POLLIN;
+	pollinfo.revents = 0;
 
 	// wait for data
 	ret = poll(&pollinfo,1,1000);
 
+	// nothing received
+	if (ret < 1) continue;
+
 		if ((ret < 0) && (errno != EINTR))
 		{
-		logmessage(LOG_ERR,"poll error nfq fd %d (%d/%s)\n",fd,errno,strerror(errno));
+		logmessage(LOG_ERR,"Error %d (%s) returned from poll()\n",errno,strerror(errno));
 		break;
 		}
 
@@ -201,22 +109,30 @@ fd = nfnl_fd(nfq_nfnlh(nfqh));
 		if (ret == -1)
 		{
 		if (errno == EAGAIN || errno == EINTR || errno == ENOBUFS) continue;
-		logmessage(LOG_ERR,"recv error nfq fd %d (%d/%s)\n",fd,errno,strerror(errno));
+		logmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
 		break;
 		}
 
 		else if (ret == 0)
 		{
-		logmessage(LOG_ERR,"nfq socket closed\n");
+		logmessage(LOG_ERR,"The nfq socket was unexpectedly closed\n");
+		g_shutdown = 1;
 		break;
 		}
 	}
+
+// destroy the netfilter queue
+nfq_destroy_queue(qh);
+
+// call the main shutdown function
+netfilter_shutdown();
+
+logmessage(LOG_INFO,"The netfilter thread has terminated\n");
+return(NULL);
 }
 /*--------------------------------------------------------------------------*/
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error)
 {
-struct nfqnl_msg_packet_hdr		*hdr;
-struct callback_info			*ci;
 struct in_addr					saddr,daddr;
 navl_iterator_t					it;
 HashObject						*local;
@@ -228,8 +144,8 @@ char							application[32];
 char							protochain[256];
 char							detail[256];
 char							finder[64];
-char							source[32];
-char							target[32];
+char							srcaddr[32];
+char							dstaddr[32];
 char							xtra[256];
 char							work[32];
 
@@ -240,19 +156,14 @@ confidence = 0;
 ipproto = 0;
 idx = 0;
 
-// first set the accept verdict on the packet
-ci = (struct callback_info *)arg;
-hdr = nfq_get_msg_packet_hdr(ci->data);
-nfq_set_verdict(ci->handle,(hdr ? ntohl(hdr->packet_id) : 0),NF_ACCEPT,0,NULL);
-
 	// keep track of errors returned by vineyard
 	if (error != 0) switch (error)
 	{
-	case ENOMEM:	err_nomem++;	return(1);
-	case ENOBUFS:	err_nobufs++;	return(1);
-	case ENOSR:		err_nosr++;		return(1);
-	case ENOTCONN:	err_notconn++;	return(1);
-	default:		err_unknown++;	return(1);
+	case ENOMEM:	err_nomem++;	break;
+	case ENOBUFS:	err_nobufs++;	break;
+	case ENOSR:		err_nosr++;		break;
+	case ENOTCONN:	err_notconn++;	break;
+	default:		err_unknown++;	break;
 	}
 
 // get the application and confidence
@@ -320,14 +231,26 @@ if (ipproto == 0) return(0);
 
 saddr.s_addr = htonl(saddr.s_addr);
 daddr.s_addr = htonl(daddr.s_addr);
-strcpy(source,inet_ntoa(saddr));
-strcpy(target,inet_ntoa(daddr));
+strcpy(srcaddr,inet_ntoa(saddr));
+strcpy(dstaddr,inet_ntoa(daddr));
 
-if (ipproto == IPPROTO_TCP) sprintf(finder,"TCP-%s:%d-%s:%d",source,sport,target,dport);
-if (ipproto == IPPROTO_UDP) sprintf(finder,"UDP-%s:%d-%s:%d",source,sport,target,dport);
+// try the inverted lookup first
+if (ipproto == IPPROTO_TCP) sprintf(finder,"TCP-%s:%d-%s:%d",dstaddr,dport,srcaddr,sport);
+if (ipproto == IPPROTO_UDP) sprintf(finder,"UDP-%s:%d-%s:%d",dstaddr,dport,srcaddr,sport);
 
 // search the hash table for the entry
+logmessage(LOG_DEBUG,"SEARCHING INVERT %s\n",finder);
 local = g_conntable->SearchObject(finder);
+
+	if (local == NULL)
+	{
+	if (ipproto == IPPROTO_TCP) sprintf(finder,"TCP-%s:%d-%s:%d",srcaddr,sport,dstaddr,dport);
+	if (ipproto == IPPROTO_UDP) sprintf(finder,"UDP-%s:%d-%s:%d",srcaddr,sport,dstaddr,dport);
+
+	// search the hash table for the entry
+	logmessage(LOG_DEBUG,"SEARCHING NORMAL %s\n",finder);
+	local = g_conntable->SearchObject(finder);
+	}
 
 	// not found so create new object in hashtable
 	if (local == NULL)
@@ -352,28 +275,164 @@ local = g_conntable->SearchObject(finder);
 	return(0);
 	}
 
-// increment counter and continue tracking the flow
+// continue tracking the flow
 return(0);
 }
 /*--------------------------------------------------------------------------*/
-int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *tb,void *arg)
+int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *nfad,void *data)
 {
-struct callback_info	ci;
-char					*data;
-int						datalen;
+struct nfqnl_msg_packet_hdr		*hdr;
+uint16_t						sport,dport;
+uint32_t						saddr,daddr;
+unsigned char					*pkt;
+const tcphdr					*tcphead;
+const udphdr					*udphead;
+const iphdr						*iphead;
+const char						*pname;
+char							sname[32];
+char							dname[32];
+char							finder[64];
+int								len;
 
-// get the packet length
-datalen = nfq_get_payload(tb,&data);
+// first set the accept verdict on the packet
+hdr = nfq_get_msg_packet_hdr(nfad);
+nfq_set_verdict(qh,(hdr ? ntohl(hdr->packet_id) : 0),NF_ACCEPT,0,NULL);
 
-	// pass valid packets to the vineyard library
-	if (datalen > 0)
+// get the packet length and data
+len = nfq_get_payload(nfad,(char **)&pkt);
+
+// ignore packets with invalid length
+if (len < (int)sizeof(struct iphdr)) return(0);
+
+// use the iphdr structure for parsing
+iphead = (iphdr *)pkt;
+
+// ignore everything except IPv4
+if (iphead->version != 4) return(0);
+
+// we only care about TCP and UDP
+if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
+
+// extract the client and server addresses
+saddr = ntohl(iphead->saddr);
+daddr = ntohl(iphead->daddr);
+inet_ntop(AF_INET,&iphead->saddr,sname,sizeof(sname));
+inet_ntop(AF_INET,&iphead->daddr,dname,sizeof(dname));
+
+	// grab TCP specific fields
+	if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
 	{
-	ci.handle = qh;
-	ci.data = tb;
-	navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,data,datalen,navl_callback,&ci);
+	tcphead = (tcphdr *)&pkt[iphead->ihl << 2];
+	sport = ntohs(tcphead->source);
+	dport = ntohs(tcphead->dest);
+	}
+
+	// grab UDP specific fields
+	if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
+	{
+	udphead = (udphdr *)&pkt[iphead->ihl << 2];
+	sport = ntohs(udphead->source);
+	dport = ntohs(udphead->dest);
+	}
+
+sprintf(finder,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
+
+printf("NETWORK PACKET %s\n",finder);
+
+// pass the packet to the vineyard library
+navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,pkt,len,navl_callback,NULL);
+
+return(0);
+}
+/*--------------------------------------------------------------------------*/
+int netfilter_startup(void)
+{
+char	buffer[256];
+int		marker = 0;
+int		ret;
+
+/*
+** The goofy marker math at the beginning of each line just gives us
+** a quick and easy way to increment a return code value that will
+** tell us which call failed if any of these calls return an error
+*/
+
+// spin up the vineyard engine
+if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
+
+// enable fragment processing
+if ((++marker) && (navl_ip_defrag(cfg_navl_defrag) != 0)) return(marker);
+
+// set the TCP and UDP timeout values
+if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0)) return(marker);
+if ((++marker) && (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0)) return(marker);
+
+// grab the id values for all protocols
+if ((++marker) && ((l_proto_eth = navl_proto_find_id("ETH")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ip = navl_proto_find_id("IP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_tcp = navl_proto_find_id("TCP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_udp = navl_proto_find_id("UDP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_http = navl_proto_find_id("HTTP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ssl = navl_proto_find_id("SSL")) < 1)) return(marker);
+if ((++marker) && ((l_proto_sip = navl_proto_find_id("SIP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ctrxica = navl_proto_find_id("CTRXICA")) < 1)) return(marker);
+if ((++marker) && ((l_proto_fbookapp = navl_proto_find_id("FBOOKAPP")) < 1)) return(marker);
+if ((++marker) && ((l_proto_ymsgfile = navl_proto_find_id("YMSGFILE")) < 1)) return(marker);
+
+// enable and grab the id values of the attributes we care about
+if ((++marker) && ((l_attr_conn_id = navl_attr("conn.id",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_ip_saddr = navl_attr("ip.src_addr",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_ip_daddr = navl_attr("ip.dst_addr",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tcp_sport = navl_attr("tcp.src_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tcp_dport = navl_attr("tcp.dst_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_udp_sport = navl_attr("udp.src_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_udp_dport = navl_attr("udp.dst_port",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_fbook_app = navl_attr("facebook.app",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_tls_host = navl_attr("tls.host",1)) < 1)) return(marker);
+if ((++marker) && ((l_attr_http_info = navl_attr("http.response.content-type",1)) < 1)) return(marker);
+
+if ((++marker) && (navl_command("classification http persistence set","4",buffer,sizeof(buffer))) != 0) return(marker);
+
+//open a new netfilter queue handler
+nfqh = nfq_open();
+
+	if ((++marker) && (nfqh == 0))
+	{
+	logmessage(LOG_ERR,"Error returned from nfq_open()\n");
+	g_shutdown = 1;
+	return(NULL);
+	}
+
+// unbind any existing queue handler
+ret = nfq_unbind_pf(nfqh,AF_INET);
+
+	if ((++marker) && (ret < 0))
+	{
+	logmessage(LOG_ERR,"Error returned from nfq_unbind_pf()\n");
+	g_shutdown = 1;
+	return(NULL);
+	}
+
+// bind the queue handler for AF_INET
+ret = nfq_bind_pf(nfqh,AF_INET);
+
+	if ((++marker) && (ret < 0))
+	{
+	logmessage(LOG_ERR,"Error returned from nfq_bind_pf(lan)\n");
+	g_shutdown = 1;
+	return(NULL);
 	}
 
 return(0);
+}
+/*--------------------------------------------------------------------------*/
+void netfilter_shutdown(void)
+{
+// shut down the netfilter queue handler
+nfq_close(nfqh);
+
+// shut down the vineyard engine
+navl_close();
 }
 /*--------------------------------------------------------------------------*/
 

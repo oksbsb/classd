@@ -23,6 +23,9 @@
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <linux/netfilter.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <netinet/udp.h>
 
 extern "C"
 {

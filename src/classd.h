@@ -161,12 +161,6 @@ public:
 	int						value;
 };
 /*--------------------------------------------------------------------------*/
-struct callback_info
-{
-	struct nfq_q_handle		*handle;
-	struct nfq_data			*data;
-};
-/*--------------------------------------------------------------------------*/
 void logmessage(int priority,const char *format,...);
 void logproblem(Problem *aProblem);
 void load_configuration(void);
