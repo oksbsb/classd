@@ -17,14 +17,6 @@ if [ -x "/etc/init.d/untangle-classd" ]; then
     /etc/init.d/untangle-classd restart
 fi
 
-# restart iptables if our netlink queue isn't open which
-# likely means this is a new install not an update
-if [ -f /proc/net/netfilter/nfnetlink_queue ] ; then
-
-    t_queue_pid=`awk -v queue=${UNTANGLE_CLASSD_QUEUE_NUM} '{ if ( $1 == queue ) print $2 }' /proc/net/netfilter/nfnetlink_queue`
-
-    if [ -z "${t_queue_pid}" ]; then
-        /etc/init.d/untangle-net-alpaca-iptables restart
-fi
+/etc/init.d/untangle-net-alpaca-iptables restart
 
 exit 0
