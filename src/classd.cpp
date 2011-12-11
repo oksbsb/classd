@@ -1,4 +1,4 @@
-// CLASSD.C
+// CLASSD.CPP
 // Traffic Classification Engine
 // Copyright (c) 2011 Untangle, Inc.
 // All Rights Reserved
@@ -25,9 +25,14 @@ load_configuration();
 
 	for(x = 1;x < argc;x++)
 	{
-	if (strncasecmp(argv[x],"-D",2) == 0) g_debug++;
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
+
+		if (strncasecmp(argv[x],"-D",2) == 0)
+		{
+		g_debug = atoi(&argv[x][2]);
+		if (g_debug == 0) g_debug = 0xFFFF;
+		}
 	}
 
 	if (g_console == 0)
@@ -76,8 +81,9 @@ getitimer(ITIMER_PROF,&g_itimer);
 logmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 if (g_console != 0) logmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 
-// allocate our connection hashtable
-g_conntable = new HashTable(cfg_hash_buckets);
+// allocate our status and lookup hashtables
+g_statustable = new HashTable(cfg_hash_buckets);
+g_lookuptable = new HashTable(cfg_hash_buckets);
 
 // create our network server
 g_netserver = new NetworkServer();
@@ -120,8 +126,10 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		ret = g_conntable->PurgeStaleObjects(currtime);
-		logmessage(LOG_DEBUG,"Removed %d stale objects from hashtable\n",ret);
+		ret = g_statustable->PurgeStaleObjects(currtime);
+		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
+		ret = g_lookuptable->PurgeStaleObjects(currtime);
+		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
 		}
 
 		if (g_recycle != 0)
@@ -139,7 +147,8 @@ pthread_join(g_netfilter_tid,NULL);
 
 // cleanup the network server and connection hashtable
 delete(g_netserver);
-delete(g_conntable);
+delete(g_statustable);
+delete(g_lookuptable);
 
 logmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 
@@ -208,21 +217,70 @@ g_logfile = fopen(cfg_log_file,"a");
 if (g_logfile == NULL) openlog("classd",LOG_NDELAY,LOG_DAEMON);
 }
 /*--------------------------------------------------------------------------*/
+void logmessage(int category,int priority,const char *format,...)
+{
+va_list			args;
+char			message[1024];
+
+if ((priority == LOG_DEBUG) && (g_debug == 0)) return;
+if ((g_debug & category) == 0) return;
+
+va_start(args,format);
+vsnprintf(message,sizeof(message),format,args);
+va_end(args);
+
+rawmessage(priority,message);
+}
+/*--------------------------------------------------------------------------*/
 void logmessage(int priority,const char *format,...)
 {
-struct timeval	nowtime;
-struct tm		*today;
 va_list			args;
-time_t			value;
-double			rr,nn,ee;
 char			message[1024];
-char			string[32];
 
 if ((priority == LOG_DEBUG) && (g_debug == 0)) return;
 
 va_start(args,format);
 vsnprintf(message,sizeof(message),format,args);
 va_end(args);
+
+rawmessage(priority,message);
+}
+/*--------------------------------------------------------------------------*/
+void hexmessage(int category,int priority,const void *buffer,int size)
+{
+const unsigned char		*data;
+char					*message;
+int						loc;
+int						x;
+
+if ((priority == LOG_DEBUG) && (g_debug == 0)) return;
+if ((g_debug & category) == 0) return;
+
+message = (char *)malloc((size * 3) + 4);
+data = (const unsigned char *)buffer;
+
+	for(x = 0;x < size;x++)
+	{
+	loc = (x * 3);
+	if (x == 0) sprintf(&message[loc],"%02X ",data[x]);
+	else sprintf(&message[loc]," %02X ",data[x]);
+	}
+
+loc = (size * 3);
+strcpy(&message[loc],"\n");
+rawmessage(priority,message);
+free(message);
+}
+/*--------------------------------------------------------------------------*/
+void rawmessage(int priority,const char *message)
+{
+struct timeval	nowtime;
+struct tm		*today;
+time_t			value;
+double			rr,nn,ee;
+char			string[32];
+
+if ((priority == LOG_DEBUG) && (g_debug == 0)) return;
 
 	// if running on the console display log messages there
 	if (g_console != 0)
@@ -266,7 +324,6 @@ fprintf(g_logfile,"%s %d %02d:%02d:%02d %s ",
 
 fputs(message,g_logfile);
 fflush(g_logfile);
-return;
 }
 /*--------------------------------------------------------------------------*/
 void logproblem(Problem *aProblem)

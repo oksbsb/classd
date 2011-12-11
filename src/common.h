@@ -29,6 +29,7 @@
 
 extern "C"
 {
+#include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 }
 

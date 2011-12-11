@@ -13,8 +13,14 @@
 #endif
 
 /*--------------------------------------------------------------------------*/
+const unsigned CAT_LOGIC = 0x0001;
+const unsigned CAT_CLIENT = 0x0002;
+const unsigned CAT_FILTER = 0x0004;
+/*--------------------------------------------------------------------------*/
 class NetworkServer;
 class NetworkClient;
+class StatusObject;
+class LookupObject;
 class HashObject;
 class HashTable;
 class WebServer;
@@ -80,7 +86,7 @@ public:
 	virtual ~HashTable(void);
 
 	int InsertObject(HashObject *aObject);
-	int DeleteObject(const char *aTitle);
+	int DeleteObject(HashObject *aObject);
 	HashObject* SearchObject(const char *aTitle);
 
 	void GetTableSize(int &aCount,int &aBytes);
@@ -102,15 +108,32 @@ friend class HashTable;
 
 public:
 
-	HashObject(unsigned short aNetwork,
-		const char *aHashname,
-		const char *aApplication,
-		const char *aProtochain,
-		const char *aDetail,
-		short aConfidence,
-		short aState);
-
+	HashObject(unsigned short aNetwork,const char *aHashname);
 	virtual ~HashObject(void);
+
+	virtual void GetObjectString(char *target,int maxlen);
+	virtual void UpdateObject(void);
+
+	inline const char *GetHashname(void)	{ return(hashname); }
+
+protected:
+
+	virtual int GetObjectSize(void);
+
+private:
+
+	HashObject				*next;
+	unsigned short			network;
+	time_t					timestamp;
+	char					*hashname;
+};
+/*--------------------------------------------------------------------------*/
+class StatusObject : public HashObject
+{
+public:
+
+	StatusObject(unsigned short aNetwork,const char *aHashname,void *aTracker);
+	virtual ~StatusObject(void);
 
 	void UpdateObject(const char *aApplication,
 		const char * aProtochain,
@@ -120,27 +143,48 @@ public:
 
 	void GetObjectString(char *target,int maxlen);
 
-	inline const char *GetHashname(void)	{ return(hashname); }
 	inline const char *GetApplication(void)	{ return(application); }
 	inline const char *GetProtochain(void)	{ return(protochain); }
 	inline const char *GetDetail(void)		{ return(detail); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
+	inline void *GetTracker(void)			{ return(tracker); }
 
 private:
 
 	int GetObjectSize(void);
 
-	unsigned short			network;
-	time_t					timestamp;
-	char					*hashname;
+	short					confidence;
+	short					state;
+	void					*tracker;
 	char					*application;
 	char					*protochain;
 	char					*detail;
-	short					confidence;
-	short					state;
+};
+/*--------------------------------------------------------------------------*/
+class LookupObject : public HashObject
+{
+public:
 
-	HashObject				*next;
+	LookupObject(unsigned short aNetwork,const char *aHashname);
+	virtual ~LookupObject(void);
+
+	void UpdateObject(uint32_t aSaddr,uint16_t aSport,uint32_t aDaddr,uint16_t aDport);
+	void GetObjectString(char *target,int maxlen);
+
+	inline uint32_t GetSaddr(void)			{ return(orig_saddr); }
+	inline uint16_t GetSport(void)			{ return(orig_sport); }
+	inline uint32_t GetDaddr(void)			{ return(orig_daddr); }
+	inline uint16_t GetDport(void)			{ return(orig_dport); }
+
+private:
+
+	int GetObjectSize(void);
+
+	uint32_t				orig_saddr;
+	uint16_t				orig_sport;
+	uint32_t				orig_daddr;
+	uint16_t				orig_dport;
 };
 /*--------------------------------------------------------------------------*/
 class Problem
@@ -161,7 +205,16 @@ public:
 	int						value;
 };
 /*--------------------------------------------------------------------------*/
+struct xxphdr
+{
+	u_int16_t				source;
+	u_int16_t				dest;
+};
+/*--------------------------------------------------------------------------*/
+void hexmessage(int category,int priority,const void *buffer,int size);
+void logmessage(int category,int priority,const char *format,...);
 void logmessage(int priority,const char *format,...);
+void rawmessage(int priority,const char *message);
 void logproblem(Problem *aProblem);
 void load_configuration(void);
 void* netfilter_thread(void *arg);
@@ -178,7 +231,8 @@ DATALOC pthread_t			g_netfilter_tid;
 DATALOC struct itimerval	g_itimer;
 DATALOC struct timeval		g_runtime;
 DATALOC NetworkServer		*g_netserver;
-DATALOC HashTable			*g_conntable;
+DATALOC HashTable			*g_statustable;
+DATALOC HashTable			*g_lookuptable;
 DATALOC FILE				*g_logfile;
 DATALOC char				g_cfgfile[256];
 DATALOC int					g_tcp_cleanup;

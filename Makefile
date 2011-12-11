@@ -14,7 +14,7 @@ ARCH := $(shell uname -m)
 
 ifeq ($(SYSTEM),Linux)
   PLATFORM = -D__LINUX__
-  LIBFILES = -lpthread -ldl -lnetfilter_queue -lnavl
+  LIBFILES = -lpthread -ldl -lnetfilter_queue -lnetfilter_conntrack -lnavl
     ifeq ($(ARCH),x86_64)
       LIBPATH = -Lsrc/vineyard/lib64
     else

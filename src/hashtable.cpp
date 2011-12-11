@@ -1,4 +1,4 @@
-// HASHTABLE.C
+// HASHTABLE.CPP
 // Traffic Classification Engine
 // Copyright (c) 2011 Untangle, Inc.
 // All Rights Reserved
@@ -70,13 +70,13 @@ sem_post(&control[key]);
 return(key);
 }
 /*--------------------------------------------------------------------------*/
-int HashTable::DeleteObject(const char *aHashname)
+int HashTable::DeleteObject(HashObject *aObject)
 {
 HashObject	*work,*prev;
 unsigned	key;
 
 // calculate bucket using the hash function
-key = GetHashValue(aHashname);
+key = GetHashValue(aObject->hashname);
 
 // lock the bucket
 sem_wait(&control[key]);
@@ -95,7 +95,7 @@ prev = NULL;
 	for(work = table[key];work != NULL;work = work->next)
 	{
 		// if we find it pull it out of the chain and delete
-		if (strcmp(aHashname,work->hashname) == 0)
+		if (work == aObject)
 		{
 		// if item being deleted is first pull out front of list
 		if (work == table[key]) table[key] = work->next;

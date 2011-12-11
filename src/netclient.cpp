@@ -31,12 +31,12 @@ username = inet_ntoa(netaddr.sin_addr);
 if (username == NULL) username = "xxx.xxx.xxx.xxx";
 sprintf(netname,"%s:%d",username,netaddr.sin_port);
 
-logmessage(LOG_DEBUG,"NETCLIENT CONNECT: %s\n",netname);
+logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT CONNECT: %s\n",netname);
 }
 /*--------------------------------------------------------------------------*/
 NetworkClient::~NetworkClient(void)
 {
-logmessage(LOG_DEBUG,"NETCLIENT GOODBYE: %s\n",netname);
+logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT GOODBYE: %s\n",netname);
 
 // shutdown and close the socket
 shutdown(netsock,SHUT_RDWR);
@@ -73,7 +73,7 @@ find = strstr(querybuff,"\r\n");
 	if (find != NULL)
 	{
 	find[0] = 0;
-	logmessage(LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
+	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
 
 	ret = ProcessRequest();
 	if (ret == 0) return(0);
@@ -92,7 +92,7 @@ return(1);
 /*--------------------------------------------------------------------------*/
 int NetworkClient::ProcessRequest(void)
 {
-HashObject				*local;
+StatusObject	*local;
 
 // first check for all our special queries
 
@@ -114,19 +114,51 @@ HashObject				*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUG OFF") == 0)
+	if (strcasecmp(querybuff,"DEBUGCLIENT OFF") == 0)
 	{
-	logmessage(LOG_NOTICE,"Debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Debug logging has been disabled\r\n");
-	g_debug = 0;
+	logmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n");
+	g_debug&=~CAT_CLIENT;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUG ON") == 0)
+	if (strcasecmp(querybuff,"DEBUGCLIENT ON") == 0)
 	{
-	logmessage(LOG_NOTICE,"Debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Debug logging has been enabled\r\n");
-	g_debug = 1;
+	logmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n");
+	g_debug|=CAT_CLIENT;
+	return(1);
+	}
+
+	if (strcasecmp(querybuff,"DEBUGFILTER OFF") == 0)
+	{
+	logmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n");
+	g_debug&=~CAT_FILTER;
+	return(1);
+	}
+
+	if (strcasecmp(querybuff,"DEBUGFILTER ON") == 0)
+	{
+	logmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n");
+	g_debug|=CAT_FILTER;
+	return(1);
+	}
+
+	if (strcasecmp(querybuff,"DEBUGLOGIC OFF") == 0)
+	{
+	logmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n");
+	g_debug&=~CAT_LOGIC;
+	return(1);
+	}
+
+	if (strcasecmp(querybuff,"DEBUGLOGIC ON") == 0)
+	{
+	logmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n");
+	g_debug|=CAT_LOGIC;
 	return(1);
 	}
 
@@ -140,12 +172,12 @@ if (strcasecmp(querybuff,"EXIT") == 0) return(0);
 if (strcasecmp(querybuff,"QUIT") == 0) return(0);
 
 // not special so use the query string to search the connection hash table
-local = g_conntable->SearchObject(querybuff);
+local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 
 	// if we have a hit return the found result
 	if (local != NULL)
 	{
-	logmessage(LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
+	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
 		local->GetApplication(),
 		local->GetProtochain(),
 		local->GetDetail(),
@@ -166,7 +198,7 @@ local = g_conntable->SearchObject(querybuff);
 	// otherwise return the empty result
 	else
 	{
-	logmessage(LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
+	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
 	replyoff = sprintf(replybuff,"EMPTY: %s\r\n",querybuff);
 	www_misscount++;
 	}
@@ -241,9 +273,14 @@ fprintf(stream,"  Web Hit Count: %d\n",www_hitcount);
 fprintf(stream,"  Web Miss Count: %d\n",www_misscount);
 fprintf(stream,"\n");
 
-// dump everything in the hashtable
-fprintf(stream,"========== HASHTABLE DETAIL ==========\n");
-g_conntable->DumpDetail(stream);
+// dump everything in the status hashtable
+fprintf(stream,"========== CONNECTION STATUS TABLE ==========\n");
+g_statustable->DumpDetail(stream);
+fprintf(stream,"\n");
+
+// dump everything in the status hashtable
+fprintf(stream,"========== CONNTRACK LOOKUP TABLE ==========\n");
+g_lookuptable->DumpDetail(stream);
 fprintf(stream,"\n");
 
 // dump the vineyard stream error counters
@@ -303,7 +340,7 @@ void NetworkClient::BuildHashStats(void)
 int		count,bytes;
 
 // get the total size of the hash table
-g_conntable->GetTableSize(count,bytes);
+g_statustable->GetTableSize(count,bytes);
 replyoff = sprintf(replybuff,"HASHTABLE COUNT=%d  SIZE=%d\n\n",count,bytes);
 }
 /*--------------------------------------------------------------------------*/
@@ -314,8 +351,9 @@ replyoff = sprintf(replybuff,"========== Untangle CLASSd Help Page ==========\n"
 replyoff+=sprintf(&replybuff[replyoff],"HASHSTATS - display session hash table statistics\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUGINFO - dump low level debug information\n");
 replyoff+=sprintf(&replybuff[replyoff],"PROTOLIST - retrieve the list of recognized protocols\n");
-replyoff+=sprintf(&replybuff[replyoff],"DEBUG ON - enable debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"DEBUG OFF - disable debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"CLIENTDEBUG [OFF | ON ] - disable/enable client debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"FILTERDEBUG [OFF | ON ] - disable/enable filter debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"LOGICDEBUG [OFF | ON ] - disable/enable logic debug logging\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\n");
 replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\n\n");

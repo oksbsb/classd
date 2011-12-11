@@ -17,32 +17,49 @@ is_queue_open()
     t_classd_pid="invalid"
 
     if [ ! -f /proc/net/netfilter/nfnetlink_queue ] ; then
-        echo "[`date`] The nfnetlink_queue does not exist.  Not inserting rules for classd"
+        echo "[`date`] The netfilter nfnetlink_queue does not exist.  Not inserting rules for classd"
         return 1
     fi
 
     t_queue_pid=`awk -v queue=${UNTANGLE_CLASSD_QUEUE_NUM} '{ if ( $1 == queue ) print $2 }' /proc/net/netfilter/nfnetlink_queue`
 
     if [ -z "${t_queue_pid}" ]; then
-        echo "[`date`] The classd nfnetlink_queue is not open.  Not inserting rules for classd"
+        echo "[`date`] The classd netfilter queue is not open.  Not inserting rules for classd"
         return 1
     fi
 
     t_classd_pid=${t_queue_pid}
 
-    grep -q classd /proc/${t_classd_pid}/cmdline 2>| /dev/null || return 1
+    t_classd_cmd=`grep -c classd /proc/${t_classd_pid}/cmdline 2>| /dev/null`
+
+    if [ $((t_classd_cmd)) -eq 0 ]; then
+        echo "[`date`] Something other than classd seems to own the queue"
+    fi
 
     return 0
 }
 
 insert_classd_iptables_rules()
 {
-    # Only capture traffic coming from non-WAN interfaces
-    # Insert one rule for each non-WAN
+    TABLE_NAME=mangle
 
-    /usr/share/untangle-net-alpaca/scripts/uvm/netConfig.py non_wan | while read net ; do
-        ${IPTABLES} -i ${net} -t mangle -A PREROUTING -j NFQUEUE --queue-num ${UNTANGLE_CLASSD_QUEUE_NUM}
-    done
+    # create and flush a new chain for our traffic
+    ${IPTABLES} -t ${TABLE_NAME} -N untangle-classd
+    ${IPTABLES} -t ${TABLE_NAME} -F untangle-classd
+
+    # we don't care about traffic to or from loopback addresses
+    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -s 127.0.0.0/8 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -d 127.0.0.0/8 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -s 192.168.222.2 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -d 192.168.222.2 -j RETURN
+
+    # all other traffic will be handed off to our netfilter queue
+    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -j NFQUEUE --queue-num ${UNTANGLE_CLASSD_QUEUE_NUM}
+
+    # insert rules to dump traffic into our new chain
+    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -j untangle-classd
+    ${IPTABLES} -t ${TABLE_NAME} -A POSTROUTING -m mark --mark 0x00000000/0x02000000 -j untangle-classd
+
     return 0
 }
 
@@ -54,6 +71,7 @@ fi
 ## If the queue is open generate the new rules
 is_queue_open && {
     insert_classd_iptables_rules
+    echo "[`date`] The classd daemon rules have been created"
 }
 
 true
