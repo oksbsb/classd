@@ -114,7 +114,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGCLIENT OFF") == 0)
+	if (strcasecmp(querybuff,"CLIENT OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n");
@@ -122,7 +122,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGCLIENT ON") == 0)
+	if (strcasecmp(querybuff,"CLIENT ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n");
@@ -130,7 +130,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGFILTER OFF") == 0)
+	if (strcasecmp(querybuff,"FILTER OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n");
@@ -138,7 +138,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGFILTER ON") == 0)
+	if (strcasecmp(querybuff,"FILTER ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n");
@@ -146,7 +146,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGLOGIC OFF") == 0)
+	if (strcasecmp(querybuff,"LOGIC OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n");
@@ -154,7 +154,7 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"DEBUGLOGIC ON") == 0)
+	if (strcasecmp(querybuff,"LOGIC ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n");
@@ -271,6 +271,7 @@ fprintf(stream,"  Build: %s\n",BUILDID);
 fprintf(stream,"  Report Date: %s\n",work);
 fprintf(stream,"  Web Hit Count: %d\n",www_hitcount);
 fprintf(stream,"  Web Miss Count: %d\n",www_misscount);
+fprintf(stream,"  Debug Level: %04X\n",g_debug);
 fprintf(stream,"\n");
 
 // dump everything in the status hashtable
@@ -351,9 +352,9 @@ replyoff = sprintf(replybuff,"========== Untangle CLASSd Help Page ==========\n"
 replyoff+=sprintf(&replybuff[replyoff],"HASHSTATS - display session hash table statistics\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUGINFO - dump low level debug information\n");
 replyoff+=sprintf(&replybuff[replyoff],"PROTOLIST - retrieve the list of recognized protocols\n");
-replyoff+=sprintf(&replybuff[replyoff],"CLIENTDEBUG [OFF | ON ] - disable/enable client debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"FILTERDEBUG [OFF | ON ] - disable/enable filter debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"LOGICDEBUG [OFF | ON ] - disable/enable logic debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"CLIENT [ON | OFF ] - enable/disable client debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"FILTER [ON | OFF ] - enable/disable filter debug logging\n");
+replyoff+=sprintf(&replybuff[replyoff],"LOGIC [ON | OFF ] - enable/disable logic debug logging\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\n");
 replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\n\n");

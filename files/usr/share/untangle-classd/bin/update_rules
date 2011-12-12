@@ -53,6 +53,8 @@ insert_classd_iptables_rules()
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.2 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.2 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.6 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.6 -j RETURN
 
     # all other traffic will be handed off to our netfilter queue
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
