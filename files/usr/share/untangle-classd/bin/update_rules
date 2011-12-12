@@ -57,8 +57,9 @@ insert_classd_iptables_rules()
     ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -j NFQUEUE --queue-num ${UNTANGLE_CLASSD_QUEUE_NUM}
 
     # insert rules to dump traffic into our new chain
-    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -j untangle-classd
-    ${IPTABLES} -t ${TABLE_NAME} -A POSTROUTING -m mark --mark 0x00000000/0x02000000 -j untangle-classd
+    # skip anything that has the NOTRACK or BYPASS flags set in the mark
+    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -m mark --mark 0x00000000/0x03000000 -j untangle-classd
+    ${IPTABLES} -t ${TABLE_NAME} -A OUTPUT -m mark --mark 0x00000000/0x03000000 -j untangle-classd
 
     return 0
 }

@@ -46,7 +46,7 @@ daddr.s_addr = orig_daddr;
 strcpy(srcname,inet_ntoa(saddr));
 strcpy(dstname,inet_ntoa(daddr));
 
-snprintf(target,maxlen,"%s [%s:%u-%s:%u]",GetHashname(),srcname,ntohs(orig_sport),dstname,ntohs(orig_dport));
+snprintf(target,maxlen,"%s [%s:%u-%s:%u]",GetHashname(),dstname,ntohs(orig_dport),srcname,ntohs(orig_sport));
 }
 /*--------------------------------------------------------------------------*/
 

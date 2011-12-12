@@ -57,8 +57,6 @@ const char		*pname;
 char			srcname[32];
 char			dstname[32];
 
-//if (len == 0) return(0);
-
 saddr.s_addr = htonl(src_addr);
 daddr.s_addr = htonl(dst_addr);
 strcpy(srcname,inet_ntoa(saddr));
@@ -69,6 +67,9 @@ else if (ip_proto == IPPROTO_UDP) pname = "UDP";
 else pname = "XXX";
 
 logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD (%d) = %s-%s:%u-%s:%u\n",len,pname,srcname,src_port,dstname,dst_port);
+
+// don't bother passing zero length packets to vineyard
+if (len == 0) return(0);
 
 return(navl_conn_classify(src_addr,src_port,dst_addr,dst_port,ip_proto,conn,data,len,callback,arg));
 }
@@ -304,13 +305,6 @@ iphead = (iphdr *)pkt;
 // ignore everything except IPv4
 if (iphead->version != 4) return(0);
 
-
-
-// TODO remove this
-if (iphead->protocol == IPPROTO_UDP) return(0);
-
-
-
 // we only care about TCP and UDP
 if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
 
@@ -409,20 +403,38 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
 	sport = ntohs(lookup->GetSport());
 	dport = ntohs(lookup->GetDport());
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
 
-	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN FWD %s\n",worker);
+	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
+	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN FWD FWD %s\n",worker);
 	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
-		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN FWD %s\n",namestr);
+		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",namestr);
 		dpistate = status->GetTracker();
 
 		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
 			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
+			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+
+		return(0);
+		}
+
+	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
+	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN FWD REV %s\n",worker);
+	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+
+		// found so update the ipheader and forward to vineyard
+		if (status != NULL)
+		{
+		status->GetObjectString(namestr,sizeof(namestr));
+		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN FWD REV %s\n",namestr);
+		dpistate = status->GetTracker();
+
+		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
+			ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
 			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
 
 		return(0);
@@ -443,16 +455,34 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
 	sport = ntohs(lookup->GetSport());
 	dport = ntohs(lookup->GetDport());
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
 
-	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN REV %s\n",worker);
+	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
+	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN REV FWD %s\n",worker);
 	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
-		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN REV %s\n",namestr);
+		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN REV FWD %s\n",namestr);
+		dpistate = status->GetTracker();
+
+		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
+			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
+			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+
+		return(0);
+		}
+
+	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
+	logmessage(CAT_FILTER,LOG_DEBUG,"SEARCH CONN REV REV %s\n",worker);
+	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+
+		// found so update the ipheader and forward to vineyard
+		if (status != NULL)
+		{
+		status->GetObjectString(namestr,sizeof(namestr));
+		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN REV REV %s\n",namestr);
 		dpistate = status->GetTracker();
 
 		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
@@ -463,7 +493,8 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		}
 	}
 
-// allocate a new vineyard connection tracker
+// didn't find an existing status object so we handle as a new
+// session by first creating a new vineyard connection object
 ret = navl_conn_init(ntohl(iphead->saddr),ntohs(xxphead->source),
 	ntohl(iphead->daddr),ntohs(xxphead->dest),iphead->protocol,&dpistate);
 
@@ -473,8 +504,8 @@ ret = navl_conn_init(ntohl(iphead->saddr),ntohs(xxphead->source),
 	return(0);
 	}
 
-// didn't find an existing status object so we'll create a new
-// one based on the forward hashname and pass to vineyard
+// create a new status object based on the forward hashname
+// insert in the status table and pass the data to vineyard
 logmessage(CAT_FILTER,LOG_DEBUG,"STATUS INSERT %s\n",forward);
 status = new StatusObject(iphead->protocol,forward,dpistate);
 ret = g_statustable->InsertObject(status);

@@ -17,6 +17,8 @@ detail = NULL;
 
 confidence = 0;
 state = 0;
+
+upcount = 0;
 }
 /*--------------------------------------------------------------------------*/
 StatusObject::~StatusObject(void)
@@ -45,6 +47,8 @@ strcpy(detail,aDetail);
 
 confidence = aConfidence;
 state = aState;
+
+upcount++;
 }
 /*--------------------------------------------------------------------------*/
 int StatusObject::GetObjectSize(void)

@@ -175,7 +175,7 @@ if (strcasecmp(querybuff,"QUIT") == 0) return(0);
 local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 
 	// if we have a hit return the found result
-	if (local != NULL)
+	if ((local != NULL) && (local->IsActive() != 0))
 	{
 	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
 		local->GetApplication(),

@@ -1,6 +1,6 @@
 // INIFILE.H
 // Configuration File Management Class
-// Copyright (c) 1989-2010 InterSafe, Inc.
+// Copyright (c) 1989-2011 InterSafe, Inc.
 // Written by Michael A. Hotz
 
 /*--------------------------------------------------------------------------*/

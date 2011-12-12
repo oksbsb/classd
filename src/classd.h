@@ -150,6 +150,8 @@ public:
 	inline short GetState(void)				{ return(state); }
 	inline void *GetTracker(void)			{ return(tracker); }
 
+	inline int IsActive(void)				{ return(upcount); }
+
 private:
 
 	int GetObjectSize(void);
@@ -160,6 +162,7 @@ private:
 	char					*application;
 	char					*protochain;
 	char					*detail;
+	int						upcount;
 };
 /*--------------------------------------------------------------------------*/
 class LookupObject : public HashObject
