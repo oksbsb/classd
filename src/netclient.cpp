@@ -59,7 +59,7 @@ if (ret == 0) return(0);
 	// and let the server thread know we're done
 	if (ret < 0)
 	{
-	logmessage(LOG_ERR,"Error %d returned from recv(%s)\n",errno,netname);
+	sysmessage(LOG_ERR,"Error %d returned from recv(%s)\n",errno,netname);
 	return(0);
 	}
 
@@ -116,7 +116,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGCLIENT OFF") == 0)
 	{
-	logmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
+	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n");
 	g_debug&=~CAT_CLIENT;
 	return(1);
@@ -124,7 +124,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGCLIENT ON") == 0)
 	{
-	logmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
+	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n");
 	g_debug|=CAT_CLIENT;
 	return(1);
@@ -132,7 +132,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGFILTER OFF") == 0)
 	{
-	logmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
+	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n");
 	g_debug&=~CAT_FILTER;
 	return(1);
@@ -140,7 +140,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGFILTER ON") == 0)
 	{
-	logmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
+	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n");
 	g_debug|=CAT_FILTER;
 	return(1);
@@ -148,7 +148,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGLOGIC OFF") == 0)
 	{
-	logmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
+	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n");
 	g_debug&=~CAT_LOGIC;
 	return(1);
@@ -156,7 +156,7 @@ StatusObject	*local;
 
 	if (strcasecmp(querybuff,"DEBUGLOGIC ON") == 0)
 	{
-	logmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
+	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n");
 	g_debug|=CAT_LOGIC;
 	return(1);
@@ -234,7 +234,7 @@ offset = 0;
 		if (ret == -1)
 		{
 		if (errno == EWOULDBLOCK) continue;
-		logmessage(LOG_ERR,"Error %d returned from send(%s)\n",errno,netname);
+		sysmessage(LOG_ERR,"Error %d returned from send(%s)\n",errno,netname);
 		return(0);
 		}
 

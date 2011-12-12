@@ -1,16 +1,53 @@
-## --------------------------------------------------
-## NOTE: All of the reall cool configuration stuff
-## is located in /etc/untangle-classd.conf
-## --------------------------------------------------
+## ------------------------------------------------------------
+## This file is read by both the classd daemon and all of the
+## supporting script files so try not to do anything stupid 
+## that might break the scripts or the app parsing logic.
+## ------------------------------------------------------------
 
-## Path to the classd binary.
+## Directory where the classd log files are created
+#CLASSD_LOG_PATH=/var/log/untangle-classd
+
+## Name of the main classd log file
+#CLASSD_LOG_FILE=/var/log/untangle-classd/classd.log
+
+## Directory for temporary files used mainly when debug info is
+## requested via the client interface so they won't be large
+#CLASSD_TEMP_PATH=/dev/shm
+
+## Directory where the vineyard navl library plugins are located
+#CLASSD_PLUGIN_PATH=/usr/share/untangle-classd/plugins
+
+## Number of hash buckets for the status and lookup tables
+## This needs to be a prime number at least as large as the total number
+## number of TCP and UDP sessions expected to be active at any given time
+#CLASSD_HASH_BUCKETS=99991
+
+## Maximum connection count value passed in the call to navl_open
+#CLASSD_MAX_FLOWS=8192
+
+## Flag to enable IP fragment processing in the navl library
+#CLASSD_IP_DEFRAG=1
+
+## Sets the timeou for TCP sessions
+#CLASSD_TCP_TIMEOUT=3600
+
+## Sets the timeout for UDP sessions
+#CLASSD_UDP_TIMEOUT=300
+
+## Sets the port where classd listens for connections
+## from classification clients
+#CLASSD_CLIENT_PORT=8123
+
+## Network filter queue the daemon should use
+#CLASSD_QUEUE_NUM=1967
+
+## Path to the classd binary
 # CLASSD_BIN=/usr/bin/classd
 
-## Network filter queue where we listen but only used by
-## the update rules script to see if daemon is running.
-## To change the actual queue used modify the .conf file
-#UNTANGLE_CLASSD_QUEUE_NUM=1967
-
-## Addition flags to pass on the command line
-## Use -d to enable debug log messages
+## Additional flags to pass on the command line
+## Use -d to enable all debug log messages or
+## you can use a mix of the following bit values
+## -d1 = application logic
+## -d2 = client/server requests from the uvm
+## -d4 = packet processing and classification
 CLASSD_FLAGS=-d

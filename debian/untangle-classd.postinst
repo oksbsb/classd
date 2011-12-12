@@ -1,15 +1,15 @@
 #!/bin/bash
 
-LOG_FILE=/var/log/untangle-classd/classd.log
-UNTANGLE_CLASSD_QUEUE_NUM=1967
+CLASSD_LOG_FILE=/var/log/untangle-classd/classd.log
+CLASSD_QUEUE_NUM=1967
 
 if [ -f /etc/default/untangle-classd ]; then
     . /etc/default/untangle-classd
 fi
 
--mkdir -p `dirname ${LOG_FILE}`
+-mkdir -p `dirname ${CLASSD_LOG_FILE}`
 
-echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
+echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${CLASSD_LOG_FILE}
 
 # restart (or start) the daemon
 if [ -x "/etc/init.d/untangle-classd" ]; then

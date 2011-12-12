@@ -78,8 +78,8 @@ signal(SIGFPE,sighandler);
 // grab the profile itimer value for thread profiling support
 getitimer(ITIMER_PROF,&g_itimer);
 
-logmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
-if (g_console != 0) logmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
+sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
+if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 
 // allocate our status and lookup hashtables
 g_statustable = new HashTable(cfg_hash_buckets);
@@ -94,7 +94,7 @@ ret = pthread_create(&g_netfilter_tid,NULL,netfilter_thread,NULL);
 
 	if (ret != 0)
 	{
-	logmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
+	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
 	g_shutdown = 1;
 	}
 
@@ -150,7 +150,7 @@ delete(g_netserver);
 delete(g_statustable);
 delete(g_lookuptable);
 
-logmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
+sysmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 
 	if (g_console == 0)
 	{
@@ -232,12 +232,10 @@ va_end(args);
 rawmessage(priority,message);
 }
 /*--------------------------------------------------------------------------*/
-void logmessage(int priority,const char *format,...)
+void sysmessage(int priority,const char *format,...)
 {
 va_list			args;
 char			message[1024];
-
-if ((priority == LOG_DEBUG) && (g_debug == 0)) return;
 
 va_start(args,format);
 vsnprintf(message,sizeof(message),format,args);
@@ -328,7 +326,7 @@ fflush(g_logfile);
 /*--------------------------------------------------------------------------*/
 void logproblem(Problem *aProblem)
 {
-logmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",aProblem->string,aProblem->value);
+sysmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",aProblem->string,aProblem->value);
 delete(aProblem);
 }
 /*--------------------------------------------------------------------------*/
@@ -368,46 +366,124 @@ return(dest);
 /*--------------------------------------------------------------------------*/
 void load_configuration(void)
 {
-INIFile		*ini = NULL;
-char		dotfile[256];
-char		etcfile[256];
+FILE		*cfg;
+char		**filedata;
+char		*check;
+char		work[1024];
+int			total,len,x;
 
-sprintf(dotfile,"./%s",g_cfgfile);
-sprintf(etcfile,"/etc/%s",g_cfgfile);
+// open the config file
+cfg = fopen("/etc/default/untangle-classd","r");
+if (cfg == NULL) return;
 
-	if (access(dotfile,R_OK) == 0)
+// allocate an array of pointers to hold each line
+filedata = (char **)calloc(1024,sizeof(char *));
+total = 0;
+
+	// grab all the data from the config file
+	for(;;)
 	{
-	printf("[ CLASSD ] Using %s for configuration\n",dotfile);
-	ini = new INIFile(dotfile);
+	check = fgets(work,sizeof(work),cfg);
+	if (check == NULL) break;
+
+	// ignore lines that start with hash or space
+	if (check[0] == '#') continue;
+	if (isspace(check[0])) continue;
+
+	// allocate some memory and save the line
+	len = strlen(work);
+	filedata[total] = (char *)malloc(len + 1);
+	strcpy(filedata[total],work);
+	total++;
 	}
 
-	else if (access(etcfile,R_OK) == 0)
+fclose(cfg);
+
+grab_config_item(filedata,"CLASSD_LOG_PATH",cfg_log_path,sizeof(cfg_log_path),"/var/log/untangle-classd");
+grab_config_item(filedata,"CLASSD_LOG_FILE",cfg_log_file,sizeof(cfg_log_file),"/var/log/untangle-classd/classd.log");
+grab_config_item(filedata,"CLASSD_TEMP_PATH",cfg_temp_path,sizeof(cfg_temp_path),"/dev/shm");
+grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_plugins),"/usr/share/untangle-classd/plugins");
+
+grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
+cfg_hash_buckets = atoi(work);
+
+grab_config_item(filedata,"CLASSD_MAX_FLOWS",work,sizeof(work),"8192");
+cfg_navl_flows = atoi(work);
+
+grab_config_item(filedata,"CLASSD_IP_DEFRAG",work,sizeof(work),"1");
+cfg_navl_defrag = atoi(work);
+
+grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"3600");
+cfg_tcp_timeout = atoi(work);
+
+grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"300");
+cfg_udp_timeout = atoi(work);
+
+grab_config_item(filedata,"CLASSD_CLIENT_PORT",work,sizeof(work),"8123");
+cfg_client_port = atoi(work);
+
+grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
+cfg_net_queue = atoi(work);
+
+for(x = 0;x < total;x++) free(filedata[x]);
+free(filedata);
+}
+/*--------------------------------------------------------------------------*/
+const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init)
+{
+char		worker[1024];
+char		lookup[256];
+char		*find;
+int			len,x;
+
+if (target == NULL) abort();
+
+// start with the default value in target
+if (init != NULL) strcpy(target,init);
+else target[0] = 0;
+
+// if any args look invalid just return
+if (filedata == NULL) return(target);
+if (search == NULL) return(target);
+if (size < 1) return(target);
+
+// make a complete search string
+len = sprintf(lookup,"%s=",search);
+
+find = NULL;
+
+	for(x = 0;filedata[x] != NULL;x++)
 	{
-	printf("[ CLASSD ] Using %s for configuration ==\n",etcfile);
-	ini = new INIFile(etcfile);
+	find = strcasestr(filedata[x],lookup);
+	if (find == NULL) continue;
+
+	// make a local copy we can play with
+	strcpy(worker,filedata[x]);
+	find = strchr(worker,'=');
+	if (find == NULL) continue;
+	*find++ = 0;
+
+	// ignore if there are any comment characters on left side
+	if (strchr(worker,'#') != NULL) continue;
+	break;
 	}
 
-	else
-	{
-	printf("[ CLASSD ] %s\n","Using default configuration values");
-	ini = new INIFile(etcfile);
-	}
+if (find == NULL) return(target);
 
-ini->GetItem("General","LogPath",cfg_log_path,"/var/log/untangle-classd");
-ini->GetItem("General","LogFile",cfg_log_file,"/var/log/untangle-classd/classd.log");
-ini->GetItem("General","TempPath",cfg_temp_path,"/dev/shm");
-ini->GetItem("General","HashBuckets",cfg_hash_buckets,99991);
+// skip over any leading spaces
+while ((*find != 0) && (isspace(*find) != 0)) find++;
 
-ini->GetItem("Vineyard","PluginPath",cfg_navl_plugins,"/usr/share/untangle-classd/plugins");
-ini->GetItem("Vineyard","Connections",cfg_navl_flows,4096);
-ini->GetItem("Vineyard","Defragment",cfg_navl_defrag,1);
+// copy the value to the target buffer
+strcpy(target,find);
 
-ini->GetItem("Network","TCPTimeout",cfg_tcp_timeout,3600);
-ini->GetItem("Network","UDPTimeout",cfg_udp_timeout,300);
-ini->GetItem("Network","ServerPort",cfg_share_port,8123);
-ini->GetItem("Network","NetfilterQueue",cfg_net_queue,1967);
+// get rid of any trailing space or comment characters
+find = target;
+while ((*find != 0) && (isspace((int)*find) == 0) && (*find != '#')) find++;
 
-delete(ini);
+// set the null terminator at the end of the string
+*find = 0;
+
+return(target);
 }
 /*--------------------------------------------------------------------------*/
 

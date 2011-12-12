@@ -1,11 +1,15 @@
 #!/bin/bash
 
-LOG_PATH=/var/log/untangle-classd
+CLASSD_LOG_PATH=/var/log/untangle-classd
+
+if [ -f /etc/default/untangle-classd ]; then
+    . /etc/default/untangle-classd
+fi
 
 case $1 in
   purge)
     update-rc.d untangle-classd remove
-    rm -f $LOG_PATH/classd.*
+    rm -f $CLASSD_LOG_PATH/classd.*
     ;;
 esac
 

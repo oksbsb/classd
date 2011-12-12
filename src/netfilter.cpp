@@ -11,7 +11,9 @@ int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
 int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
 void netfilter_shutdown(void);
+void vineyard_shutdown(void);
 int netfilter_startup(void);
+int vineyard_startup(void);
 /*--------------------------------------------------------------------------*/
 // vars for all of the protocol and application id values
 static int l_proto_eth = 0;
@@ -38,10 +40,11 @@ static int l_attr_tls_host = 0;
 static int l_attr_http_info = 0;
 
 // vars for netfilter interfaces
-struct nfct_handle *nfcth;
-struct nfq_handle *nfqh;
+struct nfq_q_handle		*nfqqh;
+struct nfct_handle		*nfcth;
+struct nfq_handle		*nfqh;
 /*--------------------------------------------------------------------------*/
-int	navl_conn_classify_debug(unsigned int src_addr,
+void navl_conn_classify_debug(unsigned int src_addr,
 	unsigned short src_port,
 	unsigned int dst_addr,
 	unsigned short dst_port,
@@ -69,50 +72,39 @@ else pname = "XXX";
 logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD (%d) = %s-%s:%u-%s:%u\n",len,pname,srcname,src_port,dstname,dst_port);
 
 // don't bother passing zero length packets to vineyard
-if (len == 0) return(0);
+if (len == 0) return;
 
-return(navl_conn_classify(src_addr,src_port,dst_addr,dst_port,ip_proto,conn,data,len,callback,arg));
+navl_conn_classify(src_addr,src_port,dst_addr,dst_port,ip_proto,conn,data,len,callback,arg);
 }
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
-struct nfq_q_handle		*qh;
 struct pollfd			pollinfo;
 char					buffer[2048];
 int						fd,ret;
 
-logmessage(LOG_INFO,"The netfilter thread is starting\n");
+sysmessage(LOG_INFO,"The netfilter thread is starting\n");
 
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
 
-// call the main startup function
+// call our vineyard startup function
+ret = vineyard_startup();
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from vineyard_startup()\n",ret);
+	g_shutdown = 1;
+	return(NULL);
+	}
+
+// call our netfilter startup function
 ret = netfilter_startup();
 
 	if (ret != 0)
 	{
-	logmessage(LOG_ERR,"Error %d returned from netfilter_startup()\n",ret);
-	g_shutdown = 1;
-	return(NULL);
-	}
-
-// create a new queue handler
-qh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
-
-	if (qh == 0)
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_create_queue(%u)\n",cfg_net_queue);
-	g_shutdown = 1;
-	return(NULL);
-	}
-
-// set the queue data copy mode
-ret = nfq_set_mode(qh,NFQNL_COPY_PACKET,0xFFFF);
-
-	if (ret < 0)
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_set_mode(NFQNL_COPY_PACKET)\n");
+	sysmessage(LOG_ERR,"Error %d returned from netfilter_startup()\n",ret);
 	g_shutdown = 1;
 	return(NULL);
 	}
@@ -134,7 +126,7 @@ fd = nfnl_fd(nfq_nfnlh(nfqh));
 
 		if ((ret < 0) && (errno != EINTR))
 		{
-		logmessage(LOG_ERR,"Error %d (%s) returned from poll()\n",errno,strerror(errno));
+		sysmessage(LOG_ERR,"Error %d (%s) returned from poll()\n",errno,strerror(errno));
 		break;
 		}
 
@@ -144,25 +136,25 @@ fd = nfnl_fd(nfq_nfnlh(nfqh));
 		if (ret == -1)
 		{
 		if (errno == EAGAIN || errno == EINTR || errno == ENOBUFS) continue;
-		logmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
+		sysmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
 		break;
 		}
 
 		else if (ret == 0)
 		{
-		logmessage(LOG_ERR,"The nfq socket was unexpectedly closed\n");
+		sysmessage(LOG_ERR,"The nfq socket was unexpectedly closed\n");
 		g_shutdown = 1;
 		break;
 		}
 	}
 
-// destroy the netfilter queue
-nfq_destroy_queue(qh);
-
-// call the main shutdown function
+// call our netfilter shutdown function
 netfilter_shutdown();
 
-logmessage(LOG_INFO,"The netfilter thread has terminated\n");
+// call our vineyard shutdown function
+vineyard_shutdown();
+
+sysmessage(LOG_INFO,"The netfilter thread has terminated\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -268,7 +260,7 @@ StatusObject					*status;
 LookupObject					*lookup;
 uint32_t						saddr,daddr;
 uint16_t						sport,dport;
-unsigned char					*rawptr;
+unsigned char					*navpkt;
 unsigned char					*pkt;
 struct xxphdr					*xxphead;
 struct tcphdr					*tcphead;
@@ -283,7 +275,10 @@ char							forward[64];
 char							reverse[64];
 char							worker[64];
 int								len,ret,off;
-int								rawlen;
+int								navlen;
+
+navpkt = NULL;
+navlen = 0;
 
 // first set the accept verdict on the packet
 hdr = nfq_get_msg_packet_hdr(nfad);
@@ -295,7 +290,7 @@ len = nfq_get_payload(nfad,(char **)&pkt);
 	// ignore packets with invalid length
 	if (len < (int)sizeof(struct iphdr))
 	{
-	logmessage(LOG_WARNING,"Invalid length %d received\n",len);
+	sysmessage(LOG_WARNING,"Invalid length %d received\n",len);
 	return(0);
 	}
 
@@ -316,16 +311,16 @@ xxphead = (struct xxphdr *)&pkt[iphead->ihl << 2];
 	if (iphead->protocol == IPPROTO_TCP)
 	{
 	off = ((iphead->ihl << 2) + (tcphead->doff << 2));
-	rawptr = &pkt[off];
-	rawlen = (len - off);
+	navpkt = &pkt[off];
+	navlen = (len - off);
 	pname = "TCP";
 	}
 
 	if (iphead->protocol == IPPROTO_UDP)
 	{
 	off = ((iphead->ihl << 2) + sizeof(struct udphdr));
-	rawptr = &pkt[off];
-	rawlen = (len - off);
+	navpkt = &pkt[off];
+	navlen = (len - off);
 	pname = "UDP";
 	}
 
@@ -365,7 +360,7 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(forward));
 
 	navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
 		ntohl(iphead->daddr),ntohs(xxphead->dest),
-		iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+		iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 	return(0);
 	}
@@ -384,7 +379,7 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(reverse));
 
 	navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
 		ntohl(iphead->daddr),ntohs(xxphead->dest),
-		iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+		iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 	return(0);
 	}
@@ -417,7 +412,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 
 		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
 			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 		return(0);
 		}
@@ -435,7 +430,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 
 		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
 			ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 		return(0);
 		}
@@ -469,7 +464,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 
 		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
 			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 		return(0);
 		}
@@ -487,7 +482,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 
 		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
 			ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			iphead->protocol,dpistate,rawptr,rawlen,navl_callback,status);
+			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
 
 		return(0);
 		}
@@ -500,7 +495,7 @@ ret = navl_conn_init(ntohl(iphead->saddr),ntohs(xxphead->source),
 
 	if (ret != 0)
 	{
-	logmessage(LOG_WARNING,"Error returned from navl_conn_init()\n");
+	sysmessage(LOG_WARNING,"Error returned from navl_conn_init()\n");
 	return(0);
 	}
 
@@ -512,7 +507,7 @@ ret = g_statustable->InsertObject(status);
 
 navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
 	ntohl(iphead->daddr),ntohs(xxphead->dest),iphead->protocol,
-	dpistate,rawptr,rawlen,navl_callback,status);
+	dpistate,navpkt,navlen,navl_callback,status);
 
 return(0);
 }
@@ -537,7 +532,7 @@ repl_proto = nfct_get_attr_u8(ct,ATTR_REPL_L4PROTO);
 
 	if (orig_proto != repl_proto)
 	{
-	logmessage(LOG_WARNING,"Protocol mismatch %d != %d in conntrack handler\n",orig_proto,repl_proto);
+	sysmessage(LOG_WARNING,"Protocol mismatch %d != %d in conntrack handler\n",orig_proto,repl_proto);
 	return(NFCT_CB_CONTINUE);
 	}
 
@@ -586,9 +581,100 @@ return(NFCT_CB_CONTINUE);
 /*--------------------------------------------------------------------------*/
 int netfilter_startup(void)
 {
+int		ret;
+
+//open a new netfilter queue handler
+nfqh = nfq_open();
+
+	if (nfqh == NULL)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_open()\n");
+	g_shutdown = 1;
+	return(1);
+	}
+
+// unbind any existing queue handler
+ret = nfq_unbind_pf(nfqh,AF_INET);
+
+	if (ret < 0)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_unbind_pf()\n");
+	g_shutdown = 1;
+	return(2);
+	}
+
+// bind the queue handler for AF_INET
+ret = nfq_bind_pf(nfqh,AF_INET);
+
+	if (ret < 0)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_bind_pf(lan)\n");
+	g_shutdown = 1;
+	return(3);
+	}
+
+// create a new netfilter queue
+nfqqh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
+
+	if (nfqqh == 0)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_create_queue(%u)\n",cfg_net_queue);
+	g_shutdown = 1;
+	return(4);
+	}
+
+// set the queue data copy mode
+ret = nfq_set_mode(nfqqh,NFQNL_COPY_PACKET,0xFFFF);
+
+	if (ret < 0)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_set_mode(NFQNL_COPY_PACKET)\n");
+	g_shutdown = 1;
+	return(5);
+	}
+
+// open a conntrack netlink handler
+nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
+
+	if (nfcth == NULL)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
+	g_shutdown = 1;
+	return(6);
+	}
+
+// register the conntrack callback
+ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
+	g_shutdown = 1;
+	return(7);
+	}
+
+return(0);
+}
+/*--------------------------------------------------------------------------*/
+void netfilter_shutdown(void)
+{
+// unregister the callback handler
+nfct_callback_unregister(nfcth);
+
+// close the conntrack netlink handler
+nfct_close(nfcth);
+
+// destroy the netfilter queue
+nfq_destroy_queue(nfqqh);
+
+// shut down the netfilter queue handler
+nfq_close(nfqh);
+}
+/*--------------------------------------------------------------------------*/
+int vineyard_startup(void)
+{
 char	buffer[1024];
 int		marker = 0;
-int		ret;
 
 /*
 ** The goofy marker math at the beginning of each line just gives us
@@ -601,6 +687,9 @@ if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(ma
 
 // set the vineyard log level
 if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);
+
+// perpetual classification should catch on-the-fly content type changes
+if ((++marker) && (navl_command("classification http persistence set","0",buffer,sizeof(buffer)) != 0)) return(marker);
 
 // disable all connection management in vineyard
 if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,0) != 0)) return(marker);
@@ -633,73 +722,11 @@ if ((++marker) && ((l_attr_fbook_app = navl_attr("facebook.app",1)) < 1)) return
 if ((++marker) && ((l_attr_tls_host = navl_attr("tls.host",1)) < 1)) return(marker);
 if ((++marker) && ((l_attr_http_info = navl_attr("http.response.content-type",1)) < 1)) return(marker);
 
-// only look at the first http transaction on a persistent http connection
-if ((++marker) && (navl_command("classification http persistence set","1",buffer,sizeof(buffer)) != 0)) return(marker);
-
-// open a conntrack netlink handler
-nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_NONE);
-
-	if ((++marker) && (nfcth == NULL))
-	{
-	logmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
-	g_shutdown = 1;
-	return(marker);
-	}
-
-// register the conntrack callback
-ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
-
-	if ((++marker) && (ret != 0))
-	{
-	logmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
-	g_shutdown = 1;
-	return(marker);
-	}
-
-//open a new netfilter queue handler
-nfqh = nfq_open();
-
-	if ((++marker) && (nfqh == NULL))
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_open()\n");
-	g_shutdown = 1;
-	return(marker);
-	}
-
-// unbind any existing queue handler
-ret = nfq_unbind_pf(nfqh,AF_INET);
-
-	if ((++marker) && (ret < 0))
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_unbind_pf()\n");
-	g_shutdown = 1;
-	return(marker);
-	}
-
-// bind the queue handler for AF_INET
-ret = nfq_bind_pf(nfqh,AF_INET);
-
-	if ((++marker) && (ret < 0))
-	{
-	logmessage(LOG_ERR,"Error returned from nfq_bind_pf(lan)\n");
-	g_shutdown = 1;
-	return(marker);
-	}
-
 return(0);
 }
 /*--------------------------------------------------------------------------*/
-void netfilter_shutdown(void)
+void vineyard_shutdown(void)
 {
-// unregister the callback handler
-nfct_callback_unregister(nfcth);
-
-// shut down the netfilter queue handler
-nfq_close(nfqh);
-
-// close the conntrack netlink handler
-nfct_close(nfcth);
-
 // shut down the vineyard engine
 navl_close();
 }

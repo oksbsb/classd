@@ -34,5 +34,4 @@ extern "C"
 }
 
 #include "vineyard/api/navl.h"
-#include "inifile.h"
 

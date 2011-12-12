@@ -216,10 +216,13 @@ struct xxphdr
 /*--------------------------------------------------------------------------*/
 void hexmessage(int category,int priority,const void *buffer,int size);
 void logmessage(int category,int priority,const char *format,...);
-void logmessage(int priority,const char *format,...);
+void sysmessage(int priority,const char *format,...);
 void rawmessage(int priority,const char *message);
 void logproblem(Problem *aProblem);
+
+const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init);
 void load_configuration(void);
+
 void* netfilter_thread(void *arg);
 void sighandler(int sigval);
 void timestring(char *target);
@@ -254,7 +257,7 @@ DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
-DATALOC int					cfg_share_port;
+DATALOC int					cfg_client_port;
 DATALOC int					cfg_net_queue;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;

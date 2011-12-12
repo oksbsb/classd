@@ -1,6 +1,6 @@
 #!/bin/dash
 
-UNTANGLE_CLASSD_QUEUE_NUM=1967
+CLASSD_QUEUE_NUM=1967
 
 IPTABLES=${IPTABLES:-iptables}
 
@@ -17,14 +17,14 @@ is_queue_open()
     t_classd_pid="invalid"
 
     if [ ! -f /proc/net/netfilter/nfnetlink_queue ] ; then
-        echo "[`date`] The netfilter nfnetlink_queue does not exist.  Not inserting rules for classd"
+        echo "[`date`] The netfilter nfnetlink_queue does not exist - not inserting rules for classd"
         return 1
     fi
 
-    t_queue_pid=`awk -v queue=${UNTANGLE_CLASSD_QUEUE_NUM} '{ if ( $1 == queue ) print $2 }' /proc/net/netfilter/nfnetlink_queue`
+    t_queue_pid=`awk -v queue=${CLASSD_QUEUE_NUM} '{ if ( $1 == queue ) print $2 }' /proc/net/netfilter/nfnetlink_queue`
 
     if [ -z "${t_queue_pid}" ]; then
-        echo "[`date`] The classd netfilter queue is not open.  Not inserting rules for classd"
+        echo "[`date`] The classd netfilter queue is not open - not inserting rules for classd"
         return 1
     fi
 
@@ -42,24 +42,26 @@ is_queue_open()
 insert_classd_iptables_rules()
 {
     TABLE_NAME=mangle
+    CHAIN_NAME=untangle_classd
 
     # create and flush a new chain for our traffic
-    ${IPTABLES} -t ${TABLE_NAME} -N untangle-classd
-    ${IPTABLES} -t ${TABLE_NAME} -F untangle-classd
+    ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME}
+    ${IPTABLES} -t ${TABLE_NAME} -F ${CHAIN_NAME}
 
     # we don't care about traffic to or from loopback addresses
-    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -s 127.0.0.0/8 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -d 127.0.0.0/8 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -s 192.168.222.2 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -d 192.168.222.2 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.2 -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.2 -j RETURN
 
     # all other traffic will be handed off to our netfilter queue
-    ${IPTABLES} -t ${TABLE_NAME} -A untangle-classd -j NFQUEUE --queue-num ${UNTANGLE_CLASSD_QUEUE_NUM}
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
 
-    # insert rules to dump traffic into our new chain
-    # skip anything that has the NOTRACK or BYPASS flags set in the mark
-    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -m mark --mark 0x00000000/0x03000000 -j untangle-classd
-    ${IPTABLES} -t ${TABLE_NAME} -A OUTPUT -m mark --mark 0x00000000/0x03000000 -j untangle-classd
+    # capture all prerouting traffic except stuff with BYPASS or NOTRACK set in the mark
+    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -m mark --mark 0x00000000/0x03000000 -j ${CHAIN_NAME}
+
+    # capture all output traffic except stuff with BYPASS set in the mark
+    ${IPTABLES} -t ${TABLE_NAME} -A OUTPUT -m mark --mark 0x00000000/0x02000000 -j ${CHAIN_NAME}
 
     return 0
 }
