@@ -44,39 +44,6 @@ struct nfq_q_handle		*nfqqh;
 struct nfct_handle		*nfcth;
 struct nfq_handle		*nfqh;
 /*--------------------------------------------------------------------------*/
-void navl_conn_classify_debug(unsigned int src_addr,
-	unsigned short src_port,
-	unsigned int dst_addr,
-	unsigned short dst_port,
-	unsigned char ip_proto,
-	void *conn,
-	const void *data,
-	unsigned short len,
-	navl_callback_t callback,
-	void *arg)
-{
-struct in_addr	saddr,daddr;
-const char		*pname;
-char			srcname[32];
-char			dstname[32];
-
-saddr.s_addr = htonl(src_addr);
-daddr.s_addr = htonl(dst_addr);
-strcpy(srcname,inet_ntoa(saddr));
-strcpy(dstname,inet_ntoa(daddr));
-
-if (ip_proto == IPPROTO_TCP) pname = "TCP";
-else if (ip_proto == IPPROTO_UDP) pname = "UDP";
-else pname = "XXX";
-
-logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD (%d) = %s-%s:%u-%s:%u\n",len,pname,srcname,src_port,dstname,dst_port);
-
-// don't bother passing zero length packets to vineyard
-if (len == 0) return;
-
-navl_conn_classify(src_addr,src_port,dst_addr,dst_port,ip_proto,conn,data,len,callback,arg);
-}
-/*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
 struct pollfd			pollinfo;
@@ -158,6 +125,130 @@ sysmessage(LOG_INFO,"The netfilter thread has terminated\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
+void process_traffic(uint16_t flags,uint8_t ip_proto,
+	uint32_t src_addr,
+	uint16_t src_port,
+	uint32_t dst_addr,
+	uint16_t dst_port,
+	const void *data,
+	unsigned short len,
+	StatusObject *status)
+{
+struct in_addr	saddr,daddr;
+const char		*pname;
+void			*dpistate;
+char			hashname[64];
+char			srcname[32];
+char			dstname[32];
+int				ret;
+
+if (ip_proto == IPPROTO_TCP) pname = "TCP";
+else if (ip_proto == IPPROTO_UDP) pname = "UDP";
+else pname = "XXX";
+
+saddr.s_addr = src_addr;
+daddr.s_addr = dst_addr;
+strcpy(srcname,inet_ntoa(saddr));
+strcpy(dstname,inet_ntoa(daddr));
+
+	// status object is NULL and protocol is UDP so handle as new
+	// session by creating the connection tracking stuff
+	if ((status == NULL) && (ip_proto == IPPROTO_UDP))
+	{
+	ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),
+		ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+
+		if (ret != 0)
+		{
+		sysmessage(LOG_WARNING,"Error %d returned from navl_conn_init()\n",ret);
+		return;
+		}
+
+	// create a new status object and store in status table
+	sprintf(hashname,"%s-%s:%u-%s:%u",pname,srcname,ntohs(src_port),dstname,ntohs(dst_port));
+	status = new StatusObject(hashname,ip_proto,src_addr,src_port,dst_addr,dst_port,dpistate);
+	ret = g_statustable->InsertObject(status);
+
+	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS INSERT %s\n",hashname);
+	}
+
+	// status object is NULL and protocol is TCP so we
+	// look at the flags and decide how to handle
+	if ((status == NULL) && (ip_proto == IPPROTO_TCP))
+	{
+	if ((flags & TCP_SYN) == 0) return;	// must have a syn
+	if ((flags & TCP_ACK) != 0) return; // ack must be clear
+
+	// we have a clean SYN so allocate a new vineyard connection
+	ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),
+		ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+
+		if (ret != 0)
+		{
+		sysmessage(LOG_WARNING,"Error %d returned from navl_conn_init()\n",ret);
+		return;
+		}
+
+	// create a new status object and store in status table
+	sprintf(hashname,"%s-%s:%u-%s:%u",pname,srcname,ntohs(src_port),dstname,ntohs(dst_port));
+	status = new StatusObject(hashname,ip_proto,src_addr,src_port,dst_addr,dst_port,dpistate);
+	ret = g_statustable->InsertObject(status);
+
+	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS INSERT %s\n",hashname);
+	}
+
+// if arg status was empty and we didn't create a new one then we're done
+if (status == NULL) return;
+
+	// if the TCP RST flag is set figure out which side sent it
+	if (flags & TCP_RST)
+	{
+		if ((src_addr == status->clientaddr) && (src_port == status->clientport))
+		{
+		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD CLIENT RST = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+		status->clientfin = 1;
+		}
+
+		if ((src_addr == status->serveraddr) && (src_port == status->serverport))
+		{
+		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD SERVER RST = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+		status->serverfin = 1;
+		}
+    }
+
+	// if the TCP FIN flag is set figure out which side sent it
+	if (flags & TCP_FIN)
+	{
+		if ((src_addr == status->clientaddr) && (src_port == status->clientport))
+		{
+		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD CLIENT FIN = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+		status->clientfin = 1;
+		}
+
+		if ((src_addr == status->serveraddr) && (src_port == status->serverport))
+		{
+		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD SERVER FIN = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+		status->serverfin = 1;
+		}
+    }
+
+	// if the client and server fin flags are set the connection is done
+	if ((status->clientfin != 0) && (status->serverfin != 0))
+	{
+	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS REMOVE = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+	g_statustable->DeleteObject(status);
+	return;
+	}
+
+// don't pass zero length packets to vineyard
+if (len == 0) return;
+
+logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD (%d) = %s-%s:%u-%s:%u\n",len,pname,srcname,src_port,dstname,dst_port);
+
+navl_conn_classify(ntohl(src_addr),ntohs(src_port),ntohl(dst_addr),ntohs(dst_port),
+	ip_proto,status->GetTracker(),data,len,navl_callback,status);
+}
+/*--------------------------------------------------------------------------*/
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error)
 {
 navl_iterator_t					it;
@@ -236,7 +327,7 @@ if (ipproto == 0) return(0);
 	if (state == NAVL_STATE_TERMINATED)
 	{
 	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS REMOVE %s\n",status->GetHashname());
-	ret = g_statustable->DeleteObject(status);
+	g_statustable->DeleteObject(status);
 	return(0);
 	}
 
@@ -260,42 +351,42 @@ StatusObject					*status;
 LookupObject					*lookup;
 uint32_t						saddr,daddr;
 uint16_t						sport,dport;
-unsigned char					*navpkt;
-unsigned char					*pkt;
+uint16_t						flags;
+unsigned char					*rawpkt,*navpkt;
 struct xxphdr					*xxphead;
 struct tcphdr					*tcphead;
 struct udphdr					*udphead;
 struct iphdr					*iphead;
 const char						*pname;
-void							*dpistate;
 char							namestr[256];
 char							sname[32];
 char							dname[32];
 char							forward[64];
 char							reverse[64];
 char							worker[64];
-int								len,ret,off;
-int								navlen;
+int								rawlen,navlen;
+int								ret,off;
 
 navpkt = NULL;
 navlen = 0;
+flags = 0;
 
 // first set the accept verdict on the packet
 hdr = nfq_get_msg_packet_hdr(nfad);
 nfq_set_verdict(qh,(hdr ? ntohl(hdr->packet_id) : 0),NF_ACCEPT,0,NULL);
 
 // get the packet length and data
-len = nfq_get_payload(nfad,(char **)&pkt);
+rawlen = nfq_get_payload(nfad,(char **)&rawpkt);
 
 	// ignore packets with invalid length
-	if (len < (int)sizeof(struct iphdr))
+	if (rawlen < (int)sizeof(struct iphdr))
 	{
-	sysmessage(LOG_WARNING,"Invalid length %d received\n",len);
+	sysmessage(LOG_WARNING,"Invalid length %d received\n",rawlen);
 	return(0);
 	}
 
 // use the iphdr structure for parsing
-iphead = (iphdr *)pkt;
+iphead = (iphdr *)rawpkt;
 
 // ignore everything except IPv4
 if (iphead->version != 4) return(0);
@@ -304,23 +395,28 @@ if (iphead->version != 4) return(0);
 if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
 
 // setup tcp, udp, and a generic header for source and dest ports
-tcphead = (struct tcphdr *)&pkt[iphead->ihl << 2];
-udphead = (struct udphdr *)&pkt[iphead->ihl << 2];
-xxphead = (struct xxphdr *)&pkt[iphead->ihl << 2];
+tcphead = (struct tcphdr *)&rawpkt[iphead->ihl << 2];
+udphead = (struct udphdr *)&rawpkt[iphead->ihl << 2];
+xxphead = (struct xxphdr *)&rawpkt[iphead->ihl << 2];
 
 	if (iphead->protocol == IPPROTO_TCP)
 	{
 	off = ((iphead->ihl << 2) + (tcphead->doff << 2));
-	navpkt = &pkt[off];
-	navlen = (len - off);
+	navpkt = &rawpkt[off];
+	navlen = (rawlen - off);
 	pname = "TCP";
+
+	if (tcphead->rst) flags|=TCP_FIN;
+	if (tcphead->syn) flags|=TCP_SYN;
+	if (tcphead->fin) flags|=TCP_RST;
+	if (tcphead->ack) flags|=TCP_ACK;
 	}
 
 	if (iphead->protocol == IPPROTO_UDP)
 	{
 	off = ((iphead->ihl << 2) + sizeof(struct udphdr));
-	navpkt = &pkt[off];
-	navlen = (len - off);
+	navpkt = &rawpkt[off];
+	navlen = (rawlen - off);
 	pname = "UDP";
 	}
 
@@ -356,11 +452,11 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(forward));
 	{
 	status->GetObjectString(namestr,sizeof(namestr));
 	logmessage(CAT_FILTER,LOG_DEBUG,"FOUND NORM FWD %s\n",namestr);
-	dpistate = status->GetTracker();
 
-	navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
-		ntohl(iphead->daddr),ntohs(xxphead->dest),
-		iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+	process_traffic(flags,iphead->protocol,
+		iphead->saddr,xxphead->source,
+		iphead->daddr,xxphead->dest,
+		navpkt,navlen,status);
 
 	return(0);
 	}
@@ -375,11 +471,11 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(reverse));
 	{
 	status->GetObjectString(namestr,sizeof(namestr));
 	logmessage(CAT_FILTER,LOG_DEBUG,"FOUND NORM REV %s\n",namestr);
-	dpistate = status->GetTracker();
 
-	navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
-		ntohl(iphead->daddr),ntohs(xxphead->dest),
-		iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+	process_traffic(flags,iphead->protocol,
+		iphead->saddr,xxphead->source,
+		iphead->daddr,xxphead->dest,
+		navpkt,navlen,status);
 
 	return(0);
 	}
@@ -408,11 +504,11 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
 		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",namestr);
-		dpistate = status->GetTracker();
 
-		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+		process_traffic(flags,iphead->protocol,
+			lookup->GetDaddr(),lookup->GetDport(),
+			lookup->GetSaddr(),lookup->GetSport(),
+			navpkt,navlen,status);
 
 		return(0);
 		}
@@ -426,11 +522,11 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
 		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN FWD REV %s\n",namestr);
-		dpistate = status->GetTracker();
 
-		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+		process_traffic(flags,iphead->protocol,
+			lookup->GetSaddr(),lookup->GetSport(),
+			lookup->GetDaddr(),lookup->GetDport(),
+			navpkt,navlen,status);
 
 		return(0);
 		}
@@ -460,11 +556,11 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
 		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN REV FWD %s\n",namestr);
-		dpistate = status->GetTracker();
 
-		navl_conn_classify_debug(ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+		process_traffic(flags,iphead->protocol,
+			lookup->GetDaddr(),lookup->GetDport(),
+			lookup->GetSaddr(),lookup->GetSport(),
+			navpkt,navlen,status);
 
 		return(0);
 		}
@@ -478,36 +574,20 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		{
 		status->GetObjectString(namestr,sizeof(namestr));
 		logmessage(CAT_FILTER,LOG_DEBUG,"FOUND CONN REV REV %s\n",namestr);
-		dpistate = status->GetTracker();
 
-		navl_conn_classify_debug(ntohl(lookup->GetSaddr()),ntohs(lookup->GetSport()),
-			ntohl(lookup->GetDaddr()),ntohs(lookup->GetDport()),
-			iphead->protocol,dpistate,navpkt,navlen,navl_callback,status);
+		process_traffic(flags,iphead->protocol,
+			lookup->GetSaddr(),lookup->GetSport(),
+			lookup->GetDaddr(),lookup->GetDport(),
+			navpkt,navlen,status);
 
 		return(0);
 		}
 	}
 
-// didn't find an existing status object so we handle as a new
-// session by first creating a new vineyard connection object
-ret = navl_conn_init(ntohl(iphead->saddr),ntohs(xxphead->source),
-	ntohl(iphead->daddr),ntohs(xxphead->dest),iphead->protocol,&dpistate);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_WARNING,"Error returned from navl_conn_init()\n");
-	return(0);
-	}
-
-// create a new status object based on the forward hashname
-// insert in the status table and pass the data to vineyard
-logmessage(CAT_FILTER,LOG_DEBUG,"STATUS INSERT %s\n",forward);
-status = new StatusObject(iphead->protocol,forward,dpistate);
-ret = g_statustable->InsertObject(status);
-
-navl_conn_classify_debug(ntohl(iphead->saddr),ntohs(xxphead->source),
-	ntohl(iphead->daddr),ntohs(xxphead->dest),iphead->protocol,
-	dpistate,navpkt,navlen,navl_callback,status);
+process_traffic(flags,iphead->protocol,
+	iphead->saddr,xxphead->source,
+	iphead->daddr,xxphead->dest,
+	navpkt,navlen,NULL);
 
 return(0);
 }

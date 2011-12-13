@@ -13,9 +13,18 @@
 #endif
 
 /*--------------------------------------------------------------------------*/
-const unsigned CAT_LOGIC = 0x0001;
-const unsigned CAT_CLIENT = 0x0002;
-const unsigned CAT_FILTER = 0x0004;
+const unsigned short TCP_FIN = 0x01;
+const unsigned short TCP_SYN = 0x02;
+const unsigned short TCP_RST = 0x04;
+const unsigned short TCP_PSH = 0x08;
+const unsigned short TCP_ACK = 0x10;
+const unsigned short TCP_URG = 0x20;
+const unsigned short TCP_ECN = 0x40;
+const unsigned short TCP_CWR = 0x80;
+
+const unsigned int CAT_LOGIC  = 0x00000001;
+const unsigned int CAT_CLIENT = 0x00000002;
+const unsigned int CAT_FILTER = 0x00000004;
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
 class NetworkClient;
@@ -108,7 +117,7 @@ friend class HashTable;
 
 public:
 
-	HashObject(unsigned short aNetwork,const char *aHashname);
+	HashObject(unsigned short aProto,const char *aHashname);
 	virtual ~HashObject(void);
 
 	virtual void GetObjectString(char *target,int maxlen);
@@ -123,7 +132,7 @@ protected:
 private:
 
 	HashObject				*next;
-	unsigned short			network;
+	unsigned short			netproto;
 	time_t					timestamp;
 	char					*hashname;
 };
@@ -132,7 +141,14 @@ class StatusObject : public HashObject
 {
 public:
 
-	StatusObject(unsigned short aNetwork,const char *aHashname,void *aTracker);
+	StatusObject(const char *aHashname,
+		uint8_t aNetProto,
+		uint32_t aClientAddr,
+		uint16_t aClientPort,
+		uint32_t aServerAddr,
+		uint16_t aServerPort,
+		void *aTracker);
+
 	virtual ~StatusObject(void);
 
 	void UpdateObject(const char *aApplication,
@@ -151,6 +167,15 @@ public:
 	inline void *GetTracker(void)			{ return(tracker); }
 
 	inline int IsActive(void)				{ return(upcount); }
+
+	uint8_t					netproto;
+	uint32_t				clientaddr;
+	uint16_t				clientport;
+	uint32_t				serveraddr;
+	uint16_t				serverport;
+
+	unsigned short			clientfin;
+	unsigned short			serverfin;
 
 private:
 

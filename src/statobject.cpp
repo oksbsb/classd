@@ -7,7 +7,13 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-StatusObject::StatusObject(unsigned short aNetwork,const char *aHashname,void *aTracker) : HashObject(aNetwork,aHashname)
+StatusObject::StatusObject(const char *aHashname,
+	uint8_t aNetProto,
+	uint32_t aClientAddr,
+	uint16_t aClientPort,
+	uint32_t aServerAddr,
+	uint16_t aServerPort,
+	void *aTracker) : HashObject(aNetProto,aHashname)
 {
 tracker = aTracker;
 
@@ -19,6 +25,13 @@ confidence = 0;
 state = 0;
 
 upcount = 0;
+
+clientaddr = aClientAddr;
+clientport = aClientPort;
+serveraddr = aServerAddr;
+serverport = aServerPort;
+
+clientfin = serverfin = 0;
 }
 /*--------------------------------------------------------------------------*/
 StatusObject::~StatusObject(void)
@@ -26,6 +39,11 @@ StatusObject::~StatusObject(void)
 if (application != NULL) free(application);
 if (protochain != NULL) free(protochain);
 if (detail != NULL) free(detail);
+
+	if (tracker != NULL)
+	{
+	navl_conn_fini(clientaddr,clientport,serveraddr,serverport,netproto);
+	}
 }
 /*--------------------------------------------------------------------------*/
 void StatusObject::UpdateObject(const char *aApplication,

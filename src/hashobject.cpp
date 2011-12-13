@@ -7,11 +7,11 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-HashObject::HashObject(unsigned short aNetwork,const char *aHashname)
+HashObject::HashObject(unsigned short aProto,const char *aHashname)
 {
 hashname = (char *)malloc(strlen(aHashname)+1);
 strcpy(hashname,aHashname);
-network = aNetwork;
+netproto = aProto;
 
 timestamp = time(NULL);
 next = NULL;

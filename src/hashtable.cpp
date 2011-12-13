@@ -189,14 +189,14 @@ removed = 0;
 		kill = 0;
 
 			// look for stale TCP objects
-			if ((curr->network == IPPROTO_TCP) && ((curr->timestamp + cfg_tcp_timeout) < aStamp))
+			if ((curr->netproto == IPPROTO_TCP) && ((curr->timestamp + cfg_tcp_timeout) < aStamp))
 			{
 			g_tcp_cleanup++;
 			kill++;
 			}
 
 			// look for stale UDP objects
-			if ((curr->network == IPPROTO_UDP) && ((curr->timestamp + cfg_udp_timeout) < aStamp))
+			if ((curr->netproto == IPPROTO_UDP) && ((curr->timestamp + cfg_udp_timeout) < aStamp))
 			{
 			g_udp_cleanup++;
 			kill++;
