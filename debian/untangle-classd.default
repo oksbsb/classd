@@ -50,4 +50,4 @@
 ## -d1 = application logic
 ## -d2 = client/server requests from the uvm
 ## -d4 = packet processing and classification
-CLASSD_FLAGS=-d
+#CLASSD_FLAGS=-d
