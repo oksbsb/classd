@@ -160,7 +160,7 @@ strcpy(dstname,inet_ntoa(daddr));
 
 		if (ret != 0)
 		{
-		sysmessage(LOG_WARNING,"Error %d returned from navl_conn_init()\n",ret);
+		err_conninit++;
 		return;
 		}
 
@@ -185,7 +185,7 @@ strcpy(dstname,inet_ntoa(daddr));
 
 		if (ret != 0)
 		{
-		sysmessage(LOG_WARNING,"Error %d returned from navl_conn_init()\n",ret);
+		err_conninit++;
 		return;
 		}
 

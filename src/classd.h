@@ -284,6 +284,7 @@ DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
 DATALOC int					cfg_client_port;
 DATALOC int					cfg_net_queue;
+DATALOC int					err_conninit;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;
 DATALOC int					err_nobufs;

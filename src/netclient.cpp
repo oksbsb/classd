@@ -291,6 +291,7 @@ fprintf(stream,"  NO FLOW ERRORS ........... %d\n",err_nobufs);
 fprintf(stream,"  NO RESOURCES ERRORS ...... %d\n",err_nosr);
 fprintf(stream,"  NO CONNECTION ERRORS ..... %d\n",err_notconn);
 fprintf(stream,"  UNKNOWN ERRORS ........... %d\n",err_unknown);
+fprintf(stream,"  CONNINIT ERRORS .......... %d\n",err_conninit);
 fprintf(stream,"  TCP CLEANUP COUNT ........ %d\n",g_tcp_cleanup);
 fprintf(stream,"  UDP CLEANUP COUNT ........ %d\n",g_udp_cleanup);
 fprintf(stream,"\n");
