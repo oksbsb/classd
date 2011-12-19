@@ -37,6 +37,7 @@ reap_child()
         wait ${CLASSD_PID}
         echo "[`date`] ClassD Stopped    (monitor: $$) (classd: $CLASSD_PID)"
 
+        # restart iptables to close our netfilter queue
         /etc/init.d/untangle-net-alpaca-iptables restart
     fi
 
@@ -48,6 +49,9 @@ start_classd()
     $CLASSD_BIN -f $CLASSD_FLAGS &
     CLASSD_PID=$!
     echo "[`date`] Started ClassD    (monitor: $$) (classd: $CLASSD_PID)"
+
+    # restart iptables to activate our netfilter queue
+    /etc/init.d/untangle-net-alpaca-iptables restart
 }
 
 trap reap_child_easy INT TERM USR1 USR2 QUIT

@@ -17,6 +17,4 @@ if [ -x "/etc/init.d/untangle-classd" ]; then
     /etc/init.d/untangle-classd restart
 fi
 
-/etc/init.d/untangle-net-alpaca-iptables restart
-
 exit 0
