@@ -42,7 +42,7 @@ is_queue_open()
 insert_classd_iptables_rules()
 {
     TABLE_NAME=mangle
-    CHAIN_NAME=untangle_classd
+    CHAIN_NAME=untangle-classd
 
     # create and flush a new chain for our traffic
     ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME}

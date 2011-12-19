@@ -7,7 +7,7 @@ if [ -f /etc/default/untangle-classd ]; then
     . /etc/default/untangle-classd
 fi
 
--mkdir -p `dirname ${CLASSD_LOG_FILE}`
+mkdir -p `dirname ${CLASSD_LOG_FILE}`
 
 echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${CLASSD_LOG_FILE}
 
