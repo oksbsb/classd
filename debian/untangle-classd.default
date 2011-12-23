@@ -34,6 +34,10 @@
 ## Sets the timeout for UDP sessions
 #CLASSD_UDP_TIMEOUT=300
 
+## Sets the number of HTTP request/response pairs to analyze
+## before giving up.  Can be 1 thru 99 or 0 for unlimited
+#CLASSD_HTTP_LIMIT=0
+
 ## Sets the purge delay for closed sessions
 #CLASSD_PURGE_DELAY=30
 

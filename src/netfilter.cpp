@@ -323,20 +323,16 @@ navl_proto_get_name(appid,application,sizeof(application));
 // us to ignore all other unknown protocol values
 if (ipproto == 0) return(0);
 
+// update the status object with the new information
+status->UpdateObject(application,protochain,detail,confidence,state);
+status->GetObjectString(namestr,sizeof(namestr));
+logmessage(CAT_FILTER,LOG_DEBUG,"STATUS UPDATE %s\n",namestr);
+
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
 	{
 	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS EXPIRE %s\n",status->GetHashname());
 	g_statustable->ExpireObject(status);
-	return(0);
-	}
-
-	else
-	{
-	// update the status object with the new information
-	status->UpdateObject(application,protochain,detail,confidence,state);
-	status->GetObjectString(namestr,sizeof(namestr));
-	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS UPDATE %s\n",namestr);
 	}
 
 // continue tracking the flow
@@ -754,6 +750,7 @@ nfq_close(nfqh);
 int vineyard_startup(void)
 {
 char	buffer[1024];
+char	work[32];
 int		marker = 0;
 
 /*
@@ -768,8 +765,9 @@ if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(ma
 // set the vineyard log level
 if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);
 
-// perpetual classification should catch on-the-fly content type changes
-if ((++marker) && (navl_command("classification http persistence set","0",buffer,sizeof(buffer)) != 0)) return(marker);
+// set the number of of http request+response pairs to analyze before giving up
+sprintf(work,"%d",cfg_http_limit);
+if ((++marker) && (navl_command("classification http persistence set",work,buffer,sizeof(buffer)) != 0)) return(marker);
 
 // disable all connection management in vineyard
 if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,0) != 0)) return(marker);

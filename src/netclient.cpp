@@ -114,10 +114,16 @@ StatusObject	*local;
 	return(1);
 	}
 
+	if (strcasecmp(querybuff,"CONFIG") == 0)
+	{
+	BuildConfiguration();
+	return(1);
+	}
+
 	if (strcasecmp(querybuff,"CLIENT OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n\r\n");
 	g_debug&=~CAT_CLIENT;
 	return(1);
 	}
@@ -125,7 +131,7 @@ StatusObject	*local;
 	if (strcasecmp(querybuff,"CLIENT ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n\r\n");
 	g_debug|=CAT_CLIENT;
 	return(1);
 	}
@@ -133,7 +139,7 @@ StatusObject	*local;
 	if (strcasecmp(querybuff,"FILTER OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n\r\n");
 	g_debug&=~CAT_FILTER;
 	return(1);
 	}
@@ -141,7 +147,7 @@ StatusObject	*local;
 	if (strcasecmp(querybuff,"FILTER ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n\r\n");
 	g_debug|=CAT_FILTER;
 	return(1);
 	}
@@ -149,7 +155,7 @@ StatusObject	*local;
 	if (strcasecmp(querybuff,"LOGIC OFF") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n\r\n");
 	g_debug&=~CAT_LOGIC;
 	return(1);
 	}
@@ -157,7 +163,7 @@ StatusObject	*local;
 	if (strcasecmp(querybuff,"LOGIC ON") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n\r\n");
 	g_debug|=CAT_LOGIC;
 	return(1);
 	}
@@ -259,46 +265,49 @@ stream = fdopen(direct,"r+");
 
 	if (stream == NULL)
 	{
-	replyoff = sprintf(replybuff,"UNABLE TO CREATE TEMPORARY FILE\n\n");
+	replyoff = sprintf(replybuff,"UNABLE TO CREATE TEMPORARY FILE\r\n");
 	return;
 	}
 
 // dump our build information
 timestring(work);
-fprintf(stream,"========== Untangle CLASSd Debug Information ==========\n");
-fprintf(stream,"  Version: %s\n",VERSION);
-fprintf(stream,"  Build: %s\n",BUILDID);
-fprintf(stream,"  Report Date: %s\n",work);
-fprintf(stream,"  Web Hit Count: %d\n",www_hitcount);
-fprintf(stream,"  Web Miss Count: %d\n",www_misscount);
-fprintf(stream,"  Debug Level: %04X\n",g_debug);
-fprintf(stream,"\n");
+fprintf(stream,"========== Untangle CLASSd Debug Information ==========\r\n");
+fprintf(stream,"  Version: %s\r\n",VERSION);
+fprintf(stream,"  Build: %s\r\n",BUILDID);
+fprintf(stream,"  Report Date: %s\r\n",work);
+fprintf(stream,"  Web Hit Count: %d\r\n",www_hitcount);
+fprintf(stream,"  Web Miss Count: %d\r\n",www_misscount);
+fprintf(stream,"  Debug Level: %04X\r\n",g_debug);
+fprintf(stream,"\r\n");
 
 // dump everything in the status hashtable
-fprintf(stream,"========== CONNECTION STATUS TABLE ==========\n");
+fprintf(stream,"========== CONNECTION STATUS TABLE ==========\r\n");
 g_statustable->DumpDetail(stream);
-fprintf(stream,"\n");
+fprintf(stream,"\r\n");
 
-// dump everything in the status hashtable
-fprintf(stream,"========== CONNTRACK LOOKUP TABLE ==========\n");
+// dump everything in the conntrack hashtable
+fprintf(stream,"========== CONNTRACK LOOKUP TABLE ==========\r\n");
 g_lookuptable->DumpDetail(stream);
-fprintf(stream,"\n");
+fprintf(stream,"\r\n");
 
 // dump the vineyard stream error counters
-fprintf(stream,"========== VINEYARD DETAIL ==========\n");
-fprintf(stream,"  NO MEMORY ERRORS ......... %d\n",err_nomem);
-fprintf(stream,"  NO FLOW ERRORS ........... %d\n",err_nobufs);
-fprintf(stream,"  NO RESOURCES ERRORS ...... %d\n",err_nosr);
-fprintf(stream,"  NO CONNECTION ERRORS ..... %d\n",err_notconn);
-fprintf(stream,"  UNKNOWN ERRORS ........... %d\n",err_unknown);
-fprintf(stream,"  CONNINIT ERRORS .......... %d\n",err_conninit);
-fprintf(stream,"  TCP CLEANUP COUNT ........ %d\n",g_tcp_cleanup);
-fprintf(stream,"  UDP CLEANUP COUNT ........ %d\n",g_udp_cleanup);
-fprintf(stream,"\n");
-fflush(stream);
+fprintf(stream,"========== VINEYARD DETAIL ==========\r\n");
+fprintf(stream,"  NO MEMORY ERRORS ......... %d\r\n",err_nomem);
+fprintf(stream,"  NO FLOW ERRORS ........... %d\r\n",err_nobufs);
+fprintf(stream,"  NO RESOURCES ERRORS ...... %d\r\n",err_nosr);
+fprintf(stream,"  NO CONNECTION ERRORS ..... %d\r\n",err_notconn);
+fprintf(stream,"  UNKNOWN ERRORS ........... %d\r\n",err_unknown);
+fprintf(stream,"  CONNINIT ERRORS .......... %d\r\n",err_conninit);
+fprintf(stream,"  TCP CLEANUP COUNT ........ %d\r\n",g_tcp_cleanup);
+fprintf(stream,"  UDP CLEANUP COUNT ........ %d\r\n",g_udp_cleanup);
+fprintf(stream,"\r\n");
 
-// dump the vineyard diagnostic info
+// dump the vineyard diagnostic info and wrap in calls
+// to fflush since we're passing the file descriptor
+fflush(stream);
 navl_diag(fileno(stream));
+fflush(stream);
+fprintf(stream,"\r\n");
 
 // get the size of the file and read into buffer
 replyoff = ftell(stream);
@@ -316,14 +325,14 @@ char	work[32];
 int		total;
 int		x;
 
-replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST=====\n");
+replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST=====\r\n");
 
 // get the total number of protocols from the vineyard library
 total = navl_proto_max_id();
 
 	if (total == -1)
 	{
-	replyoff = sprintf(replybuff,"ERROR RETURNED FROM navl_proto_max_id()\n\n");
+	replyoff = sprintf(replybuff,"ERROR RETURNED FROM navl_proto_max_id()\r\n\r\n");
 	return;
 	}
 
@@ -333,32 +342,64 @@ total = navl_proto_max_id();
 	work[0] = 0;
 	navl_proto_get_name(x,work,sizeof(work));
 	if (strlen(work) == 0) continue;
-	replyoff+=sprintf(&replybuff[replyoff],"%d = %s\n",x,work);
+	replyoff+=sprintf(&replybuff[replyoff],"%d = %s\r\n",x,work);
 	}
+
+replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildHashStats(void)
 {
 int		count,bytes;
 
-// get the total size of the hash table
+replyoff = sprintf(replybuff,"========== HASHTABLE STATISTICS ==========\r\n");
+
+// get the total size of the status table
 g_statustable->GetTableSize(count,bytes);
-replyoff = sprintf(replybuff,"HASHTABLE COUNT=%d  SIZE=%d\n\n",count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"STATUS TABLE COUNT=%d  SIZE=%d\r\n",count,bytes);
+
+// get the total size of the lookup table
+g_lookuptable->GetTableSize(count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"LOOKUP TABLE COUNT=%d  SIZE=%d\r\n",count,bytes);
+
+replyoff+=sprintf(&replybuff[replyoff],"\r\n");
+}
+/*--------------------------------------------------------------------------*/
+void NetworkClient::BuildConfiguration(void)
+{
+replyoff = sprintf(replybuff,"========== Untangle CLASSd Configuration ==========\r\n");
+
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_PATH ........ %s\r\n",cfg_log_path);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_FILE ........ %s\r\n",cfg_log_file);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_TEMP_PATH ....... %s\r\n",cfg_temp_path);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PLUGIN_PATH ..... %s\r\n",cfg_navl_plugins);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HASH_BUCKETS .... %d\r\n",cfg_hash_buckets);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_MAX_FLOWS ....... %d\r\n",cfg_navl_flows);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_IP_DEFRAG ....... %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_TCP_TIMEOUT ..... %d\r\n",cfg_tcp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_UDP_TIMEOUT ..... %d\r\n",cfg_udp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HTTP_LIMIT ...... %d\r\n",cfg_http_limit);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PURGE_DELAY ..... %d\r\n",cfg_purge_delay);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_CLIENT_PORT ..... %d\r\n",cfg_client_port);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_QUEUE_NUM ....... %d\r\n",cfg_net_queue);
+
+replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildHelpPage(void)
 {
-replyoff = sprintf(replybuff,"========== Untangle CLASSd Help Page ==========\n");
+replyoff = sprintf(replybuff,"========== Untangle CLASSd Help Page ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"HASHSTATS - display session hash table statistics\n");
-replyoff+=sprintf(&replybuff[replyoff],"DEBUGINFO - dump low level debug information\n");
-replyoff+=sprintf(&replybuff[replyoff],"PROTOLIST - retrieve the list of recognized protocols\n");
-replyoff+=sprintf(&replybuff[replyoff],"CLIENT [ON | OFF ] - enable/disable client debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"FILTER [ON | OFF ] - enable/disable filter debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"LOGIC [ON | OFF ] - enable/disable logic debug logging\n");
-replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\n");
-replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\n");
-replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\n\n");
+replyoff+=sprintf(&replybuff[replyoff],"HASHSTATS - display session hash table statistics\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"DEBUGINFO - dump low level debug information\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"PROTOLIST - retrieve the list of recognized protocols\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"CONFIG - display all of the daemon configuration values\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"CLIENT [ON | OFF ] - enable/disable client debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"FILTER [ON | OFF ] - enable/disable filter debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"LOGIC [ON | OFF ] - enable/disable logic debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\r\n\r\n");
 }
 /*--------------------------------------------------------------------------*/
 

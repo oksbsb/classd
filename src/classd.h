@@ -79,6 +79,7 @@ protected:
 
 private:
 
+	void BuildConfiguration(void);
 	void BuildDebugInfo(void);
 	void BuildProtoList(void);
 	void BuildHashStats(void);
@@ -283,6 +284,7 @@ DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
+DATALOC int					cfg_http_limit;
 DATALOC int					cfg_purge_delay;
 DATALOC int					cfg_client_port;
 DATALOC int					cfg_net_queue;
