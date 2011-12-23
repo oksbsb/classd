@@ -21,6 +21,7 @@ LookupObject::~LookupObject(void)
 /*--------------------------------------------------------------------------*/
 void LookupObject::UpdateObject(uint32_t aSaddr,uint16_t aSport,uint32_t aDaddr,uint16_t aDport)
 {
+HashObject::UpdateObject();
 orig_saddr = aSaddr;
 orig_sport = aSport;
 orig_daddr = aDaddr;

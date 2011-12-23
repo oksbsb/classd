@@ -123,6 +123,11 @@ sem_post(&control[key]);
 return(0);
 }
 /*--------------------------------------------------------------------------*/
+void HashTable::ExpireObject(HashObject *aObject)
+{
+aObject->timeout = (time(NULL) + cfg_purge_delay);
+}
+/*--------------------------------------------------------------------------*/
 HashObject* HashTable::SearchObject(const char *aHashname)
 {
 HashObject	*find;
@@ -189,14 +194,14 @@ removed = 0;
 		kill = 0;
 
 			// look for stale TCP objects
-			if ((curr->netproto == IPPROTO_TCP) && ((curr->timestamp + cfg_tcp_timeout) < aStamp))
+			if ((curr->netproto == IPPROTO_TCP) && (aStamp > curr->timeout))
 			{
 			g_tcp_cleanup++;
 			kill++;
 			}
 
 			// look for stale UDP objects
-			if ((curr->netproto == IPPROTO_UDP) && ((curr->timestamp + cfg_udp_timeout) < aStamp))
+			if ((curr->netproto == IPPROTO_UDP) && (aStamp > curr->timeout))
 			{
 			g_udp_cleanup++;
 			kill++;

@@ -12,9 +12,11 @@ HashObject::HashObject(unsigned short aProto,const char *aHashname)
 hashname = (char *)malloc(strlen(aHashname)+1);
 strcpy(hashname,aHashname);
 netproto = aProto;
-
-timestamp = time(NULL);
 next = NULL;
+
+timeout = time(NULL);
+if (netproto == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
+if (netproto == IPPROTO_UDP) timeout+=cfg_udp_timeout;
 }
 /*--------------------------------------------------------------------------*/
 HashObject::~HashObject(void)
@@ -38,7 +40,9 @@ snprintf(target,maxlen,"N:%s",hashname);
 /*--------------------------------------------------------------------------*/
 void HashObject::UpdateObject(void)
 {
-timestamp = time(NULL);
+timeout = time(NULL);
+if (netproto == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
+if (netproto == IPPROTO_UDP) timeout+=cfg_udp_timeout;
 }
 /*--------------------------------------------------------------------------*/
 

@@ -96,6 +96,7 @@ public:
 
 	int InsertObject(HashObject *aObject);
 	int DeleteObject(HashObject *aObject);
+	void ExpireObject(HashObject *aObject);
 	HashObject* SearchObject(const char *aTitle);
 
 	void GetTableSize(int &aCount,int &aBytes);
@@ -133,7 +134,7 @@ private:
 
 	HashObject				*next;
 	unsigned short			netproto;
-	time_t					timestamp;
+	time_t					timeout;
 	char					*hashname;
 };
 /*--------------------------------------------------------------------------*/
@@ -282,6 +283,7 @@ DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
+DATALOC int					cfg_purge_delay;
 DATALOC int					cfg_client_port;
 DATALOC int					cfg_net_queue;
 DATALOC int					err_conninit;

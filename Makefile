@@ -3,12 +3,12 @@
 # All Rights Reserved
 # Written by Michael A. Hotz
 
-VERSION = 1.0.0
 #DEBUG = -g3 -ggdb
 #GPROF = -pg
-SPEED = -O2
+SPEED = -O1
 
 BUILDID := "$(shell date -u "+%G/%m/%d %H:%M:%S UTC")"
+VERSION := $(shell svn info | grep Revision | awk '{ print $$2 }')
 SYSTEM := $(shell uname)
 ARCH := $(shell uname -m)
 

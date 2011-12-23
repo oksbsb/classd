@@ -235,8 +235,8 @@ if (status == NULL) return;
 	// if the client and server fin flags are set the connection is done
 	if ((status->clientfin != 0) && (status->serverfin != 0))
 	{
-	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS REMOVE = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
-	g_statustable->DeleteObject(status);
+	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS EXPIRE = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
+	g_statustable->ExpireObject(status);
 	return;
 	}
 
@@ -326,8 +326,8 @@ if (ipproto == 0) return(0);
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
 	{
-	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS REMOVE %s\n",status->GetHashname());
-	g_statustable->DeleteObject(status);
+	logmessage(CAT_FILTER,LOG_DEBUG,"STATUS EXPIRE %s\n",status->GetHashname());
+	g_statustable->ExpireObject(status);
 	return(0);
 	}
 

@@ -419,6 +419,9 @@ cfg_tcp_timeout = atoi(work);
 grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"300");
 cfg_udp_timeout = atoi(work);
 
+grab_config_item(filedata,"CLASSD_PURGE_DELAY",work,sizeof(work),"30");
+cfg_purge_delay = atoi(work);
+
 grab_config_item(filedata,"CLASSD_CLIENT_PORT",work,sizeof(work),"8123");
 cfg_client_port = atoi(work);
 
