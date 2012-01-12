@@ -45,7 +45,7 @@ close(netsock);
 /*--------------------------------------------------------------------------*/
 int NetworkClient::NetworkHandler(void)
 {
-char	*find;
+char	*crloc,*lfloc;
 int		ret;
 
 // read data from the client to the current offset in our recv buffer
@@ -63,29 +63,37 @@ if (ret == 0) return(0);
 	return(0);
 	}
 
-// add the receive count to the offet and null terminate the buffer
+// add the receive count to the offset and null terminate the buffer
 queryoff+=ret;
 querybuff[queryoff] = 0;
 
-find = strstr(querybuff,"\r\n");
+// look for CR or LF characters
+crloc = strchr(querybuff,'\r');
+lfloc = strchr(querybuff,'\n');
 
-	// look for and proccess complete command
-	if (find != NULL)
-	{
-	find[0] = 0;
-	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
+// if we don't find any return one to keep session active
+if ((crloc == NULL) && (lfloc == NULL)) return(1);
 
-	ret = ProcessRequest();
-	if (ret == 0) return(0);
+// wipe any CR or LF characters so they aren't included
+// in the command string we received from the client
+if (crloc != NULL) crloc[0] = 0;
+if (lfloc != NULL) lfloc[0] = 0;
 
-	ret = TransmitReply();
-	if (ret == 0) return(0);
+logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
 
-	querybuff[0] = 0;
-	replybuff[0] = 0;
-	queryoff = 0;
-	replyoff = 0;
-	}
+// handle the request
+ret = ProcessRequest();
+if (ret == 0) return(0);
+
+// hande the reply
+ret = TransmitReply();
+if (ret == 0) return(0);
+
+// we processed something so clear all buffers and variables
+querybuff[0] = 0;
+replybuff[0] = 0;
+queryoff = 0;
+replyoff = 0;
 
 return(1);
 }
@@ -277,6 +285,7 @@ fprintf(stream,"  Build: %s\r\n",BUILDID);
 fprintf(stream,"  Report Date: %s\r\n",work);
 fprintf(stream,"  Web Hit Count: %d\r\n",www_hitcount);
 fprintf(stream,"  Web Miss Count: %d\r\n",www_misscount);
+fprintf(stream,"  High Message Count: %d\r\n",g_messagequeue->hicount);
 fprintf(stream,"  Debug Level: %04X\r\n",g_debug);
 fprintf(stream,"\r\n");
 

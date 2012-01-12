@@ -25,9 +25,14 @@ const unsigned short TCP_CWR = 0x80;
 const unsigned int CAT_LOGIC  = 0x00000001;
 const unsigned int CAT_CLIENT = 0x00000002;
 const unsigned int CAT_FILTER = 0x00000004;
+
+const unsigned int MSG_PACKET = 0x11111111;
+const unsigned int MSG_SHUTDOWN = 0x99999999;
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
 class NetworkClient;
+class MessageQueue;
+class MessageWagon;
 class StatusObject;
 class LookupObject;
 class HashObject;
@@ -86,6 +91,46 @@ private:
 	void BuildHelpPage(void);
 	int ProcessRequest(void);
 	int TransmitReply(void);
+};
+/*--------------------------------------------------------------------------*/
+class MessageQueue
+{
+public:
+
+	MessageQueue(void);
+	virtual ~MessageQueue(void);
+
+	void PushMessage(MessageWagon *argObject);
+	MessageWagon *GrabMessage(void);
+
+	sem_t					MessageSignal;
+	int						hicount;
+
+private:
+
+	pthread_mutex_t			ListLock;
+	MessageWagon			*ListHead;
+	MessageWagon			*ListTail;
+	int						counter;
+};
+/*--------------------------------------------------------------------------*/
+class MessageWagon
+{
+friend class MessageQueue;
+
+public:
+
+	MessageWagon(int argCommand,const unsigned char *argBuffer,int argLength);
+	MessageWagon(int argCommand);
+	virtual ~MessageWagon(void);
+
+	unsigned char			*buffer;
+	int						length;
+	int						command;
+
+private:
+
+	MessageWagon			*next;
 };
 /*--------------------------------------------------------------------------*/
 class HashTable
@@ -246,11 +291,10 @@ void logmessage(int category,int priority,const char *format,...);
 void sysmessage(int priority,const char *format,...);
 void rawmessage(int priority,const char *message);
 void logproblem(Problem *aProblem);
-
 const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init);
 void load_configuration(void);
-
 void* netfilter_thread(void *arg);
+void* classify_thread(void *arg);
 void sighandler(int sigval);
 void timestring(char *target);
 void recycle(void);
@@ -261,9 +305,11 @@ char *itolevel(int value,char *dest);
 #endif
 /*--------------------------------------------------------------------------*/
 DATALOC pthread_t			g_netfilter_tid;
+DATALOC pthread_t			g_classify_tid;
 DATALOC struct itimerval	g_itimer;
 DATALOC struct timeval		g_runtime;
 DATALOC NetworkServer		*g_netserver;
+DATALOC MessageQueue		*g_messagequeue;
 DATALOC HashTable			*g_statustable;
 DATALOC HashTable			*g_lookuptable;
 DATALOC FILE				*g_logfile;

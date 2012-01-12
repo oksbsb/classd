@@ -81,7 +81,10 @@ getitimer(ITIMER_PROF,&g_itimer);
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 
-// allocate our status and lookup hashtables
+// create the main message queue
+g_messagequeue = new MessageQueue();
+
+// create our status and lookup hashtables
 g_statustable = new HashTable(cfg_hash_buckets);
 g_lookuptable = new HashTable(cfg_hash_buckets);
 
@@ -95,6 +98,15 @@ ret = pthread_create(&g_netfilter_tid,NULL,netfilter_thread,NULL);
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
+	g_shutdown = 1;
+	}
+
+// start the vineyard classification thread
+ret = pthread_create(&g_classify_tid,NULL,classify_thread,NULL);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from pthread_create(classify)\n",ret);
 	g_shutdown = 1;
 	}
 
@@ -142,13 +154,18 @@ currtime = lasttime = time(NULL);
 // set the global shutdown flag
 g_shutdown = 1;
 
-// wait for the filter thread to finish
+// post a shutdown message to the main message queue
+g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
+
+// wait for the netfilter and classify threads to finish
+pthread_join(g_classify_tid,NULL);
 pthread_join(g_netfilter_tid,NULL);
 
-// cleanup the network server and connection hashtable
+// cleanup all the global objects we created
 delete(g_netserver);
 delete(g_statustable);
 delete(g_lookuptable);
+delete(g_messagequeue);
 
 sysmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 
