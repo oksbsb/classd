@@ -239,8 +239,8 @@ return(removed);
 /*--------------------------------------------------------------------------*/
 unsigned int HashTable::GetHashValue(const void *aString)
 {
-const unsigned char	*s = (unsigned char *)aString;
-unsigned int			total;
+register const unsigned char *s = (unsigned char *)aString;
+register unsigned int	total;
 
 for(total = 0;*s;s++) total = (613 * total + s[0]);
 return(total % buckets);

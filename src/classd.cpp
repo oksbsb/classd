@@ -418,7 +418,7 @@ fclose(cfg);
 
 grab_config_item(filedata,"CLASSD_LOG_PATH",cfg_log_path,sizeof(cfg_log_path),"/var/log/untangle-classd");
 grab_config_item(filedata,"CLASSD_LOG_FILE",cfg_log_file,sizeof(cfg_log_file),"/var/log/untangle-classd/classd.log");
-grab_config_item(filedata,"CLASSD_TEMP_PATH",cfg_temp_path,sizeof(cfg_temp_path),"/dev/shm");
+grab_config_item(filedata,"CLASSD_DUMP_PATH",cfg_dump_path,sizeof(cfg_dump_path),"/tmp");
 grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_plugins),"/usr/share/untangle-classd/plugins");
 
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");

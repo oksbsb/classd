@@ -84,6 +84,7 @@ protected:
 
 private:
 
+	void DumpEverything(void);
 	void BuildConfiguration(void);
 	void BuildDebugInfo(void);
 	void BuildProtoList(void);
@@ -104,6 +105,7 @@ public:
 	MessageWagon *GrabMessage(void);
 
 	sem_t					MessageSignal;
+	int						counter;
 	int						hicount;
 
 private:
@@ -111,7 +113,6 @@ private:
 	pthread_mutex_t			ListLock;
 	MessageWagon			*ListHead;
 	MessageWagon			*ListTail;
-	int						counter;
 };
 /*--------------------------------------------------------------------------*/
 class MessageWagon
@@ -322,7 +323,7 @@ DATALOC int					g_console;
 DATALOC int					g_nofork;
 DATALOC int					g_debug;
 DATALOC char				cfg_navl_plugins[256];
-DATALOC char				cfg_temp_path[256];
+DATALOC char				cfg_dump_path[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
 DATALOC int					cfg_navl_flows;
