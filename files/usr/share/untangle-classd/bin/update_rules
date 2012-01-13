@@ -45,7 +45,7 @@ insert_classd_iptables_rules()
     CHAIN_NAME=untangle-classd
 
     # create and flush a new chain for our traffic
-    ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME}
+    ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME} > /dev/null 2>&1
     ${IPTABLES} -t ${TABLE_NAME} -F ${CHAIN_NAME}
 
     # we don't care about traffic to or from loopback addresses
