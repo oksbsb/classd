@@ -381,6 +381,25 @@ sprintf(dest,"LOG_%d",value);
 return(dest);
 }
 /*--------------------------------------------------------------------------*/
+char *pad(char *target,unsigned value,int width)
+{
+char	source[256];
+int		l,x,y;
+
+sprintf(source,"%u",value);
+l = strlen(source);
+
+	for(x = y = 0;x < l;x++)
+	{
+	if ((x > 0) && ((x % 3) == (l % 3))) target[y++] = ',';
+	target[y++] = source[x];
+	}
+
+while (y < width) target[y++] = ' ';
+target[y] = 0;
+return(target);
+}
+/*--------------------------------------------------------------------------*/
 void load_configuration(void)
 {
 FILE		*cfg;

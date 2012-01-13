@@ -86,9 +86,9 @@ private:
 
 	void DumpEverything(void);
 	void BuildConfiguration(void);
+	void BuildMemoryStats(void);
 	void BuildDebugInfo(void);
 	void BuildProtoList(void);
-	void BuildHashStats(void);
 	void BuildHelpPage(void);
 	int ProcessRequest(void);
 	int TransmitReply(void);
@@ -103,16 +103,19 @@ public:
 
 	void PushMessage(MessageWagon *argObject);
 	MessageWagon *GrabMessage(void);
+	void GetQueueSize(unsigned &aCurr_count,unsigned &aCurr_bytes,unsigned &aHigh_count,unsigned &aHigh_bytes);
 
 	sem_t					MessageSignal;
-	int						counter;
-	int						hicount;
 
 private:
 
 	pthread_mutex_t			ListLock;
 	MessageWagon			*ListHead;
 	MessageWagon			*ListTail;
+	unsigned				curr_count;
+	unsigned				curr_bytes;
+	unsigned				high_count;
+	unsigned				high_bytes;
 };
 /*--------------------------------------------------------------------------*/
 class MessageWagon
@@ -146,7 +149,7 @@ public:
 	void ExpireObject(HashObject *aObject);
 	HashObject* SearchObject(const char *aTitle);
 
-	void GetTableSize(int &aCount,int &aBytes);
+	void GetTableSize(unsigned &aCount,unsigned &aBytes);
 	void DumpDetail(FILE *aFile);
 	int PurgeStaleObjects(time_t aStamp);
 
@@ -300,6 +303,7 @@ void sighandler(int sigval);
 void timestring(char *target);
 void recycle(void);
 char *itolevel(int value,char *dest);
+char *pad(char *target,unsigned value,int width = 0);
 /*--------------------------------------------------------------------------*/
 #ifndef DATALOC
 #define DATALOC extern

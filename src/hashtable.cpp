@@ -246,7 +246,7 @@ for(total = 0;*s;s++) total = (613 * total + s[0]);
 return(total % buckets);
 }
 /*--------------------------------------------------------------------------*/
-void HashTable::GetTableSize(int &aCount,int &aBytes)
+void HashTable::GetTableSize(unsigned &aCount,unsigned &aBytes)
 {
 HashObject	*work;
 int			x;

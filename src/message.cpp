@@ -20,8 +20,10 @@ pthread_mutex_init(&ListLock,NULL);
 // create our signal semaphore
 sem_init(&MessageSignal,0,0);
 
-counter = 0;
-hicount = 0;
+curr_count = 0;
+curr_bytes = 0;
+high_count = 0;
+high_bytes = 0;
 }
 /*--------------------------------------------------------------------------*/
 MessageQueue::~MessageQueue(void)
@@ -65,9 +67,11 @@ if (ListHead == NULL) ListHead = ListTail;
 // increment the message signal semaphore
 sem_post(&MessageSignal);
 
-// increment our counter and track highest value
-counter++;
-if (counter > hicount) hicount = counter;
+// increment our count and memory trackers
+curr_count++;
+if (curr_count > high_count) high_count = curr_count;
+curr_bytes+=argMessage->length;
+if (curr_bytes > high_bytes) high_bytes = curr_bytes;
 
 // unlock our mutex
 pthread_mutex_unlock(&ListLock);
@@ -104,13 +108,22 @@ pthread_mutex_lock(&ListLock);
 	}
 
 // decrement our counter
-counter--;
+curr_count--;
+if (local != NULL) curr_bytes-=local->length;
 
 // unlock our mutex
 pthread_mutex_unlock(&ListLock);
 
 // return the message
 return(local);
+}
+/*--------------------------------------------------------------------------*/
+void MessageQueue::GetQueueSize(unsigned &aCurr_count,unsigned &aCurr_bytes,unsigned &aHigh_count,unsigned &aHigh_bytes)
+{
+aCurr_count = curr_count;
+aCurr_bytes = curr_bytes;
+aHigh_count = high_count;
+aHigh_bytes = high_bytes;
 }
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/

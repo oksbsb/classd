@@ -128,9 +128,9 @@ StatusObject	*local;
 	return(1);
 	}
 
-	if (strcasecmp(querybuff,"HASH") == 0)
+	if (strcasecmp(querybuff,"MEM") == 0)
 	{
-	BuildHashStats();
+	BuildMemoryStats();
 	return(1);
 	}
 
@@ -267,31 +267,31 @@ return(1);
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildDebugInfo(void)
 {
-replyoff = sprintf(replybuff,"========== GENERAL DEBUG INFO ==========\r\n");
+char		temp[32];
+
+replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"  Version: %s\r\n",VERSION);
 replyoff+=sprintf(&replybuff[replyoff],"  Build: %s\r\n",BUILDID);
-replyoff+=sprintf(&replybuff[replyoff],"  Web Hit Count: %d\r\n",www_hitcount);
-replyoff+=sprintf(&replybuff[replyoff],"  Web Miss Count: %d\r\n",www_misscount);
-replyoff+=sprintf(&replybuff[replyoff],"  MQ Current Count: %d\r\n",g_messagequeue->counter);
-replyoff+=sprintf(&replybuff[replyoff],"  MQ Highest Count: %d\r\n",g_messagequeue->hicount);
+replyoff+=sprintf(&replybuff[replyoff],"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level: %04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"========== VINEYARD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  NO MEMORY ERRORS ......... %d\r\n",err_nomem);
-replyoff+=sprintf(&replybuff[replyoff],"  NO FLOW ERRORS ........... %d\r\n",err_nobufs);
-replyoff+=sprintf(&replybuff[replyoff],"  NO RESOURCES ERRORS ...... %d\r\n",err_nosr);
-replyoff+=sprintf(&replybuff[replyoff],"  NO CONNECTION ERRORS ..... %d\r\n",err_notconn);
-replyoff+=sprintf(&replybuff[replyoff],"  UNKNOWN ERRORS ........... %d\r\n",err_unknown);
-replyoff+=sprintf(&replybuff[replyoff],"  CONNINIT ERRORS .......... %d\r\n",err_conninit);
-replyoff+=sprintf(&replybuff[replyoff],"  TCP CLEANUP COUNT ........ %d\r\n",g_tcp_cleanup);
-replyoff+=sprintf(&replybuff[replyoff],"  UDP CLEANUP COUNT ........ %d\r\n",g_udp_cleanup);
+replyoff+=sprintf(&replybuff[replyoff],"  NO MEMORY ERRORS ......... %s\r\n",pad(temp,err_nomem));
+replyoff+=sprintf(&replybuff[replyoff],"  NO FLOW ERRORS ........... %s\r\n",pad(temp,err_nobufs));
+replyoff+=sprintf(&replybuff[replyoff],"  NO RESOURCES ERRORS ...... %s\r\n",pad(temp,err_nosr));
+replyoff+=sprintf(&replybuff[replyoff],"  NO CONNECTION ERRORS ..... %s\r\n",pad(temp,err_notconn));
+replyoff+=sprintf(&replybuff[replyoff],"  UNKNOWN ERRORS ........... %s\r\n",pad(temp,err_unknown));
+replyoff+=sprintf(&replybuff[replyoff],"  CONNINIT ERRORS .......... %s\r\n",pad(temp,err_conninit));
+replyoff+=sprintf(&replybuff[replyoff],"  TCP CLEANUP COUNT ........ %s\r\n",pad(temp,g_tcp_cleanup));
+replyoff+=sprintf(&replybuff[replyoff],"  UDP CLEANUP COUNT ........ %s\r\n",pad(temp,g_udp_cleanup));
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildProtoList(void)
 {
-char	work[32];
+char	temp[32];
 int		total;
 int		x;
 
@@ -309,28 +309,41 @@ total = navl_proto_max_id();
 	// get the name of each protocol and append to reply buffer
 	for(x = 0;x < total;x++)
 	{
-	work[0] = 0;
-	navl_proto_get_name(x,work,sizeof(work));
-	if (strlen(work) == 0) continue;
-	replyoff+=sprintf(&replybuff[replyoff],"%d = %s\r\n",x,work);
+	temp[0] = 0;
+	navl_proto_get_name(x,temp,sizeof(temp));
+	if (strlen(temp) == 0) continue;
+	replyoff+=sprintf(&replybuff[replyoff],"%d = %s\r\n",x,temp);
 	}
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
-void NetworkClient::BuildHashStats(void)
+void NetworkClient::BuildMemoryStats(void)
 {
-int		count,bytes;
+unsigned	count,bytes,hicnt,himem;
+char		temp[32];
 
-replyoff = sprintf(replybuff,"========== HASHTABLE STATISTICS ==========\r\n");
+replyoff = sprintf(replybuff,"========== CLASSD MEMORY USAGE ==========\r\n\r\n");
+
+// get the total size of the lookup table
+g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);
+replyoff+=sprintf(&replybuff[replyoff],"  ----- Message Queue -----\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
+replyoff+=sprintf(&replybuff[replyoff],"    Highest Items: %s\r\n",pad(temp,hicnt));
+replyoff+=sprintf(&replybuff[replyoff],"    Highest Bytes: %s\r\n",pad(temp,himem));
 
 // get the total size of the status table
 g_statustable->GetTableSize(count,bytes);
-replyoff+=sprintf(&replybuff[replyoff],"STATUS TABLE COUNT=%d  SIZE=%d\r\n",count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"\r\n  ----- Session Hash Table -----\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
 
 // get the total size of the lookup table
 g_lookuptable->GetTableSize(count,bytes);
-replyoff+=sprintf(&replybuff[replyoff],"LOOKUP TABLE COUNT=%d  SIZE=%d\r\n",count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"\r\n  ----- Conntrack Hash Table -----\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
@@ -363,11 +376,11 @@ replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"CONFIG - display all daemon configuration values\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUG - display daemon debug information\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"PROTO - retrieve the list of recognized protocols\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"HASH - display network hash table statistics\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"MEM - display memory usage statistics\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"CLIENT [ON | OFF ] - enable/disable client debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"FILTER [ON | OFF ] - enable/disable filter debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"LOGIC [ON | OFF ] - enable/disable logic debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\r\n\r\n");
@@ -378,7 +391,7 @@ void NetworkClient::DumpEverything(void)
 FILE		*stream;
 unsigned	dumpsize;
 char		dumpfile[256];
-char		work[64];
+char		temp[64];
 
 // create the dump file
 sprintf(dumpfile,"%s/classd-dump.txt",cfg_dump_path);
@@ -391,15 +404,13 @@ stream = fopen(dumpfile,"a");
 	}
 
 // dump our build information
-timestring(work);
+timestring(temp);
 fprintf(stream,"========== Untangle CLASSd Debug Information ==========\r\n");
-fprintf(stream,"  Report Date: %s\r\n",work);
+fprintf(stream,"  Report Date: %s\r\n",temp);
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
-fprintf(stream,"  Web Hit Count: %d\r\n",www_hitcount);
-fprintf(stream,"  Web Miss Count: %d\r\n",www_misscount);
-fprintf(stream,"  MQ Current Count: %d\r\n",g_messagequeue->counter);
-fprintf(stream,"  MQ Highest Count: %d\r\n",g_messagequeue->hicount);
+fprintf(stream,"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
+fprintf(stream,"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
 fprintf(stream,"  Debug Level: %04X\r\n",g_debug);
 fprintf(stream,"\r\n");
 
@@ -415,14 +426,14 @@ fprintf(stream,"\r\n");
 
 // dump the vineyard stream error counters
 fprintf(stream,"========== VINEYARD DETAIL ==========\r\n");
-fprintf(stream,"  NO MEMORY ERRORS ......... %d\r\n",err_nomem);
-fprintf(stream,"  NO FLOW ERRORS ........... %d\r\n",err_nobufs);
-fprintf(stream,"  NO RESOURCES ERRORS ...... %d\r\n",err_nosr);
-fprintf(stream,"  NO CONNECTION ERRORS ..... %d\r\n",err_notconn);
-fprintf(stream,"  UNKNOWN ERRORS ........... %d\r\n",err_unknown);
-fprintf(stream,"  CONNINIT ERRORS .......... %d\r\n",err_conninit);
-fprintf(stream,"  TCP CLEANUP COUNT ........ %d\r\n",g_tcp_cleanup);
-fprintf(stream,"  UDP CLEANUP COUNT ........ %d\r\n",g_udp_cleanup);
+fprintf(stream,"  NO MEMORY ERRORS ......... %s\r\n",pad(temp,err_nomem));
+fprintf(stream,"  NO FLOW ERRORS ........... %s\r\n",pad(temp,err_nobufs));
+fprintf(stream,"  NO RESOURCES ERRORS ...... %s\r\n",pad(temp,err_nosr));
+fprintf(stream,"  NO CONNECTION ERRORS ..... %s\r\n",pad(temp,err_notconn));
+fprintf(stream,"  UNKNOWN ERRORS ........... %s\r\n",pad(temp,err_unknown));
+fprintf(stream,"  CONNINIT ERRORS .......... %s\r\n",pad(temp,err_conninit));
+fprintf(stream,"  TCP CLEANUP COUNT ........ %s\r\n",pad(temp,g_tcp_cleanup));
+fprintf(stream,"  UDP CLEANUP COUNT ........ %s\r\n",pad(temp,g_udp_cleanup));
 fprintf(stream,"\r\n");
 
 // dump the vineyard diagnostic info and wrap in calls
@@ -440,7 +451,7 @@ fclose(stream);
 
 replyoff = sprintf(replybuff,"========== DUMP FILE CREATED ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"FILE: %s\r\n",dumpfile);
-replyoff+=sprintf(&replybuff[replyoff],"SIZE: %u\r\n\r\n",dumpsize);
+replyoff+=sprintf(&replybuff[replyoff],"SIZE: %s\r\n\r\n",pad(temp,dumpsize));
 }
 /*--------------------------------------------------------------------------*/
 
