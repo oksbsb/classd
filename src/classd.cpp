@@ -467,6 +467,9 @@ cfg_client_port = atoi(work);
 grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
 cfg_net_queue = atoi(work);
 
+grab_config_item(filedata,"CLASSD_PACKET_THREAD",work,sizeof(work),"0");
+cfg_packet_thread = atoi(work);
+
 for(x = 0;x < total;x++) free(filedata[x]);
 free(filedata);
 }

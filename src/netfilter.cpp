@@ -7,11 +7,6 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *nfad,void *data);
-int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
-void netfilter_shutdown(void);
-int netfilter_startup(void);
-/*--------------------------------------------------------------------------*/
 // vars for netfilter interfaces
 struct nfq_q_handle		*nfqqh;
 struct nfct_handle		*nfcth;
@@ -138,9 +133,19 @@ ret = nfct_query(nfcth,NFCT_Q_GET,ct);
 // cleanup the conntrack
 nfct_destroy(ct);
 
-// push the packet onto the message queue
-local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
-g_messagequeue->PushMessage(local);
+	// if classification thread is not enabled then we
+	// process the packet right here... right now
+	if (cfg_packet_thread == 0)
+	{
+	process_packet(rawpkt,rawlen);
+	}
+
+	// otherwise push the packet onto the message queue
+	else
+	{
+	local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
+	g_messagequeue->PushMessage(local);
+	}
 
 return(0);
 }

@@ -7,11 +7,6 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
-void process_packet(unsigned char *rawpkt,int rawlen);
-void vineyard_shutdown(void);
-int vineyard_startup(void);
-/*--------------------------------------------------------------------------*/
 // vars for all of the protocol and application id values
 static int l_proto_eth = 0;
 static int l_proto_ip = 0;
@@ -282,6 +277,10 @@ navl_proto_get_name(appid,application,sizeof(application));
 // us to ignore all other unknown protocol values
 if (ipproto == 0) return(0);
 
+// if the status object passed is null we can't update
+// this should never happen but we check just in case
+if (status == NULL) return(0);
+
 // update the status object with the new information
 status->UpdateObject(application,protochain,detail,confidence,state);
 status->GetObjectString(namestr,sizeof(namestr));
@@ -522,7 +521,7 @@ int		marker = 0;
 */
 
 // spin up the vineyard engine
-if ((++marker) && (navl_open(cfg_navl_flows,2,cfg_navl_plugins) != 0)) return(marker);
+if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
 
 // set the vineyard log level
 if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);

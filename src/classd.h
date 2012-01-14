@@ -290,6 +290,19 @@ struct xxphdr
 	u_int16_t				dest;
 };
 /*--------------------------------------------------------------------------*/
+void* netfilter_thread(void *arg);
+int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *nfad,void *data);
+int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
+void netfilter_shutdown(void);
+int netfilter_startup(void);
+/*--------------------------------------------------------------------------*/
+void* classify_thread(void *arg);
+void process_traffic(uint16_t flags,uint8_t ip_proto,uint32_t src_addr,uint16_t src_port,uint32_t dst_addr,uint16_t dst_port,const void *data,unsigned short len,StatusObject *status);
+int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
+void process_packet(unsigned char *rawpkt,int rawlen);
+int vineyard_startup(void);
+void vineyard_shutdown(void);
+/*--------------------------------------------------------------------------*/
 void hexmessage(int category,int priority,const void *buffer,int size);
 void logmessage(int category,int priority,const char *format,...);
 void sysmessage(int priority,const char *format,...);
@@ -297,8 +310,6 @@ void rawmessage(int priority,const char *message);
 void logproblem(Problem *aProblem);
 const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init);
 void load_configuration(void);
-void* netfilter_thread(void *arg);
-void* classify_thread(void *arg);
 void sighandler(int sigval);
 void timestring(char *target);
 void recycle(void);
@@ -330,14 +341,15 @@ DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_dump_path[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
-DATALOC int					cfg_navl_flows;
-DATALOC int					cfg_navl_defrag;
+DATALOC int					cfg_packet_thread;
 DATALOC int					cfg_hash_buckets;
+DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
-DATALOC int					cfg_http_limit;
 DATALOC int					cfg_purge_delay;
 DATALOC int					cfg_client_port;
+DATALOC int					cfg_navl_flows;
+DATALOC int					cfg_http_limit;
 DATALOC int					cfg_net_queue;
 DATALOC int					err_conninit;
 DATALOC int					err_notconn;

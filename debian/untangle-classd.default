@@ -47,6 +47,10 @@
 ## Network filter queue the daemon should use
 #CLASSD_QUEUE_NUM=1967
 
+## Enable to use a seperate thread and message queue
+## to handle classification of network packets.
+#CLASSD_PACKET_THREAD=0
+
 ## Path to the classd binary
 # CLASSD_BIN=/usr/bin/classd
 
