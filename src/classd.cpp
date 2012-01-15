@@ -14,6 +14,7 @@ const char *weekday[7] = { "Sun","Mon","Tue","Wed","Thu","Fri","Sat" };
 int main(int argc,char *argv[])
 {
 struct timeval		tv;
+pthread_attr_t		attr;
 fd_set				tester;
 time_t				currtime,lasttime;
 int					ret,x;
@@ -27,6 +28,7 @@ load_configuration();
 	{
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
+	if (strncasecmp(argv[x],"-M",2) == 0) g_splitter++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{
@@ -34,6 +36,12 @@ load_configuration();
 		if (g_debug == 0) g_debug = 0xFFFF;
 		}
 	}
+
+// get the default application stack size so
+// we can set the same stack size for threads
+pthread_attr_init(&attr);
+pthread_attr_getstacksize(&attr,&g_stacksize);
+pthread_attr_destroy(&attr);
 
 	if (g_console == 0)
 	{
@@ -93,7 +101,10 @@ g_netserver = new NetworkServer();
 g_netserver->BeginExecution();
 
 // start the netqueue filter handler thread
-ret = pthread_create(&g_netfilter_tid,NULL,netfilter_thread,NULL);
+pthread_attr_init(&attr);
+pthread_attr_setstacksize(&attr,g_stacksize);
+ret = pthread_create(&g_netfilter_tid,&attr,netfilter_thread,NULL);
+pthread_attr_destroy(&attr);
 
 	if (ret != 0)
 	{
@@ -102,7 +113,10 @@ ret = pthread_create(&g_netfilter_tid,NULL,netfilter_thread,NULL);
 	}
 
 // start the vineyard classification thread
+pthread_attr_init(&attr);
+pthread_attr_setstacksize(&attr,g_stacksize);
 ret = pthread_create(&g_classify_tid,NULL,classify_thread,NULL);
+pthread_attr_destroy(&attr);
 
 	if (ret != 0)
 	{

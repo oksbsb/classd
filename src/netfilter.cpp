@@ -135,7 +135,7 @@ nfct_destroy(ct);
 
 	// if classification thread is not enabled then we
 	// process the packet right here... right now
-	if (cfg_packet_thread == 0)
+	if ((cfg_packet_thread | g_splitter) == 0)
 	{
 	process_packet(rawpkt,rawlen);
 	}
