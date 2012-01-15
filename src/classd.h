@@ -338,6 +338,7 @@ DATALOC int					g_splitter;
 DATALOC int					g_recycle;
 DATALOC int					g_console;
 DATALOC int					g_nofork;
+DATALOC int					g_bypass;
 DATALOC int					g_debug;
 DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_dump_path[256];

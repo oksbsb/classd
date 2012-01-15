@@ -109,8 +109,8 @@ strcpy(dstname,inet_ntoa(daddr));
 	// session by creating the connection tracking stuff
 	if ((status == NULL) && (ip_proto == IPPROTO_UDP))
 	{
-	ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),
-		ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+	if (g_bypass == 0) ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+	else ret = 0;
 
 		if (ret != 0)
 		{
@@ -134,8 +134,8 @@ strcpy(dstname,inet_ntoa(daddr));
 	if ((flags & TCP_ACK) != 0) return; // ack must be clear
 
 	// we have a clean SYN so allocate a new vineyard connection
-	ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),
-		ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+	if (g_bypass == 0) ret = navl_conn_init(ntohl(src_addr),ntohs(src_port),ntohl(dst_addr),ntohs(dst_port),ip_proto,&dpistate);
+	else ret = 0;
 
 		if (ret != 0)
 		{
@@ -198,6 +198,9 @@ if (status == NULL) return;
 if (len == 0) return;
 
 logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD (%d) = %s-%s:%u-%s:%u\n",len,pname,srcname,src_port,dstname,dst_port);
+
+// if the bypass flag is set we don't pass anything to vineyard
+if (g_bypass != 0) return;
 
 navl_conn_classify(ntohl(src_addr),ntohs(src_port),ntohl(dst_addr),ntohs(dst_port),
 	ip_proto,status->GetTracker(),data,len,navl_callback,status);

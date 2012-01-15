@@ -40,7 +40,7 @@ if (application != NULL) free(application);
 if (protochain != NULL) free(protochain);
 if (detail != NULL) free(detail);
 
-	if (tracker != NULL)
+	if ((tracker != NULL) && (g_bypass == 0))
 	{
 	navl_conn_fini(clientaddr,clientport,serveraddr,serverport,netproto);
 	}

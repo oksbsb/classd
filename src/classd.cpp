@@ -29,6 +29,7 @@ load_configuration();
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
 	if (strncasecmp(argv[x],"-M",2) == 0) g_splitter++;
+	if (strncasecmp(argv[x],"-P",2) == 0) g_bypass++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{
@@ -88,6 +89,8 @@ getitimer(ITIMER_PROF,&g_itimer);
 
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
+if (g_splitter != 0) sysmessage(LOG_NOTICE,"Message queue enabled via command line\n");
+if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
 
 // create the main message queue
 g_messagequeue = new MessageQueue();
