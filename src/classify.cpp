@@ -168,7 +168,7 @@ if (status == NULL) return;
 		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD SERVER RST = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
 		status->serverfin = 1;
 		}
-    }
+	}
 
 	// if the TCP FIN flag is set figure out which side sent it
 	if (flags & TCP_FIN)
@@ -184,7 +184,7 @@ if (status == NULL) return;
 		logmessage(CAT_FILTER,LOG_DEBUG,"VINEYARD SERVER FIN = %s-%s:%u-%s:%u\n",pname,srcname,src_port,dstname,dst_port);
 		status->serverfin = 1;
 		}
-    }
+	}
 
 	// if the client and server fin flags are set the connection is done
 	if ((status->clientfin != 0) && (status->serverfin != 0))

@@ -26,10 +26,10 @@ load_configuration();
 
 	for(x = 1;x < argc;x++)
 	{
+	if (strncasecmp(argv[x],"-B",2) == 0) g_bypass++;
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
 	if (strncasecmp(argv[x],"-M",2) == 0) g_splitter++;
-	if (strncasecmp(argv[x],"-P",2) == 0) g_bypass++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{

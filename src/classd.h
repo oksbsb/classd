@@ -22,7 +22,7 @@ const unsigned short TCP_URG = 0x20;
 const unsigned short TCP_ECN = 0x40;
 const unsigned short TCP_CWR = 0x80;
 
-const unsigned int CAT_LOGIC  = 0x00000001;
+const unsigned int CAT_LOGIC = 0x00000001;
 const unsigned int CAT_CLIENT = 0x00000002;
 const unsigned int CAT_FILTER = 0x00000004;
 
@@ -155,7 +155,7 @@ public:
 
 private:
 
-	unsigned int GetHashValue(const void *aString);
+	unsigned int GetHashValue(const char *aString);
 
 	HashObject				**table;
 	sem_t					*control;

@@ -6,6 +6,8 @@
 
 #include "common.h"
 #include "classd.h"
+
+#define GET16BITS(d) (*((const uint16_t *) (d)))
 /*--------------------------------------------------------------------------*/
 HashTable::HashTable(int aBuckets)
 {
@@ -237,13 +239,54 @@ removed = 0;
 return(removed);
 }
 /*--------------------------------------------------------------------------*/
-unsigned int HashTable::GetHashValue(const void *aString)
+unsigned int HashTable::GetHashValue(const char *aString)
 {
-register const unsigned char *s = (unsigned char *)aString;
-register unsigned int	total;
+uint32_t	hash,temp;
+int			len,rem;
 
-for(total = 0;*s;s++) total = (613 * total + s[0]);
-return(total % buckets);
+len = strlen(aString);
+hash = len;
+
+rem = (len & 3);
+len >>= 2;
+
+	for (;len > 0; len--)
+	{
+	hash += GET16BITS(aString);
+	temp = ((GET16BITS(aString+2) << 11) ^ hash);
+	hash = ((hash << 16) ^ temp);
+	aString += (2 * sizeof(uint16_t));
+	hash += (hash >> 11);
+	}
+
+	switch (rem)
+	{
+	case 3:
+		hash += GET16BITS(aString);
+		hash ^= (hash << 16);
+		hash ^= (aString[sizeof (uint16_t)] << 18);
+		hash += (hash >> 11);
+		break;
+	case 2:
+		hash += GET16BITS(aString);
+		hash ^= (hash << 11);
+		hash += (hash >> 17);
+		break;
+	case 1:
+		hash += (*aString);
+		hash ^= (hash << 10);
+		hash += (hash >> 1);
+		break;
+	}
+
+hash ^= (hash << 3);
+hash += (hash >> 5);
+hash ^= (hash << 4);
+hash += (hash >> 17);
+hash ^= (hash << 25);
+hash += (hash >> 6);
+
+return(hash % buckets);
 }
 /*--------------------------------------------------------------------------*/
 void HashTable::GetTableSize(unsigned &aCount,unsigned &aBytes)

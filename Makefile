@@ -5,7 +5,7 @@
 
 #DEBUG = -g3 -ggdb
 #GPROF = -pg
-SPEED = -O1
+SPEED = -O2
 
 BUILDID := "$(shell date -u "+%G/%m/%d %H:%M:%S UTC")"
 VERSION := $(shell svn info | grep Revision | awk '{ print $$2 }')
