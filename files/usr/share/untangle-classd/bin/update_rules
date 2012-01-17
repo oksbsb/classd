@@ -51,6 +51,10 @@ insert_classd_iptables_rules()
     # we don't care about traffic to or from loopback addresses
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
+
+    # we also don't want to look at anything traffic owned by the local machine
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x10000/0x10000 -j RETURN
+
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.2 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.2 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.6 -j RETURN
