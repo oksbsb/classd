@@ -55,13 +55,11 @@ insert_classd_iptables_rules()
     # we also don't want to look at anything traffic owned by the local machine
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x10000/0x10000 -j RETURN
 
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.2 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.2 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 192.168.222.6 -j RETURN
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 192.168.222.6 -j RETURN
-
     # all other traffic will be handed off to our netfilter queue
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
+
+    # ----- now that we have created our table we need some rules to send us traffic
+    # ----- these next rules will grab only traffic that we need to classify
 
     # capture all prerouting traffic except stuff with BYPASS or NOTRACK set in the mark
     ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -m mark --mark 0x00000000/0x03000000 -j ${CHAIN_NAME}
