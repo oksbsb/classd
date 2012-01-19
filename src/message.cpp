@@ -48,6 +48,18 @@ void MessageQueue::PushMessage(MessageWagon *argMessage)
 // lock our mutex
 pthread_mutex_lock(&ListLock);
 
+	// if have reached the configured limit just throw it away
+	if (curr_count >= cfg_packet_maximum)
+	{
+	// delete the message and increment the counter
+	delete(argMessage);
+	pkt_sizedrop++;
+
+	// unlock our mutex
+	pthread_mutex_unlock(&ListLock);
+	return;
+	}
+
 	// if queue is empty assign message to tail pointer
 	if (ListTail == NULL)
 	{
@@ -118,7 +130,7 @@ pthread_mutex_unlock(&ListLock);
 return(local);
 }
 /*--------------------------------------------------------------------------*/
-void MessageQueue::GetQueueSize(unsigned &aCurr_count,unsigned &aCurr_bytes,unsigned &aHigh_count,unsigned &aHigh_bytes)
+void MessageQueue::GetQueueSize(int &aCurr_count,int &aCurr_bytes,int &aHigh_count,int &aHigh_bytes)
 {
 aCurr_count = curr_count;
 aCurr_bytes = curr_bytes;
@@ -134,6 +146,7 @@ command = argCommand;
 length = argLength;
 buffer = (unsigned char *)malloc(argLength);
 memcpy(buffer,argBuffer,argLength);
+timestamp = time(NULL);
 }
 /*--------------------------------------------------------------------------*/
 MessageWagon::MessageWagon(int argCommand)

@@ -29,13 +29,16 @@ load_configuration();
 	if (strncasecmp(argv[x],"-B",2) == 0) g_bypass++;
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
-	if (strncasecmp(argv[x],"-M",2) == 0) g_splitter++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{
 		g_debug = atoi(&argv[x][2]);
 		if (g_debug == 0) g_debug = 0xFFFF;
 		}
+
+	// check for command line overrides for config file options
+	if (strncasecmp(argv[x],"-M0",3) == 0) cfg_packet_thread = 0;
+	if (strncasecmp(argv[x],"-M1",3) == 0) cfg_packet_thread = 1;
 	}
 
 // get the default application stack size so
@@ -89,8 +92,9 @@ getitimer(ITIMER_PROF,&g_itimer);
 
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
-if (g_splitter != 0) sysmessage(LOG_NOTICE,"Message queue enabled via command line\n");
 if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
+if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
+else sysmessage(LOG_NOTICE,"Traffic processing message queue is active\n");
 
 // create the main message queue
 g_messagequeue = new MessageQueue();
@@ -398,12 +402,12 @@ sprintf(dest,"LOG_%d",value);
 return(dest);
 }
 /*--------------------------------------------------------------------------*/
-char *pad(char *target,unsigned value,int width)
+char *pad(char *target,u_int64_t value,int width)
 {
 char	source[256];
 int		l,x,y;
 
-sprintf(source,"%u",value);
+sprintf(source,"%llu",value);
 l = strlen(source);
 
 	for(x = y = 0;x < l;x++)
@@ -484,8 +488,14 @@ cfg_client_port = atoi(work);
 grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
 cfg_net_queue = atoi(work);
 
-grab_config_item(filedata,"CLASSD_PACKET_THREAD",work,sizeof(work),"0");
+grab_config_item(filedata,"CLASSD_PACKET_THREAD",work,sizeof(work),"1");
 cfg_packet_thread = atoi(work);
+
+grab_config_item(filedata,"CLASSD_PACKET_TIMEOUT",work,sizeof(work),"4");
+cfg_packet_timeout = atoi(work);
+
+grab_config_item(filedata,"CLASSD_PACKET_MAXIMUM",work,sizeof(work),"1000000");
+cfg_packet_maximum = atoi(work);
 
 for(x = 0;x < total;x++) free(filedata[x]);
 free(filedata);

@@ -103,7 +103,7 @@ public:
 
 	void PushMessage(MessageWagon *argObject);
 	MessageWagon *GrabMessage(void);
-	void GetQueueSize(unsigned &aCurr_count,unsigned &aCurr_bytes,unsigned &aHigh_count,unsigned &aHigh_bytes);
+	void GetQueueSize(int &aCurr_count,int &aCurr_bytes,int &aHigh_count,int &aHigh_bytes);
 
 	sem_t					MessageSignal;
 
@@ -112,10 +112,10 @@ private:
 	pthread_mutex_t			ListLock;
 	MessageWagon			*ListHead;
 	MessageWagon			*ListTail;
-	unsigned				curr_count;
-	unsigned				curr_bytes;
-	unsigned				high_count;
-	unsigned				high_bytes;
+	int						curr_count;
+	int						curr_bytes;
+	int						high_count;
+	int						high_bytes;
 };
 /*--------------------------------------------------------------------------*/
 class MessageWagon
@@ -129,6 +129,7 @@ public:
 	virtual ~MessageWagon(void);
 
 	unsigned char			*buffer;
+	time_t					timestamp;
 	int						length;
 	int						command;
 
@@ -149,7 +150,7 @@ public:
 	void ExpireObject(HashObject *aObject);
 	HashObject* SearchObject(const char *aTitle);
 
-	void GetTableSize(unsigned &aCount,unsigned &aBytes);
+	void GetTableSize(int &aCount,int &aBytes);
 	void DumpDetail(FILE *aFile);
 	int PurgeStaleObjects(time_t aStamp);
 
@@ -314,7 +315,7 @@ void sighandler(int sigval);
 void timestring(char *target);
 void recycle(void);
 char *itolevel(int value,char *dest);
-char *pad(char *target,unsigned value,int width = 0);
+char *pad(char *target,u_int64_t value,int width = 0);
 /*--------------------------------------------------------------------------*/
 #ifndef DATALOC
 #define DATALOC extern
@@ -334,7 +335,6 @@ DATALOC char				g_cfgfile[256];
 DATALOC int					g_tcp_cleanup;
 DATALOC int					g_udp_cleanup;
 DATALOC int					g_shutdown;
-DATALOC int					g_splitter;
 DATALOC int					g_recycle;
 DATALOC int					g_console;
 DATALOC int					g_nofork;
@@ -344,6 +344,8 @@ DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_dump_path[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
+DATALOC int					cfg_packet_timeout;
+DATALOC int					cfg_packet_maximum;
 DATALOC int					cfg_packet_thread;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_navl_defrag;
@@ -360,6 +362,9 @@ DATALOC int					err_unknown;
 DATALOC int					err_nobufs;
 DATALOC int					err_nomem;
 DATALOC int					err_nosr;
+DATALOC u_int64_t			pkt_totalcount;
+DATALOC u_int64_t			pkt_timedrop;
+DATALOC u_int64_t			pkt_sizedrop;
 DATALOC int					www_misscount;
 DATALOC int					www_hitcount;
 /*--------------------------------------------------------------------------*/

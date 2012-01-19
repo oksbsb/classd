@@ -47,12 +47,22 @@
 ## Network filter queue the daemon should use
 #CLASSD_QUEUE_NUM=1967
 
-## Enable to use a seperate thread and message queue
-## to handle classification of network packets.
-#CLASSD_PACKET_THREAD=0
+## Enable to use a seperate thread and message queue to handle
+## classification of network packets.  Disable to have the
+## classify function called directly from the nfqueue handler.
+#CLASSD_PACKET_THREAD=1
+
+## Maximum number of seconds a message can wait in the
+## queue before we consider it stale and throw it away
+#CLASSD_PACKET_TIMEOUT=4
+
+## This sets the absolute maximum number of packets that
+## can be in the messague queue before we start throwing
+## them on the floor.  Mainly a worst case failsafe thing.
+#CLASSD_PACKET_MAXIMUM=1000000
 
 ## Path to the classd binary
-# CLASSD_BIN=/usr/bin/classd
+#CLASSD_BIN=/usr/bin/classd
 
 ## Additional flags to pass on the command line
 ## Use -d to enable all debug log messages or

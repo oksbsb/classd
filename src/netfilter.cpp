@@ -133,9 +133,11 @@ ret = nfct_query(nfcth,NFCT_Q_GET,ct);
 // cleanup the conntrack
 nfct_destroy(ct);
 
+pkt_totalcount++;
+
 	// if classification thread is not enabled then we
 	// process the packet right here... right now
-	if ((cfg_packet_thread | g_splitter) == 0)
+	if (cfg_packet_thread == 0)
 	{
 	process_packet(rawpkt,rawlen);
 	}

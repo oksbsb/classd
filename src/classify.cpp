@@ -34,6 +34,7 @@ static int l_attr_http_info = 0;
 void* classify_thread(void *arg)
 {
 MessageWagon		*wagon;
+time_t				current;
 int					ret;
 
 sysmessage(LOG_INFO,"The classify thread is starting\n");
@@ -65,7 +66,9 @@ ret = vineyard_startup();
 			break;
 
 		case MSG_PACKET:
-			process_packet(wagon->buffer,wagon->length);
+			current = time(NULL);
+			if (current < (wagon->timestamp + cfg_packet_timeout)) process_packet(wagon->buffer,wagon->length);
+			else pkt_timedrop++;
 			delete(wagon);
 			break;
 		}

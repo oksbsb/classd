@@ -289,7 +289,7 @@ hash += (hash >> 6);
 return(hash % buckets);
 }
 /*--------------------------------------------------------------------------*/
-void HashTable::GetTableSize(unsigned &aCount,unsigned &aBytes)
+void HashTable::GetTableSize(int &aCount,int &aBytes)
 {
 HashObject	*work;
 int			x;

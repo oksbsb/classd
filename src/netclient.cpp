@@ -274,7 +274,13 @@ replyoff+=sprintf(&replybuff[replyoff],"  Version: %s\r\n",VERSION);
 replyoff+=sprintf(&replybuff[replyoff],"  Build: %s\r\n",BUILDID);
 replyoff+=sprintf(&replybuff[replyoff],"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
+replyoff+=sprintf(&replybuff[replyoff],"  Packet Counter: %s\r\n",pad(temp,pkt_totalcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Packet Timeout: %s\r\n",pad(temp,pkt_timedrop));
+replyoff+=sprintf(&replybuff[replyoff],"  Packet Overrun: %s\r\n",pad(temp,pkt_sizedrop));
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level: %04X\r\n",g_debug);
+replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag: %d\r\n",g_nofork);
+replyoff+=sprintf(&replybuff[replyoff],"  Console Flag: %d\r\n",g_console);
+replyoff+=sprintf(&replybuff[replyoff],"  Bypass Flag %d\r\n",g_bypass);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"========== VINEYARD DEBUG INFO ==========\r\n");
@@ -320,7 +326,7 @@ replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildMemoryStats(void)
 {
-unsigned	count,bytes,hicnt,himem;
+int			count,bytes,hicnt,himem;
 char		temp[32];
 
 replyoff = sprintf(replybuff,"========== CLASSD MEMORY USAGE ==========\r\n\r\n");
@@ -352,20 +358,22 @@ void NetworkClient::BuildConfiguration(void)
 {
 replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_PATH ........ %s\r\n",cfg_log_path);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_FILE ........ %s\r\n",cfg_log_file);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_DUMP_PATH ....... %s\r\n",cfg_dump_path);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PLUGIN_PATH ..... %s\r\n",cfg_navl_plugins);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HASH_BUCKETS .... %d\r\n",cfg_hash_buckets);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_MAX_FLOWS ....... %d\r\n",cfg_navl_flows);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_IP_DEFRAG ....... %d\r\n",cfg_navl_defrag);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_TCP_TIMEOUT ..... %d\r\n",cfg_tcp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_UDP_TIMEOUT ..... %d\r\n",cfg_udp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HTTP_LIMIT ...... %d\r\n",cfg_http_limit);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PURGE_DELAY ..... %d\r\n",cfg_purge_delay);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_CLIENT_PORT ..... %d\r\n",cfg_client_port);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_QUEUE_NUM ....... %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_THREAD ... %d\r\n",cfg_packet_thread);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_PATH ......... %s\r\n",cfg_log_path);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_FILE ......... %s\r\n",cfg_log_file);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_DUMP_PATH ........ %s\r\n",cfg_dump_path);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_navl_plugins);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_IP_DEFRAG ........ %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_TCP_TIMEOUT ...... %d\r\n",cfg_tcp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_UDP_TIMEOUT ...... %d\r\n",cfg_udp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_http_limit);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PURGE_DELAY ...... %d\r\n",cfg_purge_delay);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_CLIENT_PORT ...... %d\r\n",cfg_client_port);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_QUEUE_NUM ........ %d\r\n",cfg_net_queue);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_THREAD .... %d\r\n",cfg_packet_thread);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_TIMEOUT ... %d\r\n",cfg_packet_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_MAXIMUM ... %d\r\n",cfg_packet_maximum);
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
@@ -406,13 +414,21 @@ stream = fopen(dumpfile,"a");
 
 // dump our build information
 timestring(temp);
-fprintf(stream,"========== Untangle CLASSd Debug Information ==========\r\n");
+fprintf(stream,"===========================================================================\r\n");
+fprintf(stream,"=                    Untangle CLASSd Debug Information                    =\r\n");
+fprintf(stream,"===========================================================================\r\n");
 fprintf(stream,"  Report Date: %s\r\n",temp);
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
 fprintf(stream,"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
 fprintf(stream,"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
+fprintf(stream,"  Packet Counter: %s\r\n",pad(temp,pkt_totalcount));
+fprintf(stream,"  Packet Timeout: %s\r\n",pad(temp,pkt_timedrop));
+fprintf(stream,"  Packet Overrun: %s\r\n",pad(temp,pkt_sizedrop));
 fprintf(stream,"  Debug Level: %04X\r\n",g_debug);
+fprintf(stream,"  No Fork Flag: %d\r\n",g_nofork);
+fprintf(stream,"  Console Flag: %d\r\n",g_console);
+fprintf(stream,"  Bypass Flag: %d\r\n",g_bypass);
 fprintf(stream,"\r\n");
 
 // dump everything in the status hashtable
