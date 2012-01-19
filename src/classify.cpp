@@ -53,6 +53,9 @@ ret = vineyard_startup();
 	return(NULL);
 	}
 
+// let the main process know we are fully initialized
+sem_post(&g_classify_sem);
+
 	while (g_shutdown == 0)
 	{
 	wagon = g_messagequeue->GrabMessage();

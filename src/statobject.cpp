@@ -36,13 +36,16 @@ clientfin = serverfin = 0;
 /*--------------------------------------------------------------------------*/
 StatusObject::~StatusObject(void)
 {
+int		ret;
+
 if (application != NULL) free(application);
 if (protochain != NULL) free(protochain);
 if (detail != NULL) free(detail);
 
 	if ((tracker != NULL) && (g_bypass == 0))
 	{
-	navl_conn_fini(clientaddr,clientport,serveraddr,serverport,netproto);
+	ret = navl_conn_fini(clientaddr,clientport,serveraddr,serverport,netproto);
+	if (ret != 0) err_connfini++;
 	}
 }
 /*--------------------------------------------------------------------------*/

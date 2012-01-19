@@ -54,9 +54,6 @@ int					ret;
 // set the thread signal semaphore
 sem_post(&ThreadSignal);
 
-// interrupt the running thread
-pthread_kill(ThreadHandle,SIGTERM);
-
 // wait for the thread to terminate
 pthread_join(ThreadHandle,NULL);
 

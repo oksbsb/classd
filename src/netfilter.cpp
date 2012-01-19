@@ -37,6 +37,9 @@ ret = netfilter_startup();
 // get the file descriptor for netlink queue
 fd = nfnl_fd(nfq_nfnlh(nfqh));
 
+// let the main process know we are fully initialized
+sem_post(&g_netfilter_sem);
+
 	while (g_shutdown == 0)
 	{
 	pollinfo.fd = fd;

@@ -323,6 +323,8 @@ char *pad(char *target,u_int64_t value,int width = 0);
 /*--------------------------------------------------------------------------*/
 DATALOC pthread_t			g_netfilter_tid;
 DATALOC pthread_t			g_classify_tid;
+DATALOC sem_t				g_netfilter_sem;
+DATALOC sem_t				g_classify_sem;
 DATALOC struct itimerval	g_itimer;
 DATALOC struct timeval		g_runtime;
 DATALOC size_t				g_stacksize;
@@ -357,6 +359,7 @@ DATALOC int					cfg_navl_flows;
 DATALOC int					cfg_http_limit;
 DATALOC int					cfg_net_queue;
 DATALOC int					err_conninit;
+DATALOC int					err_connfini;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;
 DATALOC int					err_nobufs;
