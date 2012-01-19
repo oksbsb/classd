@@ -16,7 +16,7 @@ is_queue_open()
 
     t_classd_pid="invalid"
 
-    if [ ! -f /proc/net/netfilter/nfnetlink_queue ] ; then
+    if [ ! -f /proc/net/netfilter/nfnetlink_queue ]; then
         echo "[`date`] The netfilter nfnetlink_queue does not exist - not inserting rules for classd"
         return 1
     fi
@@ -51,6 +51,12 @@ insert_classd_iptables_rules()
     # we don't care about traffic to or from loopback addresses
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
+
+    # special hook to allow bypass of a development machine or network
+    if [ ! -z ${CLASSD_DEV_NETWORK} ]; then
+        ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s ${CLASSD_DEV_NETWORK} -j RETURN
+        ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d ${CLASSD_DEV_NETWORK} -j RETURN
+    fi
 
     # we also don't want to look at anything traffic owned by the local machine
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x10000/0x10000 -j RETURN
