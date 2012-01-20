@@ -37,9 +37,6 @@ ret = netfilter_startup();
 // get the file descriptor for netlink queue
 fd = nfnl_fd(nfq_nfnlh(nfqh));
 
-// let the main process know we are fully initialized
-sem_post(&g_netfilter_sem);
-
 	while (g_shutdown == 0)
 	{
 	pollinfo.fd = fd;
@@ -138,19 +135,9 @@ nfct_destroy(ct);
 
 pkt_totalcount++;
 
-	// if classification thread is not enabled then we
-	// process the packet right here... right now
-	if (cfg_packet_thread == 0)
-	{
-	process_packet(rawpkt,rawlen);
-	}
-
-	// otherwise push the packet onto the message queue
-	else
-	{
-	local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
-	g_messagequeue->PushMessage(local);
-	}
+// push the packet onto the message queue
+local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
+g_messagequeue->PushMessage(local);
 
 return(0);
 }

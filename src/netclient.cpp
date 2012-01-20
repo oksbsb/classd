@@ -372,7 +372,6 @@ replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_ht
 replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PURGE_DELAY ...... %d\r\n",cfg_purge_delay);
 replyoff+=sprintf(&replybuff[replyoff],"CLASSD_CLIENT_PORT ...... %d\r\n",cfg_client_port);
 replyoff+=sprintf(&replybuff[replyoff],"CLASSD_QUEUE_NUM ........ %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_THREAD .... %d\r\n",cfg_packet_thread);
 replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_TIMEOUT ... %d\r\n",cfg_packet_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_MAXIMUM ... %d\r\n",cfg_packet_maximum);
 

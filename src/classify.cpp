@@ -53,9 +53,6 @@ ret = vineyard_startup();
 	return(NULL);
 	}
 
-// let the main process know we are fully initialized
-sem_post(&g_classify_sem);
-
 	while (g_shutdown == 0)
 	{
 	wagon = g_messagequeue->GrabMessage();
@@ -68,6 +65,15 @@ sem_post(&g_classify_sem);
 			delete(wagon);
 			break;
 
+		case MSG_CLEANUP:
+			current = time(NULL);
+			logmessage(CAT_LOGIC,LOG_DEBUG,"Beginning status and lookup table cleanup cycle\n");
+			ret = g_statustable->PurgeStaleObjects(current);
+			logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
+			ret = g_lookuptable->PurgeStaleObjects(current);
+			logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
+			break;
+
 		case MSG_PACKET:
 			current = time(NULL);
 			if (current < (wagon->timestamp + cfg_packet_timeout)) process_packet(wagon->buffer,wagon->length);
@@ -76,6 +82,11 @@ sem_post(&g_classify_sem);
 			break;
 		}
 	}
+
+// cleanup everything in the hash tables here since the destructors
+// do vineyard cleanup that we don't want happening outside this thread
+g_statustable->PurgeEverything();
+g_lookuptable->PurgeEverything();
 
 // call our vineyard shutdown function
 vineyard_shutdown();

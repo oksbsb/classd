@@ -27,6 +27,7 @@ const unsigned int CAT_CLIENT = 0x00000002;
 const unsigned int CAT_FILTER = 0x00000004;
 
 const unsigned int MSG_PACKET = 0x11111111;
+const unsigned int MSG_CLEANUP = 0x22222222;
 const unsigned int MSG_SHUTDOWN = 0x99999999;
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
@@ -153,6 +154,7 @@ public:
 	void GetTableSize(int &aCount,int &aBytes);
 	void DumpDetail(FILE *aFile);
 	int PurgeStaleObjects(time_t aStamp);
+	int PurgeEverything(void);
 
 private:
 
@@ -323,8 +325,6 @@ char *pad(char *target,u_int64_t value,int width = 0);
 /*--------------------------------------------------------------------------*/
 DATALOC pthread_t			g_netfilter_tid;
 DATALOC pthread_t			g_classify_tid;
-DATALOC sem_t				g_netfilter_sem;
-DATALOC sem_t				g_classify_sem;
 DATALOC struct itimerval	g_itimer;
 DATALOC struct timeval		g_runtime;
 DATALOC size_t				g_stacksize;
@@ -348,7 +348,6 @@ DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
 DATALOC int					cfg_packet_timeout;
 DATALOC int					cfg_packet_maximum;
-DATALOC int					cfg_packet_thread;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_tcp_timeout;
