@@ -12,11 +12,8 @@ StatusObject::StatusObject(const char *aHashname,
 	uint32_t aClientAddr,
 	uint16_t aClientPort,
 	uint32_t aServerAddr,
-	uint16_t aServerPort,
-	void *aTracker) : HashObject(aNetProto,aHashname)
+	uint16_t aServerPort) : HashObject(aNetProto,aHashname)
 {
-tracker = aTracker;
-
 application = NULL;
 protochain = NULL;
 detail = NULL;
@@ -36,17 +33,9 @@ clientfin = serverfin = 0;
 /*--------------------------------------------------------------------------*/
 StatusObject::~StatusObject(void)
 {
-int		ret;
-
 if (application != NULL) free(application);
 if (protochain != NULL) free(protochain);
 if (detail != NULL) free(detail);
-
-	if ((tracker != NULL) && (g_bypass == 0))
-	{
-	ret = navl_conn_fini(clientaddr,clientport,serveraddr,serverport,netproto);
-	if (ret != 0) err_connfini++;
-	}
 }
 /*--------------------------------------------------------------------------*/
 void StatusObject::UpdateObject(const char *aApplication,

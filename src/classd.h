@@ -13,21 +13,13 @@
 #endif
 
 /*--------------------------------------------------------------------------*/
-const unsigned short TCP_FIN = 0x01;
-const unsigned short TCP_SYN = 0x02;
-const unsigned short TCP_RST = 0x04;
-const unsigned short TCP_PSH = 0x08;
-const unsigned short TCP_ACK = 0x10;
-const unsigned short TCP_URG = 0x20;
-const unsigned short TCP_ECN = 0x40;
-const unsigned short TCP_CWR = 0x80;
+const unsigned int CAT_LOGIC    = 0x00000001;
+const unsigned int CAT_CLIENT   = 0x00000002;
+const unsigned int CAT_PACKET   = 0x00000004;
+const unsigned int CAT_LOOKUP   = 0x00000008;
+const unsigned int CAT_FILTER   = 0x00000010;
 
-const unsigned int CAT_LOGIC = 0x00000001;
-const unsigned int CAT_CLIENT = 0x00000002;
-const unsigned int CAT_FILTER = 0x00000004;
-
-const unsigned int MSG_PACKET = 0x11111111;
-const unsigned int MSG_CLEANUP = 0x22222222;
+const unsigned int MSG_PACKET   = 0x11111111;
 const unsigned int MSG_SHUTDOWN = 0x99999999;
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
@@ -85,12 +77,12 @@ protected:
 
 private:
 
-	void DumpEverything(void);
 	void BuildConfiguration(void);
-	void BuildMemoryStats(void);
 	void BuildDebugInfo(void);
 	void BuildProtoList(void);
 	void BuildHelpPage(void);
+	void DumpEverything(void);
+	void AdjustLogCategory(void);
 	int ProcessRequest(void);
 	int TransmitReply(void);
 };
@@ -154,7 +146,6 @@ public:
 	void GetTableSize(int &aCount,int &aBytes);
 	void DumpDetail(FILE *aFile);
 	int PurgeStaleObjects(time_t aStamp);
-	int PurgeEverything(void);
 
 private:
 
@@ -200,8 +191,7 @@ public:
 		uint32_t aClientAddr,
 		uint16_t aClientPort,
 		uint32_t aServerAddr,
-		uint16_t aServerPort,
-		void *aTracker);
+		uint16_t aServerPort);
 
 	virtual ~StatusObject(void);
 
@@ -218,7 +208,6 @@ public:
 	inline const char *GetDetail(void)		{ return(detail); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
-	inline void *GetTracker(void)			{ return(tracker); }
 
 	inline int IsActive(void)				{ return(upcount); }
 
@@ -237,7 +226,6 @@ private:
 
 	short					confidence;
 	short					state;
-	void					*tracker;
 	char					*application;
 	char					*protochain;
 	char					*detail;
@@ -287,7 +275,7 @@ public:
 	int						value;
 };
 /*--------------------------------------------------------------------------*/
-struct xxphdr
+struct xphdr
 {
 	u_int16_t				source;
 	u_int16_t				dest;
@@ -300,11 +288,11 @@ void netfilter_shutdown(void);
 int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
-void process_traffic(uint16_t flags,uint8_t ip_proto,uint32_t src_addr,uint16_t src_port,uint32_t dst_addr,uint16_t dst_port,const void *data,unsigned short len,StatusObject *status);
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
 void process_packet(unsigned char *rawpkt,int rawlen);
-int vineyard_startup(void);
+void log_packet(unsigned char *rawpkt,int rawlen);
 void vineyard_shutdown(void);
+int vineyard_startup(void);
 /*--------------------------------------------------------------------------*/
 void hexmessage(int category,int priority,const void *buffer,int size);
 void logmessage(int category,int priority,const char *format,...);
@@ -334,8 +322,6 @@ DATALOC HashTable			*g_statustable;
 DATALOC HashTable			*g_lookuptable;
 DATALOC FILE				*g_logfile;
 DATALOC char				g_cfgfile[256];
-DATALOC int					g_tcp_cleanup;
-DATALOC int					g_udp_cleanup;
 DATALOC int					g_shutdown;
 DATALOC int					g_recycle;
 DATALOC int					g_console;
@@ -348,6 +334,7 @@ DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
 DATALOC int					cfg_packet_timeout;
 DATALOC int					cfg_packet_maximum;
+DATALOC int					cfg_packet_thread;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_navl_defrag;
 DATALOC int					cfg_tcp_timeout;
@@ -357,8 +344,6 @@ DATALOC int					cfg_client_port;
 DATALOC int					cfg_navl_flows;
 DATALOC int					cfg_http_limit;
 DATALOC int					cfg_net_queue;
-DATALOC int					err_conninit;
-DATALOC int					err_connfini;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;
 DATALOC int					err_nobufs;

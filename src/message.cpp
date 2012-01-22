@@ -48,7 +48,7 @@ void MessageQueue::PushMessage(MessageWagon *argMessage)
 // lock our mutex
 pthread_mutex_lock(&ListLock);
 
-	// if have reached the configured limit just throw it away
+	// if we have reached the configured limit just throw it away
 	if (curr_count >= cfg_packet_maximum)
 	{
 	// delete the message and increment the counter
@@ -76,9 +76,6 @@ pthread_mutex_lock(&ListLock);
 // if head is null copy the tail
 if (ListHead == NULL) ListHead = ListTail;
 
-// increment the message signal semaphore
-sem_post(&MessageSignal);
-
 // increment our count and memory trackers
 curr_count++;
 if (curr_count > high_count) high_count = curr_count;
@@ -87,6 +84,9 @@ if (curr_bytes > high_bytes) high_bytes = curr_bytes;
 
 // unlock our mutex
 pthread_mutex_unlock(&ListLock);
+
+// increment the message signal semaphore
+sem_post(&MessageSignal);
 }
 /*--------------------------------------------------------------------------*/
 MessageWagon* MessageQueue::GrabMessage(void)

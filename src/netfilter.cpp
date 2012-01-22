@@ -86,7 +86,7 @@ MessageWagon					*local;
 struct nfqnl_msg_packet_hdr		*hdr;
 struct nf_conntrack				*ct;
 unsigned char					*rawpkt;
-struct xxphdr					*xxphead;
+struct xphdr					*xphead;
 struct iphdr					*iphead;
 int								rawlen;
 int								ret;
@@ -115,7 +115,7 @@ if (iphead->version != 4) return(0);
 if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
 
 // use a generic header for source and dest ports
-xxphead = (struct xxphdr *)&rawpkt[iphead->ihl << 2];
+xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
 
 // allocate a new conntrack
 ct = nfct_new();
@@ -125,9 +125,9 @@ if (ct == NULL) return(0);
 nfct_set_attr_u8(ct,ATTR_L3PROTO,AF_INET);
 nfct_set_attr_u8(ct,ATTR_L4PROTO,iphead->protocol);
 nfct_set_attr_u32(ct,ATTR_IPV4_SRC,iphead->saddr);
-nfct_set_attr_u16(ct,ATTR_PORT_SRC,xxphead->source);
+nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->source);
 nfct_set_attr_u32(ct,ATTR_IPV4_DST,iphead->daddr);
-nfct_set_attr_u16(ct,ATTR_PORT_DST,xxphead->dest);
+nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dest);
 ret = nfct_query(nfcth,NFCT_Q_GET,ct);
 
 // cleanup the conntrack
@@ -135,9 +135,19 @@ nfct_destroy(ct);
 
 pkt_totalcount++;
 
-// push the packet onto the message queue
-local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
-g_messagequeue->PushMessage(local);
+	// if classification thread is not enabled then we
+	// process the packet right here right now
+	if (cfg_packet_thread == 0)
+	{
+	process_packet(rawpkt,rawlen);
+	}
+
+	// otherwise push the packet onto the message queue
+	else
+	{
+	local = new MessageWagon(MSG_PACKET,rawpkt,rawlen);
+	g_messagequeue->PushMessage(local);
+	}
 
 return(0);
 }

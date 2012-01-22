@@ -26,10 +26,22 @@ for(x = 0;x < buckets;x++) sem_init(&control[x],0,1);
 /*--------------------------------------------------------------------------*/
 HashTable::~HashTable(void)
 {
+HashObject	*work,*hold;
 int			x;
 
-// cleanup anything left in the table
-PurgeEverything();
+	// walk through all the buckets and delete everything
+	for(x = 0;x < buckets;x++)
+	{
+	if (table[x] == NULL) continue;
+	work = table[x];
+
+		while (work != NULL)
+		{
+		hold = work->next;
+		delete(work);
+		work = hold;
+		}
+	}
 
 // free the bucket array
 free(table);
@@ -184,19 +196,11 @@ removed = 0;
 		{
 		kill = 0;
 
-			// look for stale TCP objects
-			if ((curr->netproto == IPPROTO_TCP) && (aStamp > curr->timeout))
-			{
-			g_tcp_cleanup++;
-			kill++;
-			}
+		// look for stale TCP objects
+		if ((curr->netproto == IPPROTO_TCP) && (aStamp > curr->timeout)) kill++;
 
-			// look for stale UDP objects
-			if ((curr->netproto == IPPROTO_UDP) && (aStamp > curr->timeout))
-			{
-			g_udp_cleanup++;
-			kill++;
-			}
+		// look for stale UDP objects
+		if ((curr->netproto == IPPROTO_UDP) && (aStamp > curr->timeout)) kill++;
 
 			// if not stale adjust working pointers and continue
 			if (kill == 0)
@@ -226,32 +230,6 @@ removed = 0;
 	}
 
 return(removed);
-}
-/*--------------------------------------------------------------------------*/
-int HashTable::PurgeEverything(void)
-{
-HashObject	*work,*hold;
-int			total,x;
-
-total = 0;
-
-	// walk through all the buckets and delete everything
-	for(x = 0;x < buckets;x++)
-	{
-	if (table[x] == NULL) continue;
-	work = table[x];
-	table[x] = NULL;
-
-		while (work != NULL)
-		{
-		hold = work->next;
-		delete(work);
-		total++;
-		work = hold;
-		}
-	}
-
-return(total);
 }
 /*--------------------------------------------------------------------------*/
 unsigned int HashTable::GetHashValue(const char *aString)

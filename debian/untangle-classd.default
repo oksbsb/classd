@@ -47,6 +47,11 @@
 ## Network filter queue the daemon should use
 #CLASSD_QUEUE_NUM=1967
 
+## Enable to use a seperate thread and message queue to handle
+## classification of network packets.  Disable to have the
+## classify function called directly from the nfqueue handler.
+#CLASSD_PACKET_THREAD=1
+
 ## Maximum number of seconds a packet can wait in our classify
 ## queue before we consider it stale and throw it away
 #CLASSD_PACKET_TIMEOUT=4

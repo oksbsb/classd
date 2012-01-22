@@ -104,87 +104,15 @@ StatusObject	*local;
 
 // first check for all our special queries
 
-	if (strcasecmp(querybuff,"DUMP") == 0)
-	{
-	DumpEverything();
-	return(1);
-	}
+if (strcasecmp(querybuff,"CONFIG") == 0)	{ BuildConfiguration(); return(1); }
+if (strcasecmp(querybuff,"DEBUG") == 0)		{ BuildDebugInfo(); return(1); }
+if (strcasecmp(querybuff,"PROTO") == 0)		{ BuildProtoList(); return(1); }
+if (strcasecmp(querybuff,"HELP") == 0)		{ BuildHelpPage(); return(1); }
+if (strcasecmp(querybuff,"DUMP") == 0)		{ DumpEverything(); return(1); }
 
-	if (strcasecmp(querybuff,"CONFIG") == 0)
+	if ((querybuff[0] == '+') || (querybuff[0] == '-'))
 	{
-	BuildConfiguration();
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"DEBUG") == 0)
-	{
-	BuildDebugInfo();
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"PROTO") == 0)
-	{
-	BuildProtoList();
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"MEM") == 0)
-	{
-	BuildMemoryStats();
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"CLIENT OFF") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_CLIENT;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"CLIENT ON") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_CLIENT;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"FILTER OFF") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_FILTER;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"FILTER ON") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_FILTER;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"LOGIC OFF") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_LOGIC;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"LOGIC ON") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_LOGIC;
-	return(1);
-	}
-
-	if (strcasecmp(querybuff,"HELP") == 0)
-	{
-	BuildHelpPage();
+	AdjustLogCategory();
 	return(1);
 	}
 
@@ -224,6 +152,94 @@ local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 	}
 
 return(1);
+}
+/*--------------------------------------------------------------------------*/
+void NetworkClient::AdjustLogCategory(void)
+{
+int		found = 0;
+
+	if (strcasecmp(querybuff,"-CLIENT") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_CLIENT;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+CLIENT") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_CLIENT;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"-FILTER") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_FILTER;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+FILTER") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_FILTER;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"-PACKET") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Packet debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Packet debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_PACKET;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+PACKET") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Packet debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Packet debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_PACKET;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"-LOOKUP") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Lookup debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Lookup debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_LOOKUP;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+LOOKUP") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Lookup debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Lookup debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_LOOKUP;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"-LOGIC") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_LOGIC;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+LOGIC") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_LOGIC;
+	found++;
+	}
+
+if (found != 0) return;
+replyoff = sprintf(replybuff,"%s","Unrecognized log control command\r\n\r\n");
 }
 /*--------------------------------------------------------------------------*/
 int NetworkClient::TransmitReply(void)
@@ -267,32 +283,46 @@ return(1);
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildDebugInfo(void)
 {
+int			count,bytes,hicnt,himem;
 char		temp[32];
 
 replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  Version: %s\r\n",VERSION);
-replyoff+=sprintf(&replybuff[replyoff],"  Build: %s\r\n",BUILDID);
-replyoff+=sprintf(&replybuff[replyoff],"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
-replyoff+=sprintf(&replybuff[replyoff],"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
-replyoff+=sprintf(&replybuff[replyoff],"  Packet Counter: %s\r\n",pad(temp,pkt_totalcount));
-replyoff+=sprintf(&replybuff[replyoff],"  Packet Timeout: %s\r\n",pad(temp,pkt_timedrop));
-replyoff+=sprintf(&replybuff[replyoff],"  Packet Overrun: %s\r\n",pad(temp,pkt_sizedrop));
-replyoff+=sprintf(&replybuff[replyoff],"  Debug Level: %04X\r\n",g_debug);
-replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag: %d\r\n",g_nofork);
-replyoff+=sprintf(&replybuff[replyoff],"  Console Flag: %d\r\n",g_console);
-replyoff+=sprintf(&replybuff[replyoff],"  Bypass Flag %d\r\n",g_bypass);
+replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,sizeof(int) * 8);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"========== VINEYARD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  NO MEMORY ERRORS ......... %s\r\n",pad(temp,err_nomem));
-replyoff+=sprintf(&replybuff[replyoff],"  NO FLOW ERRORS ........... %s\r\n",pad(temp,err_nobufs));
-replyoff+=sprintf(&replybuff[replyoff],"  NO RESOURCES ERRORS ...... %s\r\n",pad(temp,err_nosr));
-replyoff+=sprintf(&replybuff[replyoff],"  NO CONNECTION ERRORS ..... %s\r\n",pad(temp,err_notconn));
-replyoff+=sprintf(&replybuff[replyoff],"  UNKNOWN ERRORS ........... %s\r\n",pad(temp,err_unknown));
-replyoff+=sprintf(&replybuff[replyoff],"  CONN_INIT ERRORS ......... %s\r\n",pad(temp,err_conninit));
-replyoff+=sprintf(&replybuff[replyoff],"  CONN_FINI ERRORS ......... %s\r\n",pad(temp,err_connfini));
-replyoff+=sprintf(&replybuff[replyoff],"  TCP CLEANUP COUNT ........ %s\r\n",pad(temp,g_tcp_cleanup));
-replyoff+=sprintf(&replybuff[replyoff],"  UDP CLEANUP COUNT ........ %s\r\n",pad(temp,g_udp_cleanup));
+replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... %08X\r\n",g_debug);
+replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
+replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
+replyoff+=sprintf(&replybuff[replyoff],"  Bypass Flag ..................... %d\r\n",g_bypass);
+replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,www_hitcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,www_misscount));
+replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Counter .......... %s\r\n",pad(temp,pkt_totalcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Timeout .......... %s\r\n",pad(temp,pkt_timedrop));
+replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Overrun .......... %s\r\n",pad(temp,pkt_sizedrop));
+
+// get the details for the message queue
+g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Current Count ..... %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Current Bytes ..... %s\r\n",pad(temp,bytes));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Highest Count ..... %s\r\n",pad(temp,hicnt));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Highest Bytes ..... %s\r\n",pad(temp,himem));
+
+// get the total size of the status table
+g_statustable->GetTableSize(count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Items ........ %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
+
+// get the total size of the lookup table
+g_lookuptable->GetTableSize(count,bytes);
+replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Items ........ %s\r\n",pad(temp,count));
+replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
+
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO MEMORY Errors ....... %s\r\n",pad(temp,err_nomem));
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO FLOW Errors ......... %s\r\n",pad(temp,err_nobufs));
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO RESOURCE Errors ..... %s\r\n",pad(temp,err_nosr));
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO CONNECTION Errors ... %s\r\n",pad(temp,err_notconn));
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard UNKNOWN Errors ......... %s\r\n",pad(temp,err_unknown));
+
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
@@ -325,55 +355,26 @@ total = navl_proto_max_id();
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
-void NetworkClient::BuildMemoryStats(void)
-{
-int			count,bytes,hicnt,himem;
-char		temp[32];
-
-replyoff = sprintf(replybuff,"========== CLASSD MEMORY USAGE ==========\r\n\r\n");
-
-// get the total size of the lookup table
-g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);
-replyoff+=sprintf(&replybuff[replyoff],"  ----- Message Queue -----\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
-replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
-replyoff+=sprintf(&replybuff[replyoff],"    Highest Items: %s\r\n",pad(temp,hicnt));
-replyoff+=sprintf(&replybuff[replyoff],"    Highest Bytes: %s\r\n",pad(temp,himem));
-
-// get the total size of the status table
-g_statustable->GetTableSize(count,bytes);
-replyoff+=sprintf(&replybuff[replyoff],"\r\n  ----- Session Hash Table -----\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
-replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
-
-// get the total size of the lookup table
-g_lookuptable->GetTableSize(count,bytes);
-replyoff+=sprintf(&replybuff[replyoff],"\r\n  ----- Conntrack Hash Table -----\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"    Current Items: %s\r\n",pad(temp,count));
-replyoff+=sprintf(&replybuff[replyoff],"    Current Bytes: %s\r\n",pad(temp,bytes));
-
-replyoff+=sprintf(&replybuff[replyoff],"\r\n");
-}
-/*--------------------------------------------------------------------------*/
 void NetworkClient::BuildConfiguration(void)
 {
 replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_PATH ......... %s\r\n",cfg_log_path);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_LOG_FILE ......... %s\r\n",cfg_log_file);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_DUMP_PATH ........ %s\r\n",cfg_dump_path);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_navl_plugins);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_IP_DEFRAG ........ %d\r\n",cfg_navl_defrag);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_TCP_TIMEOUT ...... %d\r\n",cfg_tcp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_UDP_TIMEOUT ...... %d\r\n",cfg_udp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_http_limit);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PURGE_DELAY ...... %d\r\n",cfg_purge_delay);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_CLIENT_PORT ...... %d\r\n",cfg_client_port);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_QUEUE_NUM ........ %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_TIMEOUT ... %d\r\n",cfg_packet_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"CLASSD_PACKET_MAXIMUM ... %d\r\n",cfg_packet_maximum);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ......... %s\r\n",cfg_log_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ......... %s\r\n",cfg_log_file);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ........ %s\r\n",cfg_dump_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_navl_plugins);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ........ %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ...... %d\r\n",cfg_tcp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ...... %d\r\n",cfg_udp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_http_limit);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ...... %d\r\n",cfg_purge_delay);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ...... %d\r\n",cfg_client_port);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ........ %d\r\n",cfg_net_queue);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT ... %d\r\n",cfg_packet_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM ... %d\r\n",cfg_packet_maximum);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD .... %d\r\n",cfg_packet_thread);
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
@@ -385,10 +386,11 @@ replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"CONFIG - display all daemon configuration values\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUG - display daemon debug information\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"PROTO - retrieve the list of recognized protocols\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"MEM - display memory usage statistics\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"CLIENT [ON | OFF ] - enable/disable client debug logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"FILTER [ON | OFF ] - enable/disable filter debug logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"LOGIC [ON | OFF ] - enable/disable logic debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-CLIENT - enable/disable netclient request logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-FILTER - enable/disable netfilter conntrack logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable packet classify logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-LOOKUP - enable/disable session lookup logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-LOGIC - enable/disable logic debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\r\n");
@@ -420,12 +422,8 @@ fprintf(stream,"================================================================
 fprintf(stream,"  Report Date: %s\r\n",temp);
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
-fprintf(stream,"  Web Hit Count: %s\r\n",pad(temp,www_hitcount));
-fprintf(stream,"  Web Miss Count: %s\r\n",pad(temp,www_misscount));
-fprintf(stream,"  Packet Counter: %s\r\n",pad(temp,pkt_totalcount));
-fprintf(stream,"  Packet Timeout: %s\r\n",pad(temp,pkt_timedrop));
-fprintf(stream,"  Packet Overrun: %s\r\n",pad(temp,pkt_sizedrop));
-fprintf(stream,"  Debug Level: %04X\r\n",g_debug);
+fprintf(stream,"  Architecture: %d Bit\r\n",sizeof(int) * 8);
+fprintf(stream,"  Debug Level: %08X\r\n",g_debug);
 fprintf(stream,"  No Fork Flag: %d\r\n",g_nofork);
 fprintf(stream,"  Console Flag: %d\r\n",g_console);
 fprintf(stream,"  Bypass Flag: %d\r\n",g_bypass);
@@ -439,19 +437,6 @@ fprintf(stream,"\r\n");
 // dump everything in the conntrack hashtable
 fprintf(stream,"========== CONNTRACK LOOKUP TABLE ==========\r\n");
 g_lookuptable->DumpDetail(stream);
-fprintf(stream,"\r\n");
-
-// dump the vineyard stream error counters
-fprintf(stream,"========== VINEYARD DETAIL ==========\r\n");
-fprintf(stream,"  NO MEMORY ERRORS ......... %s\r\n",pad(temp,err_nomem));
-fprintf(stream,"  NO FLOW ERRORS ........... %s\r\n",pad(temp,err_nobufs));
-fprintf(stream,"  NO RESOURCES ERRORS ...... %s\r\n",pad(temp,err_nosr));
-fprintf(stream,"  NO CONNECTION ERRORS ..... %s\r\n",pad(temp,err_notconn));
-fprintf(stream,"  UNKNOWN ERRORS ........... %s\r\n",pad(temp,err_unknown));
-fprintf(stream,"  CONN_INIT ERRORS ......... %s\r\n",pad(temp,err_conninit));
-fprintf(stream,"  CONN_FINI ERRORS ......... %s\r\n",pad(temp,err_connfini));
-fprintf(stream,"  TCP CLEANUP COUNT ........ %s\r\n",pad(temp,g_tcp_cleanup));
-fprintf(stream,"  UDP CLEANUP COUNT ........ %s\r\n",pad(temp,g_udp_cleanup));
 fprintf(stream,"\r\n");
 
 // dump the vineyard diagnostic info and wrap in calls
@@ -468,8 +453,8 @@ dumpsize = ftell(stream);
 fclose(stream);
 
 replyoff = sprintf(replybuff,"========== DUMP FILE CREATED ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"FILE: %s\r\n",dumpfile);
-replyoff+=sprintf(&replybuff[replyoff],"SIZE: %s\r\n\r\n",pad(temp,dumpsize));
+replyoff+=sprintf(&replybuff[replyoff],"  FILE: %s\r\n",dumpfile);
+replyoff+=sprintf(&replybuff[replyoff],"  SIZE: %s\r\n\r\n",pad(temp,dumpsize));
 }
 /*--------------------------------------------------------------------------*/
 

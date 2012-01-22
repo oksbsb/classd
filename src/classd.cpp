@@ -35,6 +35,10 @@ load_configuration();
 		g_debug = atoi(&argv[x][2]);
 		if (g_debug == 0) g_debug = 0xFFFF;
 		}
+
+	// check for command line overrides for config file options
+	if (strncasecmp(argv[x],"-M0",3) == 0) cfg_packet_thread = 0;
+	if (strncasecmp(argv[x],"-M1",3) == 0) cfg_packet_thread = 1;
 	}
 
 // get the default application stack size so
@@ -89,6 +93,8 @@ getitimer(ITIMER_PROF,&g_itimer);
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
+if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
+else sysmessage(LOG_NOTICE,"Traffic processing message queue is active\n");
 
 // create the main message queue
 g_messagequeue = new MessageQueue();
@@ -153,7 +159,11 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		g_messagequeue->PushMessage(new MessageWagon(MSG_CLEANUP));
+		logmessage(CAT_LOGIC,LOG_DEBUG,"Beginning status and lookup table cleanup cycle\n");
+		ret = g_statustable->PurgeStaleObjects(currtime);
+		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
+		ret = g_lookuptable->PurgeStaleObjects(currtime);
+		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
 		}
 
 		if (g_recycle != 0)
@@ -167,7 +177,7 @@ currtime = lasttime = time(NULL);
 g_shutdown = 1;
 
 // post a shutdown message to the main message queue
-g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
+ g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 
 // wait for the netfilter and classify threads to finish
 pthread_join(g_classify_tid,NULL);
@@ -290,7 +300,7 @@ data = (const unsigned char *)buffer;
 	{
 	loc = (x * 3);
 	if (x == 0) sprintf(&message[loc],"%02X ",data[x]);
-	else sprintf(&message[loc]," %02X ",data[x]);
+	else sprintf(&message[loc],"%02X ",data[x]);
 	}
 
 loc = (size * 3);
@@ -484,6 +494,9 @@ cfg_packet_timeout = atoi(work);
 
 grab_config_item(filedata,"CLASSD_PACKET_MAXIMUM",work,sizeof(work),"1000000");
 cfg_packet_maximum = atoi(work);
+
+grab_config_item(filedata,"CLASSD_PACKET_THREAD",work,sizeof(work),"1");
+cfg_packet_thread = atoi(work);
 
 for(x = 0;x < total;x++) free(filedata[x]);
 free(filedata);

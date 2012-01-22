@@ -52,14 +52,8 @@ insert_classd_iptables_rules()
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
 
-    # we don't want to look at any traffic with the LOCAL mark set
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x00010000/0x00010000 -j RETURN
-
-    # we don't want to look at any traffic with the BYPASS mark set
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x01000000/0x01000000 -j RETURN
-
-    # we don't want to look at any traffic with the NOTRACK mark set
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x02000000/0x02000000 -j RETURN
+    # we also don't want to look at any traffic owned by the local machine
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m mark --mark 0x10000/0x10000 -j RETURN
 
     # special hook to allow bypass of a development machine or network
     if [ ! -z ${CLASSD_DEV_NETWORK} ]; then
@@ -71,13 +65,13 @@ insert_classd_iptables_rules()
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
 
     # ----- now that we have created our table we need some rules to send us traffic
-    # ----- these next rules will grab the traffic that we need to classify
+    # ----- these next rules will grab only traffic that we need to classify
 
-    # capture all prerouting traffic
-    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -j ${CHAIN_NAME}
+    # capture all prerouting traffic except stuff with BYPASS or NOTRACK set in the mark
+    ${IPTABLES} -t ${TABLE_NAME} -A PREROUTING -m mark --mark 0x00000000/0x03000000 -j ${CHAIN_NAME}
 
-    # capture all output traffic except stuff with BYPASS set in the mark
-    ${IPTABLES} -t ${TABLE_NAME} -A OUTPUT -j ${CHAIN_NAME}
+    # capture all output traffic except stuff with NOTRACK set in the mark
+    ${IPTABLES} -t ${TABLE_NAME} -A OUTPUT -m mark --mark 0x00000000/0x02000000 -j ${CHAIN_NAME}
 
     return 0
 }
@@ -94,3 +88,4 @@ is_queue_open && {
 }
 
 true
+
