@@ -177,7 +177,7 @@ currtime = lasttime = time(NULL);
 g_shutdown = 1;
 
 // post a shutdown message to the main message queue
- g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
+g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 
 // wait for the netfilter and classify threads to finish
 pthread_join(g_classify_tid,NULL);

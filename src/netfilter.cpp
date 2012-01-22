@@ -14,9 +14,9 @@ struct nfq_handle		*nfqh;
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
-struct pollfd			pollinfo;
-char					buffer[2048];
-int						fd,ret;
+struct pollfd			tester;
+char					buffer[4096];
+int						netsock,ret;
 
 sysmessage(LOG_INFO,"The netfilter thread is starting\n");
 
@@ -34,43 +34,50 @@ ret = netfilter_startup();
 	return(NULL);
 	}
 
-// get the file descriptor for netlink queue
-fd = nfnl_fd(nfq_nfnlh(nfqh));
+// get the socket descriptor for the netlink queue
+netsock = nfnl_fd(nfq_nfnlh(nfqh));
+
+// set up the poll structure
+tester.fd = netsock;
+tester.events = POLLIN;
+tester.revents = 0;
 
 	while (g_shutdown == 0)
 	{
-	pollinfo.fd = fd;
-	pollinfo.events = POLLIN;
-	pollinfo.revents = 0;
+	// wait for data on the socket
+	ret = poll(&tester,1,1000);
 
-	// wait for data
-	ret = poll(&pollinfo,1,1000);
+	// nothing received so just continue
+	if (ret == 0) continue;
 
-	// nothing received
-	if (ret < 1) continue;
-
-		if ((ret < 0) && (errno != EINTR))
+		// handle poll errors
+		if (ret < 0)
 		{
+		if (errno == EINTR) continue;
 		sysmessage(LOG_ERR,"Error %d (%s) returned from poll()\n",errno,strerror(errno));
 		break;
 		}
 
-	// process the data
-	while ((ret = recv(fd,buffer,sizeof(buffer),MSG_DONTWAIT)) > 0) nfq_handle_packet(nfqh,buffer,ret);
+	// read the data from the socket
+	ret = recv(netsock,buffer,sizeof(buffer),MSG_DONTWAIT);
 
-		if (ret == -1)
+		if (ret == 0)
 		{
-		if (errno == EAGAIN || errno == EINTR || errno == ENOBUFS) continue;
-		sysmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
-		break;
-		}
-
-		else if (ret == 0)
-		{
-		sysmessage(LOG_ERR,"The nfq socket was unexpectedly closed\n");
+		sysmessage(LOG_ERR,"The netfilter socket was unexpectedly closed\n");
 		g_shutdown = 1;
 		break;
 		}
+
+		if (ret < 0)
+		{
+		if ((errno == EAGAIN) || (errno == EINTR) || (errno == ENOBUFS)) continue;
+		sysmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
+		g_shutdown = 1;
+		break;
+		}
+
+	// pass the data to the packet handler
+	nfq_handle_packet(nfqh,buffer,ret);
 	}
 
 // call our netfilter shutdown function

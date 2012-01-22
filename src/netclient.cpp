@@ -122,7 +122,9 @@ if (strcasecmp(querybuff,"QUIT") == 0) return(0);
 // not special so use the query string to search the connection hash table
 local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 
-	// if we have a hit return the found result
+	// if we have a hit return the found result - note that we use
+	// IsActive() to make sure we don't return a newly created and thus
+	// empty object that hasn't yet been updated by the classify thread
 	if ((local != NULL) && (local->IsActive() != 0))
 	{
 	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
@@ -140,7 +142,7 @@ local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 	replyoff+=sprintf(&replybuff[replyoff],"CONFIDENCE: %d\r\n",local->GetConfidence());
 	replyoff+=sprintf(&replybuff[replyoff],"STATE: %d\r\n",local->GetState());
 
-	www_hitcount++;
+	client_hitcount++;
 	}
 
 	// otherwise return the empty result
@@ -148,7 +150,7 @@ local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 	{
 	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
 	replyoff = sprintf(replybuff,"EMPTY: %s\r\n",querybuff);
-	www_misscount++;
+	client_misscount++;
 	}
 
 return(1);
@@ -290,12 +292,12 @@ replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,sizeof(int) * 8);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... %08X\r\n",g_debug);
+replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
 replyoff+=sprintf(&replybuff[replyoff],"  Bypass Flag ..................... %d\r\n",g_bypass);
-replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,www_hitcount));
-replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,www_misscount));
+replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,client_hitcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,client_misscount));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Counter .......... %s\r\n",pad(temp,pkt_totalcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Timeout .......... %s\r\n",pad(temp,pkt_timedrop));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Overrun .......... %s\r\n",pad(temp,pkt_sizedrop));
@@ -423,7 +425,7 @@ fprintf(stream,"  Report Date: %s\r\n",temp);
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
 fprintf(stream,"  Architecture: %d Bit\r\n",sizeof(int) * 8);
-fprintf(stream,"  Debug Level: %08X\r\n",g_debug);
+fprintf(stream,"  Debug Level: 0x%04X\r\n",g_debug);
 fprintf(stream,"  No Fork Flag: %d\r\n",g_nofork);
 fprintf(stream,"  Console Flag: %d\r\n",g_console);
 fprintf(stream,"  Bypass Flag: %d\r\n",g_bypass);

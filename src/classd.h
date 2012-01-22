@@ -13,11 +13,11 @@
 #endif
 
 /*--------------------------------------------------------------------------*/
-const unsigned int CAT_LOGIC    = 0x00000001;
-const unsigned int CAT_CLIENT   = 0x00000002;
-const unsigned int CAT_PACKET   = 0x00000004;
-const unsigned int CAT_LOOKUP   = 0x00000008;
-const unsigned int CAT_FILTER   = 0x00000010;
+const unsigned int CAT_LOGIC    = 0x0001;
+const unsigned int CAT_CLIENT   = 0x0002;
+const unsigned int CAT_PACKET   = 0x0004;
+const unsigned int CAT_LOOKUP   = 0x0008;
+const unsigned int CAT_FILTER   = 0x0010;
 
 const unsigned int MSG_PACKET   = 0x11111111;
 const unsigned int MSG_SHUTDOWN = 0x99999999;
@@ -352,7 +352,7 @@ DATALOC int					err_nosr;
 DATALOC u_int64_t			pkt_totalcount;
 DATALOC u_int64_t			pkt_timedrop;
 DATALOC u_int64_t			pkt_sizedrop;
-DATALOC int					www_misscount;
-DATALOC int					www_hitcount;
+DATALOC int					client_misscount;
+DATALOC int					client_hitcount;
 /*--------------------------------------------------------------------------*/
 
