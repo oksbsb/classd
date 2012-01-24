@@ -8,7 +8,6 @@ fi
 
 case $1 in
   purge)
-    update-rc.d untangle-classd remove
     rm -f $CLASSD_LOG_PATH/classd.*
     ;;
 esac

@@ -13,7 +13,6 @@ echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${CLASSD_LOG_FILE
 
 # restart (or start) the daemon
 if [ -x "/etc/init.d/untangle-classd" ]; then
-    update-rc.d untangle-classd defaults 25
     /etc/init.d/untangle-classd restart
 fi
 
