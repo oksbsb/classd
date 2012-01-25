@@ -15,7 +15,7 @@ struct nfq_handle		*nfqh;
 void* netfilter_thread(void *arg)
 {
 struct pollfd			tester;
-char					buffer[4096];
+char					*buffer;
 int						netsock,ret;
 
 sysmessage(LOG_INFO,"The netfilter thread is starting\n");
@@ -23,6 +23,9 @@ sysmessage(LOG_INFO,"The netfilter thread is starting\n");
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
+
+// allocate our packet buffer
+buffer = (char *)malloc(cfg_net_buffer);
 
 // call our netfilter startup function
 ret = netfilter_startup();
@@ -58,30 +61,36 @@ tester.revents = 0;
 		break;
 		}
 
-	// read the data from the socket
-	ret = recv(netsock,buffer,sizeof(buffer),MSG_DONTWAIT);
-
-		if (ret == 0)
+		do
 		{
-		sysmessage(LOG_ERR,"The netfilter socket was unexpectedly closed\n");
-		g_shutdown = 1;
-		break;
-		}
+		// read from the netfilter socket
+		ret = recv(netsock,buffer,cfg_net_buffer,MSG_DONTWAIT);
 
-		if (ret < 0)
-		{
-		if ((errno == EAGAIN) || (errno == EINTR) || (errno == ENOBUFS)) continue;
-		sysmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
-		g_shutdown = 1;
-		break;
-		}
+			if (ret == 0)
+			{
+			sysmessage(LOG_ERR,"The netfilter socket was unexpectedly closed\n");
+			g_shutdown = 1;
+			break;
+			}
 
-	// pass the data to the packet handler
-	nfq_handle_packet(nfqh,buffer,ret);
+			if (ret < 0)
+			{
+			if ((errno == EAGAIN) || (errno == EINTR) || (errno == ENOBUFS)) break;
+			sysmessage(LOG_ERR,"Error %d (%s) returned from recv()\n",errno,strerror(errno));
+			g_shutdown = 1;
+			break;
+			}
+
+		// pass the data to the packet handler
+		nfq_handle_packet(nfqh,buffer,ret);
+		} while (ret > 0);
 	}
 
 // call our netfilter shutdown function
 netfilter_shutdown();
+
+// free our packet buffer memory
+free(buffer);
 
 sysmessage(LOG_INFO,"The netfilter thread has terminated\n");
 return(NULL);
@@ -270,14 +279,24 @@ nfqqh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
 	return(4);
 	}
 
+// set the queue length
+ret = nfq_set_queue_maxlen(nfqqh,cfg_net_maxlen);
+
+	if (ret < 0)
+	{
+	sysmessage(LOG_ERR,"Error returned from nfq_set_queue_maxlen(%d)\n",cfg_net_maxlen);
+	g_shutdown = 1;
+	return(5);
+	}
+
 // set the queue data copy mode
-ret = nfq_set_mode(nfqqh,NFQNL_COPY_PACKET,0xFFFF);
+ret = nfq_set_mode(nfqqh,NFQNL_COPY_PACKET,cfg_net_buffer);
 
 	if (ret < 0)
 	{
 	sysmessage(LOG_ERR,"Error returned from nfq_set_mode(NFQNL_COPY_PACKET)\n");
 	g_shutdown = 1;
-	return(5);
+	return(6);
 	}
 
 // open a conntrack netlink handler
@@ -287,7 +306,7 @@ nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
 	{
 	sysmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
 	g_shutdown = 1;
-	return(6);
+	return(7);
 	}
 
 // register the conntrack callback
@@ -297,7 +316,7 @@ ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
 	{
 	sysmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
 	g_shutdown = 1;
-	return(7);
+	return(8);
 	}
 
 return(0);

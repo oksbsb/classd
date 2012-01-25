@@ -13,14 +13,14 @@
 #endif
 
 /*--------------------------------------------------------------------------*/
-const unsigned int CAT_LOGIC    = 0x0001;
-const unsigned int CAT_CLIENT   = 0x0002;
-const unsigned int CAT_PACKET   = 0x0004;
-const unsigned int CAT_LOOKUP   = 0x0008;
-const unsigned int CAT_FILTER   = 0x0010;
+const unsigned int CAT_LOGIC	= 0x0001;
+const unsigned int CAT_CLIENT	= 0x0002;
+const unsigned int CAT_PACKET	= 0x0004;
+const unsigned int CAT_LOOKUP	= 0x0008;
+const unsigned int CAT_FILTER	= 0x0010;
 
-const unsigned int MSG_PACKET   = 0x11111111;
-const unsigned int MSG_SHUTDOWN = 0x99999999;
+const unsigned int MSG_PACKET	= 0x11111111;
+const unsigned int MSG_SHUTDOWN	= 0x99999999;
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
 class NetworkClient;
@@ -343,6 +343,8 @@ DATALOC int					cfg_purge_delay;
 DATALOC int					cfg_client_port;
 DATALOC int					cfg_navl_flows;
 DATALOC int					cfg_http_limit;
+DATALOC int					cfg_net_buffer;
+DATALOC int					cfg_net_maxlen;
 DATALOC int					cfg_net_queue;
 DATALOC int					err_notconn;
 DATALOC int					err_unknown;

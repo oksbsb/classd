@@ -15,6 +15,7 @@ memset(&MessageSignal,0,sizeof(MessageSignal));
 memset(&ListLock,0,sizeof(ListLock));
 
 // initialize our lock mutex
+memset(&ListLock,0,sizeof(ListLock));
 pthread_mutex_init(&ListLock,NULL);
 
 // create our signal semaphore

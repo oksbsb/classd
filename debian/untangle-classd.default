@@ -47,6 +47,14 @@
 ## Network filter queue the daemon should use
 #CLASSD_QUEUE_NUM=1967
 
+## Sets the value passed to nfq_set_queue_maxlen
+#CLASSD_QUEUE_MAXLEN=1024
+
+## Sets the size of the network packet buffer.  I would guess
+## this needs be large enough for the highest MTU which could
+## be greater than 1500 on a gigabit link with jumbo frames
+#CLASSD_QUEUE_BUFFER=32768
+
 ## Enable to use a seperate thread and message queue to handle
 ## classification of network packets.  Disable to have the
 ## classify function called directly from the nfqueue handler.
@@ -69,5 +77,7 @@
 ## you can use a mix of the following bit values
 ## -d1 = application logic
 ## -d2 = client/server requests from the uvm
-## -d4 = packet processing and classification
+## -d4 = packets submitted for classification
+## -d8 = conntrack object lookup and processing
+## -d16 = session object lookup and processing
 #CLASSD_FLAGS=-d

@@ -489,6 +489,12 @@ cfg_client_port = atoi(work);
 grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
 cfg_net_queue = atoi(work);
 
+grab_config_item(filedata,"CLASSD_QUEUE_MAXLEN",work,sizeof(work),"1024");
+cfg_net_maxlen = atoi(work);
+
+grab_config_item(filedata,"CLASSD_QUEUE_BUFFER",work,sizeof(work),"32768");
+cfg_net_buffer = atoi(work);
+
 grab_config_item(filedata,"CLASSD_PACKET_TIMEOUT",work,sizeof(work),"4");
 cfg_packet_timeout = atoi(work);
 
