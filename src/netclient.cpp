@@ -289,7 +289,7 @@ int			count,bytes,hicnt,himem;
 char		temp[32];
 
 replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,sizeof(int) * 8);
+replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,(int)sizeof(int) * 8);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
@@ -426,7 +426,7 @@ fprintf(stream,"================================================================
 fprintf(stream,"  Report Date: %s\r\n",temp);
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
-fprintf(stream,"  Architecture: %d Bit\r\n",sizeof(int) * 8);
+fprintf(stream,"  Architecture: %d Bit\r\n",(int)sizeof(int) * 8);
 fprintf(stream,"  Debug Level: 0x%04X\r\n",g_debug);
 fprintf(stream,"  No Fork Flag: %d\r\n",g_nofork);
 fprintf(stream,"  Console Flag: %d\r\n",g_console);

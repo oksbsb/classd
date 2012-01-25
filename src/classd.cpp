@@ -408,7 +408,12 @@ char *pad(char *target,u_int64_t value,int width)
 char	source[256];
 int		l,x,y;
 
+#if __WORDSIZE == 64
+sprintf(source,"%lu",value);
+#else
 sprintf(source,"%llu",value);
+#endif
+
 l = strlen(source);
 
 	for(x = y = 0;x < l;x++)
