@@ -21,25 +21,6 @@ MONITOR_SCRIPT=/usr/share/untangle-classd/bin/${MONITOR}
 
 PID_FILE="/var/run/untangle-classd.pid"
 
-restart()
-{
-    if [ -f ${PID_FILE} ] ; then
-      ps -p `cat ${PID_FILE}` > /dev/null 2>&1 && grep $MONITOR /proc/`cat ${PID_FILE}`/cmdline > /dev/null 2>&1
-      if [ $? -eq 0 ] ; then
-          stop
-          start
-          exit 0
-      else
-          echo "$DESC is not running and will not be restarted"
-          rm -f ${PID_FILE}
-          exit 0
-      fi
-    else
-      echo "$DESC is not running and will not be restarted"
-      exit 0
-    fi
-}
-
 start()
 {
     log_daemon_msg "Starting $DESC"
@@ -82,7 +63,8 @@ case "$1" in
         stop
         ;;
     reload|restart|force-reload)
-        restart
+        stop
+        start
         ;;
     *)
         /bin/echo "Usage: $0 {start|stop|restart|force-reload}" >&2

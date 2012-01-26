@@ -1,19 +1,28 @@
 #!/bin/bash
 
-CLASSD_LOG_FILE=/var/log/untangle-classd/classd.log
-CLASSD_QUEUE_NUM=1967
+FLAG_FILE=/tmp/untangle-classd.flag
+LOG_FILE=/var/log/untangle-classd/classd.log
 
-if [ -f /etc/default/untangle-classd ]; then
-    . /etc/default/untangle-classd
+# make sure our directory exists
+mkdir -p `dirname ${LOG_FILE}`
+
+# spew something in the log file
+echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
+
+# if flag file doesn't exist classd wasn't running before so skip restart
+if [ ! -f ${FLAG_FILE} ]; then
+    exit 0
 fi
 
-mkdir -p `dirname ${CLASSD_LOG_FILE}`
+# get rid of the flag file
+rm -f ${FLAG_FILE}
 
-echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${CLASSD_LOG_FILE}
-
-# restart (or start) the daemon
-if [ -x "/etc/init.d/untangle-classd" ]; then
-    /etc/init.d/untangle-classd restart
+# if the init script can't be executed just bail
+if [ ! -x "/etc/init.d/untangle-classd" ]; then
+    exit 0
 fi
+
+# start the daemon
+/etc/init.d/untangle-classd start
 
 exit 0
