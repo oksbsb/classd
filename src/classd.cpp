@@ -90,7 +90,7 @@ signal(SIGFPE,sighandler);
 // grab the profile itimer value for thread profiling support
 getitimer(ITIMER_PROF,&g_itimer);
 
-sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
+sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd %d-Bit Version %s Build %s\n",(int)sizeof(void*)*8,VERSION,BUILDID);
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
 if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
@@ -159,11 +159,11 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		logmessage(CAT_LOGIC,LOG_DEBUG,"Beginning status and lookup table cleanup cycle\n");
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle\n");
 		ret = g_statustable->PurgeStaleObjects(currtime);
-		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
 		ret = g_lookuptable->PurgeStaleObjects(currtime);
-		logmessage(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
 		}
 
 		if (g_recycle != 0)

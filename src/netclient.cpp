@@ -31,12 +31,12 @@ username = inet_ntoa(netaddr.sin_addr);
 if (username == NULL) username = "xxx.xxx.xxx.xxx";
 sprintf(netname,"%s:%d",username,netaddr.sin_port);
 
-logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT CONNECT: %s\n",netname);
+LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT CONNECT: %s\n",netname);
 }
 /*--------------------------------------------------------------------------*/
 NetworkClient::~NetworkClient(void)
 {
-logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT GOODBYE: %s\n",netname);
+LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT GOODBYE: %s\n",netname);
 
 // shutdown and close the socket
 shutdown(netsock,SHUT_RDWR);
@@ -79,7 +79,7 @@ if ((crloc == NULL) && (lfloc == NULL)) return(1);
 if (crloc != NULL) crloc[0] = 0;
 if (lfloc != NULL) lfloc[0] = 0;
 
-logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
+LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
 
 // handle the request
 ret = ProcessRequest();
@@ -127,7 +127,7 @@ local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 	// empty object that hasn't yet been updated by the classify thread
 	if ((local != NULL) && (local->IsActive() != 0))
 	{
-	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
+	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
 		local->GetApplication(),
 		local->GetProtochain(),
 		local->GetDetail(),
@@ -148,7 +148,7 @@ local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
 	// otherwise return the empty result
 	else
 	{
-	logmessage(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
+	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
 	replyoff = sprintf(replybuff,"EMPTY: %s\r\n",querybuff);
 	client_misscount++;
 	}
@@ -289,7 +289,7 @@ int			count,bytes,hicnt,himem;
 char		temp[32];
 
 replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,(int)sizeof(int) * 8);
+replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,(int)sizeof(void*)*8);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);

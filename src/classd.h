@@ -12,6 +12,12 @@
 #define BUILDID "0"
 #endif
 
+// This spiffy macro will only call the actual logmessage function if the
+// corresponding category is enabled for logging.  This will improve
+// performance since we're not needlessly calling a function that will
+// simply return.  It does require that you always use a format string
+
+#define LOGMESSAGE(cat,pri,fmt,...) if (g_debug & cat) logmessage(cat,pri,fmt,__VA_ARGS__)
 /*--------------------------------------------------------------------------*/
 const unsigned int CAT_LOGIC	= 0x0001;
 const unsigned int CAT_CLIENT	= 0x0002;
