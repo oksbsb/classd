@@ -158,7 +158,7 @@ private:
 	unsigned int GetHashValue(const char *aString);
 
 	HashObject				**table;
-	sem_t					*control;
+	pthread_mutex_t			*control;
 	int						buckets;
 };
 /*--------------------------------------------------------------------------*/
@@ -171,7 +171,7 @@ public:
 	HashObject(unsigned short aProto,const char *aHashname);
 	virtual ~HashObject(void);
 
-	virtual void GetObjectString(char *target,int maxlen);
+	virtual char *GetObjectString(char *target,int maxlen);
 	virtual void UpdateObject(void);
 
 	inline const char *GetHashname(void)	{ return(hashname); }
@@ -207,7 +207,7 @@ public:
 		short aConfidence,
 		short aState);
 
-	void GetObjectString(char *target,int maxlen);
+	char *GetObjectString(char *target,int maxlen);
 
 	inline const char *GetApplication(void)	{ return(application); }
 	inline const char *GetProtochain(void)	{ return(protochain); }
@@ -246,7 +246,7 @@ public:
 	virtual ~LookupObject(void);
 
 	void UpdateObject(uint32_t aSaddr,uint16_t aSport,uint32_t aDaddr,uint16_t aDport);
-	void GetObjectString(char *target,int maxlen);
+	char *GetObjectString(char *target,int maxlen);
 
 	inline uint32_t GetSaddr(void)			{ return(orig_saddr); }
 	inline uint16_t GetSport(void)			{ return(orig_sport); }
@@ -331,6 +331,8 @@ DATALOC char				g_cfgfile[256];
 DATALOC int					g_shutdown;
 DATALOC int					g_recycle;
 DATALOC int					g_console;
+DATALOC int					g_skiptcp;
+DATALOC int					g_skipudp;
 DATALOC int					g_nofork;
 DATALOC int					g_bypass;
 DATALOC int					g_debug;

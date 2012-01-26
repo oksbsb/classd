@@ -33,9 +33,10 @@ if (hashname != NULL) mysize+=(strlen(hashname) + 1);
 return(mysize);
 }
 /*--------------------------------------------------------------------------*/
-void HashObject::GetObjectString(char *target,int maxlen)
+char *HashObject::GetObjectString(char *target,int maxlen)
 {
 snprintf(target,maxlen,"N:%s",hashname);
+return(target);
 }
 /*--------------------------------------------------------------------------*/
 void HashObject::UpdateObject(void)

@@ -36,7 +36,7 @@ mysize = HashObject::GetObjectSize();
 return(mysize);
 }
 /*--------------------------------------------------------------------------*/
-void LookupObject::GetObjectString(char *target,int maxlen)
+char *LookupObject::GetObjectString(char *target,int maxlen)
 {
 struct in_addr	saddr,daddr;
 char			srcname[32];
@@ -48,6 +48,7 @@ strcpy(srcname,inet_ntoa(saddr));
 strcpy(dstname,inet_ntoa(daddr));
 
 snprintf(target,maxlen,"%s [%s:%u-%s:%u]",GetHashname(),dstname,ntohs(orig_dport),srcname,ntohs(orig_sport));
+return(target);
 }
 /*--------------------------------------------------------------------------*/
 

@@ -29,6 +29,8 @@ load_configuration();
 	if (strncasecmp(argv[x],"-B",2) == 0) g_bypass++;
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
+	if (strncasecmp(argv[x],"-IT",3) == 0) g_skiptcp++;
+	if (strncasecmp(argv[x],"-IU",3) == 0) g_skipudp++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{

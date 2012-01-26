@@ -40,15 +40,18 @@ ret = netfilter_startup();
 // get the socket descriptor for the netlink queue
 netsock = nfnl_fd(nfq_nfnlh(nfqh));
 
-// set the socket receive buffer size
-val = cfg_sock_buffer;
-ret = setsockopt(netsock,SOL_SOCKET,SO_RCVBUF,&val,sizeof(val));
-
-	if (ret != 0)
+	// set the socket receive buffer size if config value is not zero
+	if (cfg_sock_buffer != 0)
 	{
-	sysmessage(LOG_ERR,"Error %d returned from setsockopt(SO_RCVBUF)\n",errno);
-	g_shutdown = 1;
-	return(NULL);
+	val = cfg_sock_buffer;
+	ret = setsockopt(netsock,SOL_SOCKET,SO_RCVBUF,&val,sizeof(val));
+
+		if (ret != 0)
+		{
+		sysmessage(LOG_ERR,"Error %d returned from setsockopt(SO_RCVBUF)\n",errno);
+		g_shutdown = 1;
+		return(NULL);
+		}
 	}
 
 // set up the poll structure
@@ -137,6 +140,10 @@ if (iphead->version != 4) return(0);
 
 // we only care about TCP and UDP
 if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
+
+// check our special ignore flags
+if ((iphead->protocol == IPPROTO_TCP) && (g_skiptcp != 0)) return(0);
+if ((iphead->protocol == IPPROTO_UDP) && (g_skipudp != 0)) return(0);
 
 // increment the packet counter
 pkt_totalcount++;

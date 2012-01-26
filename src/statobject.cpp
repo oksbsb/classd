@@ -72,9 +72,10 @@ if (detail != NULL) mysize+=(strlen(detail) + 1);
 return(mysize);
 }
 /*--------------------------------------------------------------------------*/
-void StatusObject::GetObjectString(char *target,int maxlen)
+char *StatusObject::GetObjectString(char *target,int maxlen)
 {
 snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,detail);
+return(target);
 }
 /*--------------------------------------------------------------------------*/
 

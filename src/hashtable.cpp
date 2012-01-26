@@ -7,7 +7,7 @@
 #include "common.h"
 #include "classd.h"
 
-#define GET16BITS(d) (*((const uint16_t *) (d)))
+#define GET16BITS(d) (*((const uint16_t *)(d)))
 /*--------------------------------------------------------------------------*/
 HashTable::HashTable(int aBuckets)
 {
@@ -20,8 +20,13 @@ buckets = aBuckets;
 table = (HashObject **)calloc(buckets,sizeof(HashObject *));
 
 // allocate and initialize the bucket locks
-control = (sem_t *)calloc(buckets,sizeof(sem_t));
-for(x = 0;x < buckets;x++) sem_init(&control[x],0,1);
+control = (pthread_mutex_t *)calloc(buckets,sizeof(pthread_mutex_t));
+
+	for(x = 0;x < buckets;x++)
+	{
+	memset(&control[0],0,sizeof(pthread_mutex_t));
+	pthread_mutex_init(&control[x],NULL);
+	}
 }
 /*--------------------------------------------------------------------------*/
 HashTable::~HashTable(void)
@@ -47,7 +52,7 @@ int			x;
 free(table);
 
 // free the bucket locks
-for(x = 0;x < buckets;x++) sem_destroy(&control[x]);
+for(x = 0;x < buckets;x++) pthread_mutex_destroy(&control[x]);
 free(control);
 }
 /*--------------------------------------------------------------------------*/
@@ -59,7 +64,7 @@ unsigned			key;
 key = GetHashValue(aObject->hashname);
 
 // lock the bucket
-sem_wait(&control[key]);
+pthread_mutex_lock(&control[key]);
 
 // save existing item in new item next pointer
 aObject->next = table[key];
@@ -68,7 +73,7 @@ aObject->next = table[key];
 table[key] = aObject;
 
 // unlock the bucket
-sem_post(&control[key]);
+pthread_mutex_unlock(&control[key]);
 
 return(key);
 }
@@ -82,12 +87,12 @@ unsigned	key;
 key = GetHashValue(aObject->hashname);
 
 // lock the bucket
-sem_wait(&control[key]);
+pthread_mutex_lock(&control[key]);
 
 	// if bucket is empty just unlock and return
 	if (table[key] == NULL)
 	{
-	sem_post(&control[key]);
+	pthread_mutex_unlock(&control[key]);
 	return(0);
 	}
 
@@ -110,7 +115,7 @@ prev = NULL;
 		delete(work);
 
 		// unlock the bucket
-		sem_post(&control[key]);
+		pthread_mutex_unlock(&control[key]);
 
 		// return one item deleted
 		return(1);
@@ -121,7 +126,7 @@ prev = NULL;
 	}
 
 // unlock the bucket
-sem_post(&control[key]);
+pthread_mutex_unlock(&control[key]);
 
 return(0);
 }
@@ -140,12 +145,12 @@ unsigned	key;
 key = GetHashValue(aHashname);
 
 // lock the bucket
-sem_wait(&control[key]);
+pthread_mutex_lock(&control[key]);
 
 	// if the bucket is empty unlock and return nothing
 	if (table[key] == NULL)
 	{
-	sem_post(&control[key]);
+	pthread_mutex_unlock(&control[key]);
 	return(NULL);
 	}
 
@@ -156,14 +161,14 @@ sem_wait(&control[key]);
 	if (strcmp(aHashname,find->hashname) != 0) continue;
 
 	// unlock the bucket
-	sem_post(&control[key]);
+	pthread_mutex_unlock(&control[key]);
 
 	// return object found
 	return(find);
 	}
 
 // unlocko and return NULL if nothing found
-sem_post(&control[key]);
+pthread_mutex_unlock(&control[key]);
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -179,12 +184,12 @@ removed = 0;
 	for(x = 0;x < buckets;x++)
 	{
 	// lock the bucket
-	sem_wait(&control[x]);
+	pthread_mutex_lock(&control[x]);
 
 		// if bucket is empty just unlock and continue
 		if (table[x] == NULL)
 		{
-		sem_post(&control[x]);
+		pthread_mutex_unlock(&control[x]);
 		continue;
 		}
 
@@ -226,7 +231,7 @@ removed = 0;
 		}
 
 	// unlock the bucket
-	sem_post(&control[x]);
+	pthread_mutex_unlock(&control[x]);
 	}
 
 return(removed);
@@ -293,13 +298,13 @@ aBytes = 0;
 // start with our size
 aBytes = sizeof(*this);
 aBytes+=(buckets * sizeof(HashObject *));
-aBytes+=(buckets * sizeof(sem_t));
+aBytes+=(buckets * sizeof(pthread_mutex_t));
 
 	// walk through all of the table entries
 	for(x = 0;x < buckets;x++)
 	{
 	// lock the bucket
-	sem_wait(&control[x]);
+	pthread_mutex_lock(&control[x]);
 
 		// count an add the size of every object
 		if (table[x] != NULL)
@@ -312,7 +317,7 @@ aBytes+=(buckets * sizeof(sem_t));
 		}
 
 	// unlock the bucket
-	sem_post(&control[x]);
+	pthread_mutex_unlock(&control[x]);
 	}
 }
 /*--------------------------------------------------------------------------*/
@@ -329,13 +334,13 @@ bytes = 0;
 // start with our size
 bytes = sizeof(*this);
 bytes+=(buckets * sizeof(HashObject *));
-bytes+=(buckets * sizeof(sem_t));
+bytes+=(buckets * sizeof(pthread_mutex_t));
 
 	// walk through all of the table entries
 	for(x = 0;x < buckets;x++)
 	{
 	// lock the bucket
-	sem_wait(&control[x]);
+	pthread_mutex_lock(&control[x]);
 
 		// count an add the size of every object
 		if (table[x] != NULL)
@@ -350,7 +355,7 @@ bytes+=(buckets * sizeof(sem_t));
 		}
 
 	// unlock the bucket
-	sem_post(&control[x]);
+	pthread_mutex_unlock(&control[x]);
 	}
 
 fprintf(aFile,"  TOTAL ITEMS = %d\n",count);

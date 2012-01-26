@@ -173,8 +173,7 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(forward));
 	// pass the packet to the vineyard library
 	if (status != NULL)
 	{
-	status->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM FWD %s\n",namestr);
+	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM FWD %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 	log_packet(rawpkt,rawlen);
 	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 	return;
@@ -188,8 +187,7 @@ status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(reverse));
 	// pass the packet to the vineyard library
 	if (status != NULL)
 	{
-	status->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM REV %s\n",namestr);
+	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 	log_packet(rawpkt,rawlen);
 	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 	return;
@@ -201,8 +199,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 
 	if (lookup != NULL)
 	{
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK FWD %s\n",namestr);
+	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK FWD %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 	saddr = lookup->GetSaddr();
 	daddr = lookup->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
@@ -217,8 +214,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
-		status->GetObjectString(namestr,sizeof(namestr));
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",namestr);
+		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetDaddr();
 		xphead->source = lookup->GetDport();
 		iphead->daddr = lookup->GetSaddr();
@@ -235,8 +231,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
-		status->GetObjectString(namestr,sizeof(namestr));
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD REV %s\n",namestr);
+		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetSaddr();
 		xphead->source = lookup->GetSport();
 		iphead->daddr = lookup->GetDaddr();
@@ -253,8 +248,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 
 	if (lookup != NULL)
 	{
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK REV %s\n",namestr);
+	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK REV %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 	saddr = lookup->GetSaddr();
 	daddr = lookup->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
@@ -269,8 +263,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
-		status->GetObjectString(namestr,sizeof(namestr));
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV FWD %s\n",namestr);
+		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV FWD %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetDaddr();
 		xphead->source = lookup->GetDport();
 		iphead->daddr = lookup->GetSaddr();
@@ -287,8 +280,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		// found so update the ipheader and forward to vineyard
 		if (status != NULL)
 		{
-		status->GetObjectString(namestr,sizeof(namestr));
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV REV %s\n",namestr);
+		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetSaddr();
 		xphead->source = lookup->GetSport();
 		iphead->daddr = lookup->GetDaddr();
@@ -347,6 +339,9 @@ char				work[32];
 int					confidence,ipproto;
 int					appid,value;
 int					ret,idx;
+
+// if callback and object state are both classified no need to process
+if ((state == NAVL_STATE_CLASSIFIED) && (status->GetState() == NAVL_STATE_CLASSIFIED)) return(0);
 
 application[0] = 0;
 protochain[0] = 0;
@@ -414,8 +409,7 @@ if (status == NULL) return(0);
 
 // update the status object with the new information
 status->UpdateObject(application,protochain,detail,confidence,state);
-status->GetObjectString(namestr,sizeof(namestr));
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS UPDATE %s\n",namestr);
+LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS UPDATE %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
@@ -480,16 +474,14 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(finder));
 	{
 	lookup = new LookupObject(orig_proto,finder);
 	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER INSERT %s\n",namestr);
+	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER INSERT %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 	g_lookuptable->InsertObject(lookup);
 	}
 
 	else
 	{
 	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER UPDATE %s\n",namestr);
+	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER UPDATE %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 	}
 
 return(NFCT_CB_CONTINUE);
