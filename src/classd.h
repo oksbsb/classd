@@ -283,12 +283,12 @@ struct xphdr
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg);
 int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data *nfad,void *data);
-int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
 void netfilter_shutdown(void);
 int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
+int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
 void process_packet(unsigned char *rawpkt,int rawlen);
 void log_packet(unsigned char *rawpkt,int rawlen);
 void vineyard_shutdown(void);
@@ -341,6 +341,7 @@ DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
 DATALOC int					cfg_purge_delay;
 DATALOC int					cfg_client_port;
+DATALOC int					cfg_sock_buffer;
 DATALOC int					cfg_navl_flows;
 DATALOC int					cfg_http_limit;
 DATALOC int					cfg_net_buffer;
@@ -354,6 +355,7 @@ DATALOC int					err_nosr;
 DATALOC u_int64_t			pkt_totalcount;
 DATALOC u_int64_t			pkt_timedrop;
 DATALOC u_int64_t			pkt_sizedrop;
+DATALOC u_int64_t			pkt_faildrop;
 DATALOC int					client_misscount;
 DATALOC int					client_hitcount;
 /*--------------------------------------------------------------------------*/

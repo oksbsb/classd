@@ -476,6 +476,9 @@ cfg_navl_flows = atoi(work);
 grab_config_item(filedata,"CLASSD_IP_DEFRAG",work,sizeof(work),"1");
 cfg_navl_defrag = atoi(work);
 
+grab_config_item(filedata,"CLASSD_SOCKET_BUFFER",work,sizeof(work),"10485760");
+cfg_sock_buffer = atoi(work);
+
 grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"3600");
 cfg_tcp_timeout = atoi(work);
 

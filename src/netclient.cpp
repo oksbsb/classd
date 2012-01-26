@@ -301,6 +301,7 @@ replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Counter .......... %s\r\n",pad(temp,pkt_totalcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Timeout .......... %s\r\n",pad(temp,pkt_timedrop));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Overrun .......... %s\r\n",pad(temp,pkt_sizedrop));
+replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Failure .......... %s\r\n",pad(temp,pkt_faildrop));
 
 // get the details for the message queue
 g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);
@@ -368,6 +369,7 @@ replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ........ %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ...... %d\r\n",cfg_sock_buffer);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ...... %d\r\n",cfg_tcp_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ...... %d\r\n",cfg_udp_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_http_limit);

@@ -9,14 +9,14 @@
 /*--------------------------------------------------------------------------*/
 // vars for netfilter interfaces
 struct nfq_q_handle		*nfqqh;
-struct nfct_handle		*nfcth;
 struct nfq_handle		*nfqh;
 /*--------------------------------------------------------------------------*/
 void* netfilter_thread(void *arg)
 {
-struct pollfd			tester;
-char					*buffer;
-int						netsock,ret;
+struct pollfd	tester;
+char			*buffer;
+int				netsock;
+int				val,ret;
 
 sysmessage(LOG_INFO,"The netfilter thread is starting\n");
 
@@ -39,6 +39,17 @@ ret = netfilter_startup();
 
 // get the socket descriptor for the netlink queue
 netsock = nfnl_fd(nfq_nfnlh(nfqh));
+
+// set the socket receive buffer size
+val = cfg_sock_buffer;
+ret = setsockopt(netsock,SOL_SOCKET,SO_RCVBUF,&val,sizeof(val));
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from setsockopt(SO_RCVBUF)\n",errno);
+	g_shutdown = 1;
+	return(NULL);
+	}
 
 // set up the poll structure
 tester.fd = netsock;
@@ -100,12 +111,9 @@ int netq_callback(struct nfq_q_handle *qh,struct nfgenmsg *nfmsg,struct nfq_data
 {
 MessageWagon					*local;
 struct nfqnl_msg_packet_hdr		*hdr;
-struct nf_conntrack				*ct;
 unsigned char					*rawpkt;
-struct xphdr					*xphead;
 struct iphdr					*iphead;
 int								rawlen;
-int								ret;
 
 // first set the accept verdict on the packet
 hdr = nfq_get_msg_packet_hdr(nfad);
@@ -130,25 +138,7 @@ if (iphead->version != 4) return(0);
 // we only care about TCP and UDP
 if ((iphead->protocol != IPPROTO_TCP) && (iphead->protocol != IPPROTO_UDP)) return(0);
 
-// use a generic header for source and dest ports
-xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
-
-// allocate a new conntrack
-ct = nfct_new();
-if (ct == NULL) return(0);
-
-// setup and submit the conntrack query
-nfct_set_attr_u8(ct,ATTR_L3PROTO,AF_INET);
-nfct_set_attr_u8(ct,ATTR_L4PROTO,iphead->protocol);
-nfct_set_attr_u32(ct,ATTR_IPV4_SRC,iphead->saddr);
-nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->source);
-nfct_set_attr_u32(ct,ATTR_IPV4_DST,iphead->daddr);
-nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dest);
-ret = nfct_query(nfcth,NFCT_Q_GET,ct);
-
-// cleanup the conntrack
-nfct_destroy(ct);
-
+// increment the packet counter
 pkt_totalcount++;
 
 	// if classification thread is not enabled then we
@@ -166,73 +156,6 @@ pkt_totalcount++;
 	}
 
 return(0);
-}
-/*--------------------------------------------------------------------------*/
-int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data)
-{
-LookupObject	*lookup;
-uint32_t		orig_saddr,repl_saddr;
-uint32_t		orig_daddr,repl_daddr;
-uint16_t		orig_sport,repl_sport;
-uint16_t		orig_dport,repl_dport;
-uint8_t			orig_proto,repl_proto;
-uint32_t		sess_id;
-const char		*pname;
-char			orig_sname[32],repl_sname[32];
-char			orig_dname[32],repl_dname[32];
-char			namestr[256];
-char			finder[64];
-
-orig_proto = nfct_get_attr_u8(ct,ATTR_ORIG_L4PROTO);
-repl_proto = nfct_get_attr_u8(ct,ATTR_REPL_L4PROTO);
-
-	if (orig_proto != repl_proto)
-	{
-	sysmessage(LOG_WARNING,"Protocol mismatch %d != %d in conntrack handler\n",orig_proto,repl_proto);
-	return(NFCT_CB_CONTINUE);
-	}
-
-if (orig_proto == IPPROTO_TCP) pname = "TCP";
-if (orig_proto == IPPROTO_UDP) pname = "UDP";
-
-orig_saddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
-orig_sport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
-orig_daddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST);
-orig_dport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST);
-repl_saddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC);
-repl_sport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC);
-repl_daddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST);
-repl_dport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST);
-sess_id = nfct_get_attr_u16(ct,ATTR_ID);
-
-// extract the client and server addresses
-inet_ntop(AF_INET,&orig_saddr,orig_sname,sizeof(orig_sname));
-inet_ntop(AF_INET,&orig_daddr,orig_dname,sizeof(orig_dname));
-inet_ntop(AF_INET,&repl_saddr,repl_sname,sizeof(repl_sname));
-inet_ntop(AF_INET,&repl_daddr,repl_dname,sizeof(repl_dname));
-
-sprintf(finder,"%s-%s:%u-%s:%u",pname,repl_sname,ntohs(repl_sport),repl_dname,ntohs(repl_dport));
-
-logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER SEARCH %s\n",finder);
-lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(finder));
-
-	if (lookup == NULL)
-	{
-	lookup = new LookupObject(orig_proto,finder);
-	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER INSERT %s\n",namestr);
-	g_lookuptable->InsertObject(lookup);
-	}
-
-	else
-	{
-	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	lookup->GetObjectString(namestr,sizeof(namestr));
-	logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER UPDATE %s\n",namestr);
-	}
-
-return(NFCT_CB_CONTINUE);
 }
 /*--------------------------------------------------------------------------*/
 int netfilter_startup(void)
@@ -299,37 +222,11 @@ ret = nfq_set_mode(nfqqh,NFQNL_COPY_PACKET,cfg_net_buffer);
 	return(6);
 	}
 
-// open a conntrack netlink handler
-nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
-
-	if (nfcth == NULL)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
-	g_shutdown = 1;
-	return(7);
-	}
-
-// register the conntrack callback
-ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
-	g_shutdown = 1;
-	return(8);
-	}
-
 return(0);
 }
 /*--------------------------------------------------------------------------*/
 void netfilter_shutdown(void)
 {
-// unregister the callback handler
-nfct_callback_unregister(nfcth);
-
-// close the conntrack netlink handler
-nfct_close(nfcth);
-
 // destroy the netfilter queue
 nfq_destroy_queue(nfqqh);
 

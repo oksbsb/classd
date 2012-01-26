@@ -30,6 +30,9 @@ static int l_attr_conn_id = 0;
 static int l_attr_fbook_app = 0;
 static int l_attr_tls_host = 0;
 static int l_attr_http_info = 0;
+
+// vars for the conntrack lookups
+struct nfct_handle *nfcth;
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg)
 {
@@ -42,6 +45,26 @@ sysmessage(LOG_INFO,"The classify thread is starting\n");
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
+
+// open a conntrack netlink handler
+nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
+
+	if (nfcth == NULL)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
+	g_shutdown = 1;
+	return(NULL);
+	}
+
+// register the conntrack callback
+ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
+	g_shutdown = 1;
+	return(NULL);
+	}
 
 // call our vineyard startup function
 ret = vineyard_startup();
@@ -77,25 +100,33 @@ ret = vineyard_startup();
 // call our vineyard shutdown function
 vineyard_shutdown();
 
+// unregister the callback handler
+nfct_callback_unregister(nfcth);
+
+// close the conntrack netlink handler
+nfct_close(nfcth);
+
 sysmessage(LOG_INFO,"The classify thread has terminated\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
 void process_packet(unsigned char *rawpkt,int rawlen)
 {
-StatusObject	*status;
-LookupObject	*lookup;
-uint32_t		saddr,daddr;
-uint16_t		sport,dport;
-struct xphdr	*xphead;
-struct iphdr	*iphead;
-const char		*pname;
-char			namestr[256];
-char			sname[32];
-char			dname[32];
-char			forward[64];
-char			reverse[64];
-char			worker[64];
+struct nf_conntrack		*ct;
+StatusObject			*status;
+LookupObject			*lookup;
+uint32_t				saddr,daddr;
+uint16_t				sport,dport;
+struct xphdr			*xphead;
+struct iphdr			*iphead;
+const char				*pname;
+char					namestr[256];
+char					sname[32];
+char					dname[32];
+char					forward[64];
+char					reverse[64];
+char					worker[64];
+int						ret;
 
 // use the iphdr structure for parsing
 iphead = (iphdr *)rawpkt;
@@ -105,6 +136,28 @@ xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
 
 if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
 if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
+
+// allocate a new conntrack
+ct = nfct_new();
+
+	// on error increment the fail counter
+	if (ct == NULL)
+	{
+	pkt_faildrop++;
+	return;
+	}
+
+// setup and submit the conntrack query
+nfct_set_attr_u8(ct,ATTR_L3PROTO,AF_INET);
+nfct_set_attr_u8(ct,ATTR_L4PROTO,iphead->protocol);
+nfct_set_attr_u32(ct,ATTR_IPV4_SRC,iphead->saddr);
+nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->source);
+nfct_set_attr_u32(ct,ATTR_IPV4_DST,iphead->daddr);
+nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dest);
+ret = nfct_query(nfcth,NFCT_Q_GET,ct);
+
+// cleanup the conntrack
+nfct_destroy(ct);
 
 // extract the client and server addresses
 inet_ntop(AF_INET,&iphead->saddr,sname,sizeof(sname));
@@ -373,6 +426,73 @@ logmessage(CAT_LOOKUP,LOG_DEBUG,"STATUS UPDATE %s\n",namestr);
 
 // continue tracking the flow
 return(0);
+}
+/*--------------------------------------------------------------------------*/
+int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data)
+{
+LookupObject	*lookup;
+uint32_t		orig_saddr,repl_saddr;
+uint32_t		orig_daddr,repl_daddr;
+uint16_t		orig_sport,repl_sport;
+uint16_t		orig_dport,repl_dport;
+uint8_t			orig_proto,repl_proto;
+uint32_t		sess_id;
+const char		*pname;
+char			orig_sname[32],repl_sname[32];
+char			orig_dname[32],repl_dname[32];
+char			namestr[256];
+char			finder[64];
+
+orig_proto = nfct_get_attr_u8(ct,ATTR_ORIG_L4PROTO);
+repl_proto = nfct_get_attr_u8(ct,ATTR_REPL_L4PROTO);
+
+	if (orig_proto != repl_proto)
+	{
+	sysmessage(LOG_WARNING,"Protocol mismatch %d != %d in conntrack handler\n",orig_proto,repl_proto);
+	return(NFCT_CB_CONTINUE);
+	}
+
+if (orig_proto == IPPROTO_TCP) pname = "TCP";
+if (orig_proto == IPPROTO_UDP) pname = "UDP";
+
+orig_saddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
+orig_sport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
+orig_daddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST);
+orig_dport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST);
+repl_saddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC);
+repl_sport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC);
+repl_daddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST);
+repl_dport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST);
+sess_id = nfct_get_attr_u16(ct,ATTR_ID);
+
+// extract the client and server addresses
+inet_ntop(AF_INET,&orig_saddr,orig_sname,sizeof(orig_sname));
+inet_ntop(AF_INET,&orig_daddr,orig_dname,sizeof(orig_dname));
+inet_ntop(AF_INET,&repl_saddr,repl_sname,sizeof(repl_sname));
+inet_ntop(AF_INET,&repl_daddr,repl_dname,sizeof(repl_dname));
+
+sprintf(finder,"%s-%s:%u-%s:%u",pname,repl_sname,ntohs(repl_sport),repl_dname,ntohs(repl_dport));
+
+logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER SEARCH %s\n",finder);
+lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(finder));
+
+	if (lookup == NULL)
+	{
+	lookup = new LookupObject(orig_proto,finder);
+	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
+	lookup->GetObjectString(namestr,sizeof(namestr));
+	logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER INSERT %s\n",namestr);
+	g_lookuptable->InsertObject(lookup);
+	}
+
+	else
+	{
+	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
+	lookup->GetObjectString(namestr,sizeof(namestr));
+	logmessage(CAT_FILTER,LOG_DEBUG,"TRACKER UPDATE %s\n",namestr);
+	}
+
+return(NFCT_CB_CONTINUE);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)

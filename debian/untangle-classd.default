@@ -27,6 +27,9 @@
 ## Flag to enable IP fragment processing in the navl library
 #CLASSD_IP_DEFRAG=1
 
+## Sets the SO_RCVBUF size for the filter queue socket
+#CLASSD_SOCK_BUFFER=10485760
+
 ## Sets the timeout for TCP sessions
 #CLASSD_TCP_TIMEOUT=3600
 
