@@ -159,7 +159,7 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle\n");
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle");
 		ret = g_statustable->PurgeStaleObjects(currtime);
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
 		ret = g_lookuptable->PurgeStaleObjects(currtime);
