@@ -338,6 +338,7 @@ DATALOC int					g_bypass;
 DATALOC int					g_debug;
 DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_dump_path[256];
+DATALOC char				cfg_core_path[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
 DATALOC int					cfg_packet_timeout;

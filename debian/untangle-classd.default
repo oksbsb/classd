@@ -10,8 +10,11 @@
 ## Name of the main classd log file
 #CLASSD_LOG_FILE=/var/log/untangle-classd/classd.log
 
-## Directory for any debug dump files
+## Directory for debug dump files
 #CLASSD_DUMP_PATH=/tmp
+
+## Directory for crash dump core files
+#CLASSD_CORE_PATH=/usr/share/untangle-classd
 
 ## Directory where the vineyard navl library plugins are located
 #CLASSD_PLUGIN_PATH=/usr/share/untangle-classd/plugins

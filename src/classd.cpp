@@ -15,14 +15,24 @@ int main(int argc,char *argv[])
 {
 struct timeval		tv;
 pthread_attr_t		attr;
+rlimit				core;
 fd_set				tester;
 time_t				currtime,lasttime;
 int					ret,x;
 
 printf("[ CLASSD ] Untangle Traffic Classification Engine Version %s\n",VERSION);
+
 strcpy(g_cfgfile,"untangle-classd.conf");
 gettimeofday(&g_runtime,NULL);
 load_configuration();
+
+// change directory to path for core dump files
+chdir(cfg_core_path);
+
+// set the core dump file size limit
+core.rlim_cur = 0x40000000;
+core.rlim_max = 0x40000000;
+setrlimit(RLIMIT_CORE,&core);
 
 	for(x = 1;x < argc;x++)
 	{
@@ -84,10 +94,6 @@ signal(SIGTERM,sighandler);
 signal(SIGQUIT,sighandler);
 signal(SIGINT,sighandler);
 signal(SIGHUP,sighandler);
-
-signal(SIGSEGV,sighandler);
-signal(SIGILL,sighandler);
-signal(SIGFPE,sighandler);
 
 // grab the profile itimer value for thread profiling support
 getitimer(ITIMER_PROF,&g_itimer);
@@ -160,6 +166,9 @@ currtime = lasttime = time(NULL);
 
 		if (currtime > (lasttime + 60))
 		{
+		char *shit = (char *)0x12345678;
+		shit[1] = 1;
+
 		lasttime = currtime;
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle");
 		ret = g_statustable->PurgeStaleObjects(currtime);
@@ -216,21 +225,6 @@ void sighandler(int sigval)
 	case SIGHUP:
 		signal(sigval,sighandler);
 		g_recycle = 1;
-		break;
-
-	case SIGSEGV:
-		g_shutdown = 2;
-		abort();
-		break;
-
-	case SIGILL:
-		g_shutdown = 2;
-		abort();
-		break;
-
-	case SIGFPE:
-		g_shutdown = 2;
-		abort();
 		break;
 	}
 }
@@ -467,6 +461,7 @@ fclose(cfg);
 grab_config_item(filedata,"CLASSD_LOG_PATH",cfg_log_path,sizeof(cfg_log_path),"/var/log/untangle-classd");
 grab_config_item(filedata,"CLASSD_LOG_FILE",cfg_log_file,sizeof(cfg_log_file),"/var/log/untangle-classd/classd.log");
 grab_config_item(filedata,"CLASSD_DUMP_PATH",cfg_dump_path,sizeof(cfg_dump_path),"/tmp");
+grab_config_item(filedata,"CLASSD_CORE_PATH",cfg_core_path,sizeof(cfg_core_path),"/usr/share/untangle-classd");
 grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_plugins),"/usr/share/untangle-classd/plugins");
 
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
