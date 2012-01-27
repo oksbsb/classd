@@ -151,9 +151,9 @@ ct = nfct_new();
 nfct_set_attr_u8(ct,ATTR_L3PROTO,AF_INET);
 nfct_set_attr_u8(ct,ATTR_L4PROTO,iphead->protocol);
 nfct_set_attr_u32(ct,ATTR_IPV4_SRC,iphead->saddr);
-nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->source);
+nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->sport);
 nfct_set_attr_u32(ct,ATTR_IPV4_DST,iphead->daddr);
-nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dest);
+nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dport);
 ret = nfct_query(nfcth,NFCT_Q_GET,ct);
 
 // cleanup the conntrack
@@ -162,8 +162,8 @@ nfct_destroy(ct);
 // extract the client and server addresses
 inet_ntop(AF_INET,&iphead->saddr,sname,sizeof(sname));
 inet_ntop(AF_INET,&iphead->daddr,dname,sizeof(dname));
-sport = ntohs(xphead->source);
-dport = ntohs(xphead->dest);
+sport = ntohs(xphead->sport);
+dport = ntohs(xphead->dport);
 
 // search the hash table for the normal entry
 sprintf(forward,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
@@ -216,9 +216,9 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		{
 		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetDaddr();
-		xphead->source = lookup->GetDport();
+		xphead->sport = lookup->GetDport();
 		iphead->daddr = lookup->GetSaddr();
-		xphead->dest = lookup->GetSport();
+		xphead->dport = lookup->GetSport();
 		log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 		return;
@@ -233,9 +233,9 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
 		{
 		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetSaddr();
-		xphead->source = lookup->GetSport();
+		xphead->sport = lookup->GetSport();
 		iphead->daddr = lookup->GetDaddr();
-		xphead->dest = lookup->GetDport();
+		xphead->dport = lookup->GetDport();
 		log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 		return;
@@ -265,9 +265,9 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		{
 		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV FWD %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetDaddr();
-		xphead->source = lookup->GetDport();
+		xphead->sport = lookup->GetDport();
 		iphead->daddr = lookup->GetSaddr();
-		xphead->dest = lookup->GetSport();
+		xphead->dport = lookup->GetSport();
 		log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 		return;
@@ -282,9 +282,9 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 		{
 		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
 		iphead->saddr = lookup->GetSaddr();
-		xphead->source = lookup->GetSport();
+		xphead->sport = lookup->GetSport();
 		iphead->daddr = lookup->GetDaddr();
-		xphead->dest = lookup->GetDport();
+		xphead->dport = lookup->GetDport();
 		log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
 		return;
@@ -292,7 +292,7 @@ lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
 	}
 
 // create a new status object and store in status table
-status = new StatusObject(forward,iphead->protocol,iphead->saddr,xphead->source,iphead->daddr,xphead->dest);
+status = new StatusObject(forward,iphead->protocol,iphead->saddr,xphead->sport,iphead->daddr,xphead->dport);
 g_statustable->InsertObject(status);
 LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS INSERT %s\n",forward);
 
@@ -317,8 +317,8 @@ xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
 if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
 if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
 
-src_port = ntohs(xphead->source);
-dst_port = ntohs(xphead->dest);
+src_port = ntohs(xphead->sport);
+dst_port = ntohs(xphead->dport);
 
 inet_ntop(AF_INET,&iphead->saddr,src_addr,sizeof(src_addr));
 inet_ntop(AF_INET,&iphead->daddr,dst_addr,sizeof(dst_addr));

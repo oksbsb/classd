@@ -3,7 +3,7 @@
 # All Rights Reserved
 # Written by Michael A. Hotz
 
-#DEBUG = -g3 -ggdb
+DEBUG = -g3 -ggdb
 #GPROF = -pg
 SPEED = -O2
 
