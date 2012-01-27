@@ -358,7 +358,7 @@ fflush(g_logfile);
 /*--------------------------------------------------------------------------*/
 void logproblem(Problem *aProblem)
 {
-sysmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",aProblem->string,aProblem->value);
+if (aProblem->string != NULL) sysmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",aProblem->string,aProblem->value);
 delete(aProblem);
 }
 /*--------------------------------------------------------------------------*/

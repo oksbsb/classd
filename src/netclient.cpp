@@ -23,8 +23,15 @@ next = NULL;
 memset(&netaddr,0,sizeof(netaddr));
 size = sizeof(netaddr);
 netsock = accept(aSock,(sockaddr *)&netaddr,(socklen_t *)&size);
-if ((netsock < 0) && (errno == EWOULDBLOCK)) throw(new Problem());
-if (netsock < 0) throw(new Problem("Error returned from accept()",errno));
+
+	if (netsock < 0)
+	{
+	// if nobody is there just throw an empty problem
+	if (errno == EWOULDBLOCK) throw(new Problem());
+
+	// otherwise throw a problem with a message and error code
+	throw(new Problem("Error returned from accept()",errno));
+	}
 
 // construct network name string for logging and such
 username = inet_ntoa(netaddr.sin_addr);
@@ -365,6 +372,7 @@ replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ......... %s\r\n",cfg_log_path);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ......... %s\r\n",cfg_log_file);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ........ %s\r\n",cfg_dump_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CORE_PATH ........ %s\r\n",cfg_core_path);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_navl_plugins);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
