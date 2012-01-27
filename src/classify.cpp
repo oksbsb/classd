@@ -115,8 +115,8 @@ void process_packet(unsigned char *rawpkt,int rawlen)
 struct nf_conntrack		*ct;
 StatusObject			*status;
 LookupObject			*lookup;
-uint32_t				saddr,daddr;
-uint16_t				sport,dport;
+u_int32_t				saddr,daddr;
+u_int16_t				sport,dport;
 struct xphdr			*xphead;
 struct iphdr			*iphead;
 const char				*pname;
@@ -306,7 +306,7 @@ struct xphdr	*xphead;
 struct iphdr	*iphead;
 const char		*pname;
 char			src_addr[32],dst_addr[32];
-uint16_t		src_port,dst_port;
+u_int16_t		src_port,dst_port;
 
 // use the iphdr structure for parsing
 iphead = (iphdr *)rawpkt;
@@ -425,12 +425,12 @@ return(0);
 int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data)
 {
 LookupObject	*lookup;
-uint32_t		orig_saddr,repl_saddr;
-uint32_t		orig_daddr,repl_daddr;
-uint16_t		orig_sport,repl_sport;
-uint16_t		orig_dport,repl_dport;
-uint8_t			orig_proto,repl_proto;
-uint32_t		sess_id;
+u_int32_t		orig_saddr,repl_saddr;
+u_int32_t		orig_daddr,repl_daddr;
+u_int16_t		orig_sport,repl_sport;
+u_int16_t		orig_dport,repl_dport;
+u_int8_t		orig_proto,repl_proto;
+u_int32_t		sess_id;
 const char		*pname;
 char			orig_sname[32],repl_sname[32];
 char			orig_dname[32],repl_dname[32];

@@ -25,8 +25,8 @@ const unsigned int CAT_PACKET	= 0x0004;
 const unsigned int CAT_LOOKUP	= 0x0008;
 const unsigned int CAT_FILTER	= 0x0010;
 
-const unsigned int MSG_PACKET	= 0x11111111;
-const unsigned int MSG_SHUTDOWN	= 0x99999999;
+const unsigned char MSG_PACKET		= 'P';
+const unsigned char MSG_SHUTDOWN	= 'S';
 /*--------------------------------------------------------------------------*/
 class NetworkServer;
 class NetworkClient;
@@ -123,14 +123,14 @@ friend class MessageQueue;
 
 public:
 
-	MessageWagon(int argCommand,const unsigned char *argBuffer,int argLength);
-	MessageWagon(int argCommand);
+	MessageWagon(u_int8_t argCommand,const unsigned char *argBuffer,int argLength);
+	MessageWagon(u_int8_t argCommand);
 	virtual ~MessageWagon(void);
 
 	unsigned char			*buffer;
+	u_int8_t				command;
 	time_t					timestamp;
 	int						length;
-	int						command;
 
 private:
 
@@ -193,11 +193,11 @@ class StatusObject : public HashObject
 public:
 
 	StatusObject(const char *aHashname,
-		uint8_t aNetProto,
-		uint32_t aClientAddr,
-		uint16_t aClientPort,
-		uint32_t aServerAddr,
-		uint16_t aServerPort);
+		u_int8_t aNetProto,
+		u_int32_t aClientAddr,
+		u_int16_t aClientPort,
+		u_int32_t aServerAddr,
+		u_int16_t aServerPort);
 
 	virtual ~StatusObject(void);
 
@@ -217,11 +217,11 @@ public:
 
 	inline int IsActive(void)				{ return(upcount); }
 
-	uint8_t					netproto;
-	uint32_t				clientaddr;
-	uint16_t				clientport;
-	uint32_t				serveraddr;
-	uint16_t				serverport;
+	u_int8_t					netproto;
+	u_int32_t				clientaddr;
+	u_int16_t				clientport;
+	u_int32_t				serveraddr;
+	u_int16_t				serverport;
 
 	unsigned short			clientfin;
 	unsigned short			serverfin;
@@ -245,22 +245,22 @@ public:
 	LookupObject(unsigned short aNetwork,const char *aHashname);
 	virtual ~LookupObject(void);
 
-	void UpdateObject(uint32_t aSaddr,uint16_t aSport,uint32_t aDaddr,uint16_t aDport);
+	void UpdateObject(u_int32_t aSaddr,u_int16_t aSport,u_int32_t aDaddr,u_int16_t aDport);
 	char *GetObjectString(char *target,int maxlen);
 
-	inline uint32_t GetSaddr(void)			{ return(orig_saddr); }
-	inline uint16_t GetSport(void)			{ return(orig_sport); }
-	inline uint32_t GetDaddr(void)			{ return(orig_daddr); }
-	inline uint16_t GetDport(void)			{ return(orig_dport); }
+	inline u_int32_t GetSaddr(void)			{ return(orig_saddr); }
+	inline u_int16_t GetSport(void)			{ return(orig_sport); }
+	inline u_int32_t GetDaddr(void)			{ return(orig_daddr); }
+	inline u_int16_t GetDport(void)			{ return(orig_dport); }
 
 private:
 
 	int GetObjectSize(void);
 
-	uint32_t				orig_saddr;
-	uint16_t				orig_sport;
-	uint32_t				orig_daddr;
-	uint16_t				orig_dport;
+	u_int32_t				orig_saddr;
+	u_int16_t				orig_sport;
+	u_int32_t				orig_daddr;
+	u_int16_t				orig_dport;
 };
 /*--------------------------------------------------------------------------*/
 class Problem

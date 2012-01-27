@@ -140,7 +140,7 @@ aHigh_bytes = high_bytes;
 }
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
-MessageWagon::MessageWagon(int argCommand,const unsigned char *argBuffer,int argLength)
+MessageWagon::MessageWagon(u_int8_t argCommand,const unsigned char *argBuffer,int argLength)
 {
 next = NULL;
 command = argCommand;
@@ -150,7 +150,7 @@ memcpy(buffer,argBuffer,argLength);
 timestamp = time(NULL);
 }
 /*--------------------------------------------------------------------------*/
-MessageWagon::MessageWagon(int argCommand)
+MessageWagon::MessageWagon(u_int8_t argCommand)
 {
 next = NULL;
 command = argCommand;

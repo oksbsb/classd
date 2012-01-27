@@ -7,7 +7,7 @@
 #include "common.h"
 #include "classd.h"
 
-#define GET16BITS(d) (*((const uint16_t *)(d)))
+#define GET16BITS(d) (*((const u_int16_t *)(d)))
 /*--------------------------------------------------------------------------*/
 HashTable::HashTable(int aBuckets)
 {
@@ -239,7 +239,7 @@ return(removed);
 /*--------------------------------------------------------------------------*/
 unsigned int HashTable::GetHashValue(const char *aString)
 {
-uint32_t	hash,temp;
+u_int32_t	hash,temp;
 int			len,rem;
 
 len = strlen(aString);
@@ -253,7 +253,7 @@ len >>= 2;
 	hash += GET16BITS(aString);
 	temp = ((GET16BITS(aString+2) << 11) ^ hash);
 	hash = ((hash << 16) ^ temp);
-	aString += (2 * sizeof(uint16_t));
+	aString += (2 * sizeof(u_int16_t));
 	hash += (hash >> 11);
 	}
 
@@ -262,7 +262,7 @@ len >>= 2;
 	case 3:
 		hash += GET16BITS(aString);
 		hash ^= (hash << 16);
-		hash ^= (aString[sizeof (uint16_t)] << 18);
+		hash ^= (aString[sizeof (u_int16_t)] << 18);
 		hash += (hash >> 11);
 		break;
 	case 2:

@@ -8,11 +8,11 @@
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
 StatusObject::StatusObject(const char *aHashname,
-	uint8_t aNetProto,
-	uint32_t aClientAddr,
-	uint16_t aClientPort,
-	uint32_t aServerAddr,
-	uint16_t aServerPort) : HashObject(aNetProto,aHashname)
+	u_int8_t aNetProto,
+	u_int32_t aClientAddr,
+	u_int16_t aClientPort,
+	u_int32_t aServerAddr,
+	u_int16_t aServerPort) : HashObject(aNetProto,aHashname)
 {
 application = NULL;
 protochain = NULL;
