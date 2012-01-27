@@ -3,6 +3,8 @@
 CLASSD_QUEUE_NUM=1967
 
 IPTABLES=${IPTABLES:-iptables}
+TABLE_NAME=mangle
+CHAIN_NAME=untangle-classd
 
 debug()
 {
@@ -33,21 +35,25 @@ is_queue_open()
     t_classd_cmd=`grep -c classd /proc/${t_classd_pid}/cmdline 2>| /dev/null`
 
     if [ $((t_classd_cmd)) -eq 0 ]; then
-        echo "[`date`] Something other than classd seems to own the queue"
+        echo "[`date`] Something other than classd seems to own the queue: `cat /proc/${t_classd_pid}/cmdline`"
     fi
 
     return 0
 }
 
-insert_classd_iptables_rules()
+flush_classd_iptables_rules()
 {
-    TABLE_NAME=mangle
-    CHAIN_NAME=untangle-classd
-
     # create and flush a new chain for our traffic
-    ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME} > /dev/null 2>&1
+    ${IPTABLES} -t ${TABLE_NAME} -N ${CHAIN_NAME} >/dev/null 2>&1
     ${IPTABLES} -t ${TABLE_NAME} -F ${CHAIN_NAME}
 
+    # remove previous rules to call the chain if they exist
+    ${IPTABLES} -t ${TABLE_NAME} -D PREROUTING -m mark --mark 0x00000000/0x03000000 -j ${CHAIN_NAME} >/dev/null 2>&1
+    ${IPTABLES} -t ${TABLE_NAME} -D OUTPUT -m mark --mark 0x00000000/0x02000000 -j ${CHAIN_NAME} >/dev/null 2>&1
+}
+
+insert_classd_iptables_rules()
+{
     # we don't care about traffic to or from loopback addresses
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
@@ -82,9 +88,11 @@ if [ -f /etc/default/untangle-classd ]; then
 fi
 
 ## If the queue is open generate the new rules
+flush_classd_iptables_rules
+
 is_queue_open && {
+    echo "[`date`] The untangle-classd is running. Inserting rules."
     insert_classd_iptables_rules
-    echo "[`date`] The classd daemon rules have been created"
 }
 
 true
