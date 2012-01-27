@@ -166,9 +166,6 @@ currtime = lasttime = time(NULL);
 
 		if (currtime > (lasttime + 60))
 		{
-		char *shit = (char *)0x12345678;
-		shit[1] = 1;
-
 		lasttime = currtime;
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle");
 		ret = g_statustable->PurgeStaleObjects(currtime);
