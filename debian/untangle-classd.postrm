@@ -8,6 +8,7 @@ LOG_PATH=/var/log/untangle-classd
 
 if [ "$1" == "purge" ]; then
     rm -f $LOG_PATH/classd.*
+    rm -f $LOG_PATH/*.log
     rm -f $FLAG_FILE
 fi
 
