@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 FLAG_FILE=/tmp/untangle-classd.flag
 LOG_PATH=/var/log/untangle-classd

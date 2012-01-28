@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 FLAG_FILE=/tmp/untangle-classd.flag
 PID_FILE=/var/run/untangle-classd.pid
