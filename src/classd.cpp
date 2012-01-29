@@ -26,9 +26,6 @@ strcpy(g_cfgfile,"untangle-classd.conf");
 gettimeofday(&g_runtime,NULL);
 load_configuration();
 
-// change directory to path for core dump files
-chdir(cfg_core_path);
-
 // set the core dump file size limit
 core.rlim_cur = 0x40000000;
 core.rlim_max = 0x40000000;
@@ -52,6 +49,9 @@ setrlimit(RLIMIT_CORE,&core);
 	if (strncasecmp(argv[x],"-M0",3) == 0) cfg_packet_thread = 0;
 	if (strncasecmp(argv[x],"-M1",3) == 0) cfg_packet_thread = 1;
 	}
+
+// change directory to path for core dump files
+if (g_console == 0) chdir(cfg_core_path);
 
 // get the default application stack size so
 // we can set the same stack size for threads
@@ -89,7 +89,6 @@ pthread_attr_destroy(&attr);
 	freopen("/dev/null","w",stderr);
 	}
 
-signal(SIGALRM,sighandler);
 signal(SIGTERM,sighandler);
 signal(SIGQUIT,sighandler);
 signal(SIGINT,sighandler);
@@ -99,21 +98,36 @@ signal(SIGHUP,sighandler);
 getitimer(ITIMER_PROF,&g_itimer);
 
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd %d-Bit Version %s Build %s\n",(int)sizeof(void*)*8,VERSION,BUILDID);
+
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
 if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
 else sysmessage(LOG_NOTICE,"Traffic processing message queue is active\n");
+if (g_skiptcp != 0) sysmessage(LOG_NOTICE,"Ignoring all TCP traffic\n");
+if (g_skipudp != 0) sysmessage(LOG_NOTICE,"Ignoring all UDP traffic\n");
 
 // create the main message queue
 g_messagequeue = new MessageQueue();
 
-// create our status and lookup hashtables
-g_statustable = new HashTable(cfg_hash_buckets);
-g_lookuptable = new HashTable(cfg_hash_buckets);
+// create our session and tracker hash tables
+g_sessiontable = new HashTable(cfg_hash_buckets);
+g_trackertable = new HashTable(cfg_hash_buckets);
 
 // create our network server
 g_netserver = new NetworkServer();
 g_netserver->BeginExecution();
+
+// start the conntrack handler thread
+pthread_attr_init(&attr);
+pthread_attr_setstacksize(&attr,g_stacksize);
+ret = pthread_create(&g_conntrack_tid,&attr,conntrack_thread,NULL);
+pthread_attr_destroy(&attr);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
+	g_shutdown = 1;
+	}
 
 // start the netqueue filter handler thread
 pthread_attr_init(&attr);
@@ -167,17 +181,17 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning status and lookup table cleanup cycle");
-		ret = g_statustable->PurgeStaleObjects(currtime);
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from status table\n",ret);
-		ret = g_lookuptable->PurgeStaleObjects(currtime);
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from lookup table\n",ret);
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning session and tracker table cleanup cycle");
+		ret = g_sessiontable->PurgeStaleObjects(currtime);
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from session table\n",ret);
+		ret = g_trackertable->PurgeStaleObjects(currtime);
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from tracker table\n",ret);
 		}
 
-		if (g_recycle != 0)
+		if (g_logrecycle != 0)
 		{
-		recycle();
-		g_recycle = 0;
+		logrecycle();
+		g_logrecycle = 0;
 		}
 	}
 
@@ -187,14 +201,18 @@ g_shutdown = 1;
 // post a shutdown message to the main message queue
 g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 
+// tell the conntrack thread we're shutting down
+pthread_kill(g_conntrack_tid,SIGUSR1);
+
 // wait for the netfilter and classify threads to finish
 pthread_join(g_classify_tid,NULL);
 pthread_join(g_netfilter_tid,NULL);
+pthread_join(g_conntrack_tid,NULL);
 
 // cleanup all the global objects we created
 delete(g_netserver);
-delete(g_statustable);
-delete(g_lookuptable);
+delete(g_sessiontable);
+delete(g_trackertable);
 delete(g_messagequeue);
 
 sysmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
@@ -221,12 +239,12 @@ void sighandler(int sigval)
 
 	case SIGHUP:
 		signal(sigval,sighandler);
-		g_recycle = 1;
+		g_logrecycle = 1;
 		break;
 	}
 }
 /*--------------------------------------------------------------------------*/
-void recycle(void)
+void logrecycle(void)
 {
 // if running on console just return
 if (g_console != 0) return;

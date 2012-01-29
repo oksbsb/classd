@@ -14,6 +14,7 @@ struct nfq_handle		*nfqh;
 void* netfilter_thread(void *arg)
 {
 struct pollfd	tester;
+sigset_t		sigset;
 char			*buffer;
 int				netsock;
 int				val,ret;
@@ -23,6 +24,15 @@ sysmessage(LOG_INFO,"The netfilter thread is starting\n");
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
+
+// start by masking all signals
+sigfillset(&sigset);
+pthread_sigmask(SIG_BLOCK,&sigset,NULL);
+
+// now we allow only the PROF signal
+sigemptyset(&sigset);
+sigaddset(&sigset,SIGPROF);
+pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 
 // allocate our packet buffer
 buffer = (char *)malloc(cfg_net_buffer);

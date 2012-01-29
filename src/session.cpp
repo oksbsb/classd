@@ -1,4 +1,4 @@
-// STATOBJECT.CPP
+// SESSION.CPP
 // Traffic Classification Engine
 // Copyright (c) 2011 Untangle, Inc.
 // All Rights Reserved
@@ -7,7 +7,7 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-StatusObject::StatusObject(const char *aHashname,
+SessionObject::SessionObject(const char *aHashname,
 	u_int8_t aNetProto,
 	u_int32_t aClientAddr,
 	u_int16_t aClientPort,
@@ -27,18 +27,16 @@ clientaddr = aClientAddr;
 clientport = aClientPort;
 serveraddr = aServerAddr;
 serverport = aServerPort;
-
-clientfin = serverfin = 0;
 }
 /*--------------------------------------------------------------------------*/
-StatusObject::~StatusObject(void)
+SessionObject::~SessionObject(void)
 {
 if (application != NULL) free(application);
 if (protochain != NULL) free(protochain);
 if (detail != NULL) free(detail);
 }
 /*--------------------------------------------------------------------------*/
-void StatusObject::UpdateObject(const char *aApplication,
+void SessionObject::UpdateObject(const char *aApplication,
 	const char *aProtochain,
 	const char *aDetail,
 	short aConfidence,
@@ -61,7 +59,7 @@ state = aState;
 upcount++;
 }
 /*--------------------------------------------------------------------------*/
-int StatusObject::GetObjectSize(void)
+int SessionObject::GetObjectSize(void)
 {
 int			mysize;
 
@@ -72,7 +70,7 @@ if (detail != NULL) mysize+=(strlen(detail) + 1);
 return(mysize);
 }
 /*--------------------------------------------------------------------------*/
-char *StatusObject::GetObjectString(char *target,int maxlen)
+char *SessionObject::GetObjectString(char *target,int maxlen)
 {
 snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,detail);
 return(target);

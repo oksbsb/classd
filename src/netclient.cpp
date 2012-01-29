@@ -107,7 +107,7 @@ return(1);
 /*--------------------------------------------------------------------------*/
 int NetworkClient::ProcessRequest(void)
 {
-StatusObject	*local;
+SessionObject	*local;
 
 // first check for all our special queries
 
@@ -127,7 +127,7 @@ if (strcasecmp(querybuff,"EXIT") == 0) return(0);
 if (strcasecmp(querybuff,"QUIT") == 0) return(0);
 
 // not special so use the query string to search the connection hash table
-local = dynamic_cast<StatusObject*>(g_statustable->SearchObject(querybuff));
+local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(querybuff));
 
 	// if we have a hit return the found result - note that we use
 	// IsActive() to make sure we don't return a newly created and thus
@@ -167,6 +167,22 @@ void NetworkClient::AdjustLogCategory(void)
 {
 int		found = 0;
 
+	if (strcasecmp(querybuff,"-LOGIC") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_LOGIC;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+LOGIC") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_LOGIC;
+	found++;
+	}
+
 	if (strcasecmp(querybuff,"-CLIENT") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Client debug logging has been disabled\n");
@@ -180,22 +196,6 @@ int		found = 0;
 	sysmessage(LOG_NOTICE,"Client debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Client debug logging has been enabled\r\n\r\n");
 	g_debug|=CAT_CLIENT;
-	found++;
-	}
-
-	if (strcasecmp(querybuff,"-FILTER") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Filter debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_FILTER;
-	found++;
-	}
-
-	if (strcasecmp(querybuff,"+FILTER") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Filter debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Filter debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_FILTER;
 	found++;
 	}
 
@@ -215,35 +215,35 @@ int		found = 0;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"-LOOKUP") == 0)
+	if (strcasecmp(querybuff,"-SESSION") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Lookup debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Lookup debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_LOOKUP;
+	sysmessage(LOG_NOTICE,"Session debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Session debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_SESSION;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"+LOOKUP") == 0)
+	if (strcasecmp(querybuff,"+SESSION") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Lookup debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Lookup debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_LOOKUP;
+	sysmessage(LOG_NOTICE,"Session debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Session debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_SESSION;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"-LOGIC") == 0)
+	if (strcasecmp(querybuff,"-TRACKER") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Logic debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_LOGIC;
+	sysmessage(LOG_NOTICE,"Tracker debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Tracker debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_TRACKER;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"+LOGIC") == 0)
+	if (strcasecmp(querybuff,"+TRACKER") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Logic debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Logic debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_LOGIC;
+	sysmessage(LOG_NOTICE,"Tracker debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Tracker debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_TRACKER;
 	found++;
 	}
 
@@ -317,13 +317,13 @@ replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Current Bytes ..... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Highest Count ..... %s\r\n",pad(temp,hicnt));
 replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Highest Bytes ..... %s\r\n",pad(temp,himem));
 
-// get the total size of the status table
-g_statustable->GetTableSize(count,bytes);
+// get the total size of the session table
+g_sessiontable->GetTableSize(count,bytes);
 replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Items ........ %s\r\n",pad(temp,count));
 replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
 
-// get the total size of the lookup table
-g_lookuptable->GetTableSize(count,bytes);
+// get the total size of the tracker table
+g_trackertable->GetTableSize(count,bytes);
 replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Items ........ %s\r\n",pad(temp,count));
 replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
 
@@ -400,11 +400,11 @@ replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"CONFIG - display all daemon configuration values\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUG - display daemon debug information\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"PROTO - retrieve the list of recognized protocols\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-CLIENT - enable/disable netclient request logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-FILTER - enable/disable netfilter conntrack logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable packet classify logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-LOOKUP - enable/disable session lookup logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+/-LOGIC - enable/disable logic debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-CLIENT - enable/disable netclient request logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable packet classify logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-SESSION - enable/disable netfilter session table logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-TRACKER - enable/disable netfilter tracker table logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\r\n");
@@ -443,14 +443,14 @@ fprintf(stream,"  Console Flag: %d\r\n",g_console);
 fprintf(stream,"  Bypass Flag: %d\r\n",g_bypass);
 fprintf(stream,"\r\n");
 
-// dump everything in the status hashtable
-fprintf(stream,"========== CONNECTION STATUS TABLE ==========\r\n");
-g_statustable->DumpDetail(stream);
+// dump everything in the session hash table
+fprintf(stream,"========== SESSION HASH TABLE ==========\r\n");
+g_sessiontable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
-// dump everything in the conntrack hashtable
-fprintf(stream,"========== CONNTRACK LOOKUP TABLE ==========\r\n");
-g_lookuptable->DumpDetail(stream);
+// dump everything in the conntrack has htable
+fprintf(stream,"========== TRACKER HASH TABLE ==========\r\n");
+g_trackertable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
 // dump the vineyard diagnostic info and wrap in calls

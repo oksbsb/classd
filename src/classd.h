@@ -22,8 +22,8 @@
 const unsigned int CAT_LOGIC	= 0x0001;
 const unsigned int CAT_CLIENT	= 0x0002;
 const unsigned int CAT_PACKET	= 0x0004;
-const unsigned int CAT_LOOKUP	= 0x0008;
-const unsigned int CAT_FILTER	= 0x0010;
+const unsigned int CAT_SESSION	= 0x0008;
+const unsigned int CAT_TRACKER	= 0x0010;
 
 const unsigned char MSG_PACKET		= 'P';
 const unsigned char MSG_SHUTDOWN	= 'S';
@@ -32,8 +32,8 @@ class NetworkServer;
 class NetworkClient;
 class MessageQueue;
 class MessageWagon;
-class StatusObject;
-class LookupObject;
+class SessionObject;
+class TrackerObject;
 class HashObject;
 class HashTable;
 class WebServer;
@@ -188,18 +188,18 @@ private:
 	char					*hashname;
 };
 /*--------------------------------------------------------------------------*/
-class StatusObject : public HashObject
+class SessionObject : public HashObject
 {
 public:
 
-	StatusObject(const char *aHashname,
+	SessionObject(const char *aHashname,
 		u_int8_t aNetProto,
 		u_int32_t aClientAddr,
 		u_int16_t aClientPort,
 		u_int32_t aServerAddr,
 		u_int16_t aServerPort);
 
-	virtual ~StatusObject(void);
+	virtual ~SessionObject(void);
 
 	void UpdateObject(const char *aApplication,
 		const char * aProtochain,
@@ -217,14 +217,11 @@ public:
 
 	inline int IsActive(void)				{ return(upcount); }
 
-	u_int8_t					netproto;
+	u_int8_t				netproto;
 	u_int32_t				clientaddr;
 	u_int16_t				clientport;
 	u_int32_t				serveraddr;
 	u_int16_t				serverport;
-
-	unsigned short			clientfin;
-	unsigned short			serverfin;
 
 private:
 
@@ -238,12 +235,12 @@ private:
 	int						upcount;
 };
 /*--------------------------------------------------------------------------*/
-class LookupObject : public HashObject
+class TrackerObject : public HashObject
 {
 public:
 
-	LookupObject(unsigned short aNetwork,const char *aHashname);
-	virtual ~LookupObject(void);
+	TrackerObject(unsigned short aNetwork,const char *aHashname);
+	virtual ~TrackerObject(void);
 
 	void UpdateObject(u_int32_t aSaddr,u_int16_t aSport,u_int32_t aDaddr,u_int16_t aDport);
 	char *GetObjectString(char *target,int maxlen);
@@ -294,11 +291,15 @@ int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
-int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
 void process_packet(unsigned char *rawpkt,int rawlen);
 void log_packet(unsigned char *rawpkt,int rawlen);
 void vineyard_shutdown(void);
 int vineyard_startup(void);
+/*--------------------------------------------------------------------------*/
+void* conntrack_thread(void *arg);
+int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
+void conntrack_shutdown(void);
+int conntrack_startup(void);
 /*--------------------------------------------------------------------------*/
 void hexmessage(int category,int priority,const void *buffer,int size);
 void logmessage(int category,int priority,const char *format,...);
@@ -309,7 +310,7 @@ const char *grab_config_item(char** const filedata,const char *search,char *targ
 void load_configuration(void);
 void sighandler(int sigval);
 void timestring(char *target);
-void recycle(void);
+void logrecycle(void);
 char *itolevel(int value,char *dest);
 char *pad(char *target,u_int64_t value,int width = 0);
 /*--------------------------------------------------------------------------*/
@@ -318,18 +319,19 @@ char *pad(char *target,u_int64_t value,int width = 0);
 #endif
 /*--------------------------------------------------------------------------*/
 DATALOC pthread_t			g_netfilter_tid;
+DATALOC pthread_t			g_conntrack_tid;
 DATALOC pthread_t			g_classify_tid;
 DATALOC struct itimerval	g_itimer;
 DATALOC struct timeval		g_runtime;
 DATALOC size_t				g_stacksize;
 DATALOC NetworkServer		*g_netserver;
 DATALOC MessageQueue		*g_messagequeue;
-DATALOC HashTable			*g_statustable;
-DATALOC HashTable			*g_lookuptable;
+DATALOC HashTable			*g_sessiontable;
+DATALOC HashTable			*g_trackertable;
 DATALOC FILE				*g_logfile;
 DATALOC char				g_cfgfile[256];
+DATALOC int					g_logrecycle;
 DATALOC int					g_shutdown;
-DATALOC int					g_recycle;
 DATALOC int					g_console;
 DATALOC int					g_skiptcp;
 DATALOC int					g_skipudp;

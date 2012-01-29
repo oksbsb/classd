@@ -30,13 +30,11 @@ static int l_attr_conn_id = 0;
 static int l_attr_fbook_app = 0;
 static int l_attr_tls_host = 0;
 static int l_attr_http_info = 0;
-
-// vars for the conntrack lookups
-struct nfct_handle *nfcth;
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg)
 {
 MessageWagon	*wagon;
+sigset_t		sigset;
 time_t			current;
 int				ret;
 
@@ -46,25 +44,14 @@ sysmessage(LOG_INFO,"The classify thread is starting\n");
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
 
-// open a conntrack netlink handler
-nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
+// start by masking all signals
+sigfillset(&sigset);
+pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 
-	if (nfcth == NULL)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from nfct_open()\n",errno);
-	g_shutdown = 1;
-	return(NULL);
-	}
-
-// register the conntrack callback
-ret = nfct_callback_register(nfcth,NFCT_T_ALL,conn_callback,NULL);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from nfct_callback_register()\n",errno);
-	g_shutdown = 1;
-	return(NULL);
-	}
+// now we allow only the PROF signal
+sigemptyset(&sigset);
+sigaddset(&sigset,SIGPROF);
+pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 
 // call our vineyard startup function
 ret = vineyard_startup();
@@ -100,21 +87,14 @@ ret = vineyard_startup();
 // call our vineyard shutdown function
 vineyard_shutdown();
 
-// unregister the callback handler
-nfct_callback_unregister(nfcth);
-
-// close the conntrack netlink handler
-nfct_close(nfcth);
-
 sysmessage(LOG_INFO,"The classify thread has terminated\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
 void process_packet(unsigned char *rawpkt,int rawlen)
 {
-struct nf_conntrack		*ct;
-StatusObject			*status;
-LookupObject			*lookup;
+SessionObject			*session;
+TrackerObject			*tracker;
 u_int32_t				saddr,daddr;
 u_int16_t				sport,dport;
 struct xphdr			*xphead;
@@ -126,7 +106,6 @@ char					dname[32];
 char					forward[64];
 char					reverse[64];
 char					worker[64];
-int						ret;
 
 // use the iphdr structure for parsing
 iphead = (iphdr *)rawpkt;
@@ -137,28 +116,6 @@ xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
 if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
 if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
 
-// allocate a new conntrack
-ct = nfct_new();
-
-	// on error increment the fail counter
-	if (ct == NULL)
-	{
-	pkt_faildrop++;
-	return;
-	}
-
-// setup and submit the conntrack query
-nfct_set_attr_u8(ct,ATTR_L3PROTO,AF_INET);
-nfct_set_attr_u8(ct,ATTR_L4PROTO,iphead->protocol);
-nfct_set_attr_u32(ct,ATTR_IPV4_SRC,iphead->saddr);
-nfct_set_attr_u16(ct,ATTR_PORT_SRC,xphead->sport);
-nfct_set_attr_u32(ct,ATTR_IPV4_DST,iphead->daddr);
-nfct_set_attr_u16(ct,ATTR_PORT_DST,xphead->dport);
-ret = nfct_query(nfcth,NFCT_Q_GET,ct);
-
-// cleanup the conntrack
-nfct_destroy(ct);
-
 // extract the client and server addresses
 inet_ntop(AF_INET,&iphead->saddr,sname,sizeof(sname));
 inet_ntop(AF_INET,&iphead->daddr,dname,sizeof(dname));
@@ -167,137 +124,137 @@ dport = ntohs(xphead->dport);
 
 // search the hash table for the normal entry
 sprintf(forward,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH NORM FWD %s\n",forward);
-status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(forward));
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION NORM FWD %s\n",forward);
+session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(forward));
 
 	// pass the packet to the vineyard library
-	if (status != NULL)
+	if (session != NULL)
 	{
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM FWD %s\n",status->GetObjectString(namestr,sizeof(namestr)));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 	log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 	return;
 	}
 
 // not found so reverse source and destination
 sprintf(reverse,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH NORM REV %s\n",reverse);
-status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(reverse));
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION NORM REV %s\n",reverse);
+session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(reverse));
 
 	// pass the packet to the vineyard library
-	if (status != NULL)
+	if (session != NULL)
 	{
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND NORM REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 	log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 	return;
 	}
 
 // nothing found so check the forward in the conntrack table
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH LOOK FWD %s\n",forward);
-lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(forward));
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD %s\n",forward);
+tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 
-	if (lookup != NULL)
+	if (tracker != NULL)
 	{
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK FWD %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
-	saddr = lookup->GetSaddr();
-	daddr = lookup->GetDaddr();
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+	saddr = tracker->GetSaddr();
+	daddr = tracker->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
 	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
-	sport = ntohs(lookup->GetSport());
-	dport = ntohs(lookup->GetDport());
+	sport = ntohs(tracker->GetSport());
+	dport = ntohs(tracker->GetDport());
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH CONN FWD FWD %s\n",worker);
-	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD FWD %s\n",worker);
+	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
-		if (status != NULL)
+		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = lookup->GetDaddr();
-		xphead->sport = lookup->GetDport();
-		iphead->daddr = lookup->GetSaddr();
-		xphead->dport = lookup->GetSport();
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		iphead->saddr = tracker->GetDaddr();
+		xphead->sport = tracker->GetDport();
+		iphead->daddr = tracker->GetSaddr();
+		xphead->dport = tracker->GetSport();
 		log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH CONN FWD REV %s\n",worker);
-	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD REV %s\n",worker);
+	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
-		if (status != NULL)
+		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN FWD REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = lookup->GetSaddr();
-		xphead->sport = lookup->GetSport();
-		iphead->daddr = lookup->GetDaddr();
-		xphead->dport = lookup->GetDport();
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		iphead->saddr = tracker->GetSaddr();
+		xphead->sport = tracker->GetSport();
+		iphead->daddr = tracker->GetDaddr();
+		xphead->dport = tracker->GetDport();
 		log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
 	}
 
 // nothing found so check the reverse in the conntrack table
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH LOOK REV %s\n",reverse);
-lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(reverse));
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN REV %s\n",reverse);
+tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 
-	if (lookup != NULL)
+	if (tracker != NULL)
 	{
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND LOOK REV %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
-	saddr = lookup->GetSaddr();
-	daddr = lookup->GetDaddr();
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+	saddr = tracker->GetSaddr();
+	daddr = tracker->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
 	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
-	sport = ntohs(lookup->GetSport());
-	dport = ntohs(lookup->GetDport());
+	sport = ntohs(tracker->GetSport());
+	dport = ntohs(tracker->GetDport());
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH CONN REV FWD %s\n",worker);
-	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSIONH CONN REV FWD %s\n",worker);
+	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
-		if (status != NULL)
+		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV FWD %s\n",status->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = lookup->GetDaddr();
-		xphead->sport = lookup->GetDport();
-		iphead->daddr = lookup->GetSaddr();
-		xphead->dport = lookup->GetSport();
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		iphead->saddr = tracker->GetDaddr();
+		xphead->sport = tracker->GetDport();
+		iphead->daddr = tracker->GetSaddr();
+		xphead->dport = tracker->GetSport();
 		log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"SEARCH CONN REV REV %s\n",worker);
-	status = dynamic_cast<StatusObject*>(g_statustable->SearchObject(worker));
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN REV REV %s\n",worker);
+	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
-		if (status != NULL)
+		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"FOUND CONN REV REV %s\n",status->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = lookup->GetSaddr();
-		xphead->sport = lookup->GetSport();
-		iphead->daddr = lookup->GetDaddr();
-		xphead->dport = lookup->GetDport();
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		iphead->saddr = tracker->GetSaddr();
+		xphead->sport = tracker->GetSport();
+		iphead->daddr = tracker->GetDaddr();
+		xphead->dport = tracker->GetDport();
 		log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
 	}
 
-// create a new status object and store in status table
-status = new StatusObject(forward,iphead->protocol,iphead->saddr,xphead->sport,iphead->daddr,xphead->dport);
-g_statustable->InsertObject(status);
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS INSERT %s\n",forward);
+// create a new session object and store in session table
+session = new SessionObject(forward,iphead->protocol,iphead->saddr,xphead->sport,iphead->daddr,xphead->dport);
+g_sessiontable->InsertObject(session);
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION INSERT %s\n",forward);
 
 log_packet(rawpkt,rawlen);
-if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,status);
+if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 }
 /*--------------------------------------------------------------------------*/
 void log_packet(unsigned char *rawpkt,int rawlen)
@@ -307,6 +264,9 @@ struct iphdr	*iphead;
 const char		*pname;
 char			src_addr[32],dst_addr[32];
 u_int16_t		src_port,dst_port;
+
+// if packet logging is not active return immediately
+if ((g_debug & CAT_PACKET) == 0) return;
 
 // use the iphdr structure for parsing
 iphead = (iphdr *)rawpkt;
@@ -329,7 +289,7 @@ LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (%d) = %s-%s:%u-%s:%u\n",rawlen,pname,sr
 int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error)
 {
 navl_iterator_t		it;
-StatusObject		*status = (StatusObject *)arg;
+SessionObject		*session = (SessionObject *)arg;
 char				application[32];
 char				protochain[256];
 char				namestr[256];
@@ -341,7 +301,7 @@ int					appid,value;
 int					ret,idx;
 
 // if callback and object state are both classified no need to process
-if ((state == NAVL_STATE_CLASSIFIED) && (status->GetState() == NAVL_STATE_CLASSIFIED)) return(0);
+if ((state == NAVL_STATE_CLASSIFIED) && (session->GetState() == NAVL_STATE_CLASSIFIED)) return(0);
 
 application[0] = 0;
 protochain[0] = 0;
@@ -403,88 +363,23 @@ navl_proto_get_name(appid,application,sizeof(application));
 // us to ignore all other unknown protocol values
 if (ipproto == 0) return(0);
 
-// if the status object passed is null we can't update
+// if the session object passed is null we can't update
 // this should never happen but we check just in case
-if (status == NULL) return(0);
+if (session == NULL) return(0);
 
-// update the status object with the new information
-status->UpdateObject(application,protochain,detail,confidence,state);
-LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS UPDATE %s\n",status->GetObjectString(namestr,sizeof(namestr)));
+// update the session object with the new information
+session->UpdateObject(application,protochain,detail,confidence,state);
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
 	{
-	LOGMESSAGE(CAT_LOOKUP,LOG_DEBUG,"STATUS EXPIRE %s\n",status->GetHashname());
-	g_statustable->ExpireObject(status);
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION EXPIRE %s\n",session->GetHashname());
+	g_sessiontable->ExpireObject(session);
 	}
 
 // continue tracking the flow
 return(0);
-}
-/*--------------------------------------------------------------------------*/
-int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data)
-{
-LookupObject	*lookup;
-u_int32_t		orig_saddr,repl_saddr;
-u_int32_t		orig_daddr,repl_daddr;
-u_int16_t		orig_sport,repl_sport;
-u_int16_t		orig_dport,repl_dport;
-u_int8_t		orig_proto,repl_proto;
-u_int32_t		sess_id;
-const char		*pname;
-char			orig_sname[32],repl_sname[32];
-char			orig_dname[32],repl_dname[32];
-char			namestr[256];
-char			finder[64];
-
-orig_proto = nfct_get_attr_u8(ct,ATTR_ORIG_L4PROTO);
-repl_proto = nfct_get_attr_u8(ct,ATTR_REPL_L4PROTO);
-
-	if (orig_proto != repl_proto)
-	{
-	sysmessage(LOG_WARNING,"Protocol mismatch %d != %d in conntrack handler\n",orig_proto,repl_proto);
-	return(NFCT_CB_CONTINUE);
-	}
-
-if (orig_proto == IPPROTO_TCP) pname = "TCP";
-if (orig_proto == IPPROTO_UDP) pname = "UDP";
-
-orig_saddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
-orig_sport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
-orig_daddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST);
-orig_dport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST);
-repl_saddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC);
-repl_sport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC);
-repl_daddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST);
-repl_dport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST);
-sess_id = nfct_get_attr_u16(ct,ATTR_ID);
-
-// extract the client and server addresses
-inet_ntop(AF_INET,&orig_saddr,orig_sname,sizeof(orig_sname));
-inet_ntop(AF_INET,&orig_daddr,orig_dname,sizeof(orig_dname));
-inet_ntop(AF_INET,&repl_saddr,repl_sname,sizeof(repl_sname));
-inet_ntop(AF_INET,&repl_daddr,repl_dname,sizeof(repl_dname));
-
-sprintf(finder,"%s-%s:%u-%s:%u",pname,repl_sname,ntohs(repl_sport),repl_dname,ntohs(repl_dport));
-
-LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER SEARCH %s\n",finder);
-lookup = dynamic_cast<LookupObject*>(g_lookuptable->SearchObject(finder));
-
-	if (lookup == NULL)
-	{
-	lookup = new LookupObject(orig_proto,finder);
-	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER INSERT %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
-	g_lookuptable->InsertObject(lookup);
-	}
-
-	else
-	{
-	lookup->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	LOGMESSAGE(CAT_FILTER,LOG_DEBUG,"TRACKER UPDATE %s\n",lookup->GetObjectString(namestr,sizeof(namestr)));
-	}
-
-return(NFCT_CB_CONTINUE);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)

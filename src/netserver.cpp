@@ -79,11 +79,21 @@ pthread_join(ThreadHandle,NULL);
 void* NetworkServer::ThreadMaster(void *argument)
 {
 NetworkServer		*mypointer = (NetworkServer *)argument;
+sigset_t			sigset;
 void				*retval;
 
 // set the itimer value of the main thread which is required
 // for gprof to work properly with multithreaded applications
 setitimer(ITIMER_PROF,&g_itimer,NULL);
+
+// start by masking all signals
+sigfillset(&sigset);
+pthread_sigmask(SIG_BLOCK,&sigset,NULL);
+
+// now we allow only the PROF signal
+sigemptyset(&sigset);
+sigaddset(&sigset,SIGPROF);
+pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 
 // wait for the control semaphore so we don't start
 // running before the constructor has finished
