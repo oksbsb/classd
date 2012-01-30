@@ -54,7 +54,7 @@
 #CLASSD_QUEUE_NUM=1967
 
 ## Sets the value passed to nfq_set_queue_maxlen
-#CLASSD_QUEUE_MAXLEN=1024
+#CLASSD_QUEUE_MAXLEN=10240
 
 ## Sets the size of the network packet buffer.  I would guess
 ## this needs be large enough for the highest MTU which could

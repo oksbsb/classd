@@ -39,6 +39,9 @@ signal(SIGUSR1,conntrack_sighandler);
 // call our conntrack startup function
 ret = conntrack_startup();
 
+// signal the startup complete semaphore
+sem_post(&g_conntrack_sem);
+
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from conntrack_startup()\n",ret);

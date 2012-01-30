@@ -44,6 +44,7 @@ ret = netfilter_startup();
 	{
 	sysmessage(LOG_ERR,"Error %d returned from netfilter_startup()\n",ret);
 	g_shutdown = 1;
+	sem_post(&g_netfilter_sem);
 	return(NULL);
 	}
 
@@ -60,9 +61,13 @@ netsock = nfnl_fd(nfq_nfnlh(nfqh));
 		{
 		sysmessage(LOG_ERR,"Error %d returned from setsockopt(SO_RCVBUF)\n",errno);
 		g_shutdown = 1;
+		sem_post(&g_netfilter_sem);
 		return(NULL);
 		}
 	}
+
+// signal the startup complete semaphore
+sem_post(&g_netfilter_sem);
 
 // set up the poll structure
 tester.fd = netsock;

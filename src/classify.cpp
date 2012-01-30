@@ -56,6 +56,9 @@ pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 // call our vineyard startup function
 ret = vineyard_startup();
 
+// signal the startup complete semaphore
+sem_post(&g_classify_sem);
+
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from vineyard_startup()\n",ret);

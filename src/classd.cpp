@@ -113,23 +113,8 @@ g_messagequeue = new MessageQueue();
 g_sessiontable = new HashTable(cfg_hash_buckets);
 g_trackertable = new HashTable(cfg_hash_buckets);
 
-// create our network server
-g_netserver = new NetworkServer();
-g_netserver->BeginExecution();
-
-// start the conntrack handler thread
-pthread_attr_init(&attr);
-pthread_attr_setstacksize(&attr,g_stacksize);
-ret = pthread_create(&g_conntrack_tid,&attr,conntrack_thread,NULL);
-pthread_attr_destroy(&attr);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
-	g_shutdown = 1;
-	}
-
 // start the netqueue filter handler thread
+sem_init(&g_netfilter_sem,0,0);
 pthread_attr_init(&attr);
 pthread_attr_setstacksize(&attr,g_stacksize);
 ret = pthread_create(&g_netfilter_tid,&attr,netfilter_thread,NULL);
@@ -141,7 +126,27 @@ pthread_attr_destroy(&attr);
 	g_shutdown = 1;
 	}
 
+// wait for the thread to signal init complete
+sem_wait(&g_netfilter_sem);
+
+// start the conntrack handler thread
+sem_init(&g_conntrack_sem,0,0);
+pthread_attr_init(&attr);
+pthread_attr_setstacksize(&attr,g_stacksize);
+ret = pthread_create(&g_conntrack_tid,&attr,conntrack_thread,NULL);
+pthread_attr_destroy(&attr);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
+	g_shutdown = 1;
+	}
+
+// wait for the thread to signal init complete
+sem_wait(&g_conntrack_sem);
+
 // start the vineyard classification thread
+sem_init(&g_classify_sem,0,0);
 pthread_attr_init(&attr);
 pthread_attr_setstacksize(&attr,g_stacksize);
 ret = pthread_create(&g_classify_tid,NULL,classify_thread,NULL);
@@ -152,6 +157,13 @@ pthread_attr_destroy(&attr);
 	sysmessage(LOG_ERR,"Error %d returned from pthread_create(classify)\n",ret);
 	g_shutdown = 1;
 	}
+
+// wait for the thread to signal init complete
+sem_wait(&g_classify_sem);
+
+// create the network server
+g_netserver = new NetworkServer();
+g_netserver->BeginExecution();
 
 // initialize cleanup timers
 currtime = lasttime = time(NULL);
@@ -206,8 +218,13 @@ pthread_kill(g_conntrack_tid,SIGUSR1);
 
 // wait for the netfilter and classify threads to finish
 pthread_join(g_classify_tid,NULL);
-pthread_join(g_netfilter_tid,NULL);
 pthread_join(g_conntrack_tid,NULL);
+pthread_join(g_netfilter_tid,NULL);
+
+// clean up the thread semaphores
+sem_destroy(&g_classify_sem);
+sem_destroy(&g_conntrack_sem);
+sem_destroy(&g_netfilter_sem);
 
 // cleanup all the global objects we created
 delete(g_netserver);
@@ -509,7 +526,7 @@ cfg_client_port = atoi(work);
 grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
 cfg_net_queue = atoi(work);
 
-grab_config_item(filedata,"CLASSD_QUEUE_MAXLEN",work,sizeof(work),"1024");
+grab_config_item(filedata,"CLASSD_QUEUE_MAXLEN",work,sizeof(work),"10240");
 cfg_net_maxlen = atoi(work);
 
 grab_config_item(filedata,"CLASSD_QUEUE_BUFFER",work,sizeof(work),"32768");
