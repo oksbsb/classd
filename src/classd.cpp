@@ -397,10 +397,10 @@ if (aProblem->string != NULL) sysmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",
 delete(aProblem);
 }
 /*--------------------------------------------------------------------------*/
-void timestring(char *target)
+char *nowtimestr(char *target)
 {
-struct tm		*today;
-time_t			value;
+struct tm	*today;
+time_t		value;
 
 value = time(NULL);
 today = localtime(&value);
@@ -414,6 +414,29 @@ sprintf(target,"%s, %d %s %d %02d:%02d:%02d %s",
 	today->tm_min,
 	today->tm_sec,
 	today->tm_zone);
+
+return(target);
+}
+/*--------------------------------------------------------------------------*/
+char *runtimestr(char *target)
+{
+struct timeval	nowtime;
+int				dd,hh,mm,ss;
+int				dt,pp,ww;
+
+gettimeofday(&nowtime,NULL);
+dt = (nowtime.tv_sec - g_runtime.tv_sec);
+
+dd = (dt / 86400);
+pp = (dt % 86400);
+hh = (pp / 3600);
+ww = (pp % 3600);
+mm = (ww / 60);
+ss = (ww % 60);
+
+sprintf(target,"%d Days + %02d:%02d:%02d",dd,hh,mm,ss);
+
+return(target);
 }
 /*--------------------------------------------------------------------------*/
 char *itolevel(int value,char *dest)

@@ -309,9 +309,10 @@ void logproblem(Problem *aProblem);
 const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init);
 void load_configuration(void);
 void sighandler(int sigval);
-void timestring(char *target);
 void logrecycle(void);
 char *itolevel(int value,char *dest);
+char *nowtimestr(char *target);
+char *runtimestr(char *target);
 char *pad(char *target,u_int64_t value,int width = 0);
 /*--------------------------------------------------------------------------*/
 #ifndef DATALOC

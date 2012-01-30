@@ -292,13 +292,14 @@ return(1);
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildDebugInfo(void)
 {
+char		temp[64];
 int			count,bytes,hicnt,himem;
-char		temp[32];
 
 replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,(int)sizeof(void*)*8);
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 
+replyoff+=sprintf(&replybuff[replyoff],"  Run Time ........................ %s\r\n",runtimestr(temp));
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
@@ -338,7 +339,7 @@ replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildProtoList(void)
 {
-char	temp[32];
+char	temp[64];
 int		total;
 int		x;
 
@@ -429,11 +430,12 @@ stream = fopen(dumpfile,"a");
 	}
 
 // dump our build information
-timestring(temp);
+
 fprintf(stream,"===========================================================================\r\n");
 fprintf(stream,"=                    Untangle CLASSd Debug Information                    =\r\n");
 fprintf(stream,"===========================================================================\r\n");
-fprintf(stream,"  Report Date: %s\r\n",temp);
+fprintf(stream,"  Report Date: %s\r\n",nowtimestr(temp));
+fprintf(stream,"  Run Time: %s\r\n",runtimestr(temp));
 fprintf(stream,"  Version: %s\r\n",VERSION);
 fprintf(stream,"  Build: %s\r\n",BUILDID);
 fprintf(stream,"  Architecture: %d Bit\r\n",(int)sizeof(int) * 8);
