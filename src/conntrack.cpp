@@ -140,7 +140,7 @@ sprintf(finder,"%s-%s:%u-%s:%u",pname,repl_sname,ntohs(repl_sport),repl_dname,nt
 	if (type & NFCT_T_DESTROY)
 	{
 	tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(finder));
-	if (tracker != NULL) g_trackertable->ExpireObject(tracker);
+	if (tracker != NULL) tracker->ScheduleExpiration();
 	LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER EXPIRE %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
 	}
 

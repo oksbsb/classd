@@ -21,7 +21,7 @@ TrackerObject::~TrackerObject(void)
 /*--------------------------------------------------------------------------*/
 void TrackerObject::UpdateObject(u_int32_t aSaddr,u_int16_t aSport,u_int32_t aDaddr,u_int16_t aDport)
 {
-HashObject::UpdateObject();
+ResetTimeout();
 orig_saddr = aSaddr;
 orig_sport = aSport;
 orig_daddr = aDaddr;

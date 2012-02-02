@@ -80,8 +80,13 @@ sem_post(&g_classify_sem);
 
 		case MSG_PACKET:
 			current = time(NULL);
+
+			// if the packet is stale we just throw it away
 			if (current > (wagon->timestamp + cfg_packet_timeout)) pkt_timedrop++;
+
+			// otherwise we send it to vineyard for classification
 			else process_packet(wagon->buffer,wagon->length);
+
 			delete(wagon);
 			break;
 		}
@@ -154,12 +159,15 @@ session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(reverse));
 	}
 
 // nothing found so check the forward in the conntrack table
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD %s\n",forward);
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD %s\n",forward);
 tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 
 	if (tracker != NULL)
 	{
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+	// make sure we reset the timeout so active objects don't get purged
+	tracker->ResetTimeout();
+
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
 	saddr = tracker->GetSaddr();
 	daddr = tracker->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
@@ -168,13 +176,14 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 	dport = ntohs(tracker->GetDport());
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD FWD %s\n",worker);
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD FWD %s\n",worker);
 	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetDaddr();
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
@@ -185,13 +194,14 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		}
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN FWD REV %s\n",worker);
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD REV %s\n",worker);
 	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN FWD REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetSaddr();
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
@@ -203,12 +213,15 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 	}
 
 // nothing found so check the reverse in the conntrack table
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN REV %s\n",reverse);
+LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV %s\n",reverse);
 tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 
 	if (tracker != NULL)
 	{
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+	// make sure we reset the timeout so active objects don't get purged
+	tracker->ResetTimeout();
+
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
 	saddr = tracker->GetSaddr();
 	daddr = tracker->GetDaddr();
 	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
@@ -217,13 +230,14 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 	dport = ntohs(tracker->GetDport());
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSIONH CONN REV FWD %s\n",worker);
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV FWD %s\n",worker);
 	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetDaddr();
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
@@ -234,13 +248,14 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		}
 
 	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CONN REV REV %s\n",worker);
+	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV REV %s\n",worker);
 	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
 
 		// found so update the ipheader and forward to vineyard
 		if (session != NULL)
 		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND CONN REV REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetSaddr();
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
@@ -303,9 +318,15 @@ int					confidence,ipproto;
 int					appid,value;
 int					ret,idx;
 
-// if callback and object state are both classified no need to process
-if ((state == NAVL_STATE_CLASSIFIED) && (session->GetState() == NAVL_STATE_CLASSIFIED)) return(0);
+	// if callback and object state are both classified no need to process
+	// but we will reset the timeout so it isn't prematurely purged
+	if ((state == NAVL_STATE_CLASSIFIED) && (session->GetState() == NAVL_STATE_CLASSIFIED))
+	{
+	session->ResetTimeout();
+	return(0);
+	}
 
+// clear local variables that we fill in while building the protochain
 application[0] = 0;
 protochain[0] = 0;
 detail[0] = 0;
@@ -378,7 +399,7 @@ LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION UPDATE %s\n",session->GetObjectString(
 	if (state == NAVL_STATE_TERMINATED)
 	{
 	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION EXPIRE %s\n",session->GetHashname());
-	g_sessiontable->ExpireObject(session);
+	session->ScheduleExpiration();
 	}
 
 // continue tracking the flow

@@ -146,7 +146,6 @@ public:
 
 	int InsertObject(HashObject *aObject);
 	int DeleteObject(HashObject *aObject);
-	void ExpireObject(HashObject *aObject);
 	HashObject* SearchObject(const char *aTitle);
 
 	void GetTableSize(int &aCount,int &aBytes);
@@ -172,7 +171,8 @@ public:
 	virtual ~HashObject(void);
 
 	virtual char *GetObjectString(char *target,int maxlen);
-	virtual void UpdateObject(void);
+	virtual void ScheduleExpiration(void);
+	virtual void ResetTimeout(void);
 
 	inline const char *GetHashname(void)	{ return(hashname); }
 
@@ -208,6 +208,12 @@ public:
 		short aState);
 
 	char *GetObjectString(char *target,int maxlen);
+	void ScheduleExpiration(void);
+
+	inline void AssociateTracker(TrackerObject *aObject)
+	{
+	if (tracker == NULL) tracker = aObject;
+	}
 
 	inline const char *GetApplication(void)	{ return(application); }
 	inline const char *GetProtochain(void)	{ return(protochain); }
@@ -227,6 +233,7 @@ private:
 
 	int GetObjectSize(void);
 
+	TrackerObject			*tracker;
 	short					confidence;
 	short					state;
 	char					*application;

@@ -39,11 +39,16 @@ snprintf(target,maxlen,"N:%s",hashname);
 return(target);
 }
 /*--------------------------------------------------------------------------*/
-void HashObject::UpdateObject(void)
+void HashObject::ResetTimeout(void)
 {
 timeout = time(NULL);
 if (netproto == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
 if (netproto == IPPROTO_UDP) timeout+=cfg_udp_timeout;
+}
+/*--------------------------------------------------------------------------*/
+void HashObject::ScheduleExpiration(void)
+{
+timeout = (time(NULL) + cfg_purge_delay);
 }
 /*--------------------------------------------------------------------------*/
 

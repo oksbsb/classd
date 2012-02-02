@@ -131,11 +131,6 @@ pthread_mutex_unlock(&control[key]);
 return(0);
 }
 /*--------------------------------------------------------------------------*/
-void HashTable::ExpireObject(HashObject *aObject)
-{
-aObject->timeout = (time(NULL) + cfg_purge_delay);
-}
-/*--------------------------------------------------------------------------*/
 HashObject* HashTable::SearchObject(const char *aHashname)
 {
 HashObject	*find;
