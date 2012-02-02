@@ -1,8 +1,8 @@
-#!/bin/dash
+#!/bin/bash
 
 mkdir -p /var/log/untangle-classd
 
-exec 2>&1 | logger -t untangleclassd
+exec &> >(logger -t untangleclassd)
 
 CLASSD_BIN=/usr/bin/classd
 
