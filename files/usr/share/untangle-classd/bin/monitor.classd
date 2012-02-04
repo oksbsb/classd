@@ -1,10 +1,9 @@
-#!/bin/bash
+#!/bin/dash
 
 mkdir -p /var/log/untangle-classd
 
-exec &> >(logger -t untangleclassd)
-
 CLASSD_BIN=/usr/bin/classd
+CLASSD_LOG=untangleclassd
 
 if [ -f /etc/default/untangle-classd ] ; then
     . /etc/default/untangle-classd
@@ -29,13 +28,13 @@ reap_child_easy()
 
 reap_child()
 {
-    echo "[`date`] Received Signal      (monitor: $$) (classd: $CLASSD_PID) (sending signal: $1) "
+    echo "[`date`] Received Signal      (monitor: $$) (classd: $CLASSD_PID) (sending signal: $1) " | logger -t ${CLASSD_LOG}
 
     if [ ! -z "$CLASSD_PID" ] ; then
-        echo "[`date`] Sending signal $1 to classd ($CLASSD_PID)."
+        echo "[`date`] Sending signal $1 to classd ($CLASSD_PID)."  | logger -t ${CLASSD_LOG}
         kill -$1 ${CLASSD_PID}
         wait ${CLASSD_PID}
-        echo "[`date`] ClassD Stopped    (monitor: $$) (classd: $CLASSD_PID)"
+        echo "[`date`] ClassD Stopped    (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
 
         # remove iptables rules
 	/usr/share/untangle-classd/bin/update_rules
@@ -48,7 +47,7 @@ start_classd()
 {
     $CLASSD_BIN -f $CLASSD_FLAGS &
     CLASSD_PID=$!
-    echo "[`date`] Started ClassD    (monitor: $$) (classd: $CLASSD_PID)"
+    echo "[`date`] Started ClassD    (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
 
     # give classd time to open the queue so the update_rules succeeds
     # without this update_rules doesn't see the open queue and refuses to add the rules
@@ -62,13 +61,13 @@ start_classd()
 trap reap_child_easy INT TERM USR1 USR2 QUIT
 
 while ( true ) ;  do
-    echo "[`date`] Starting CLassD"
+    echo "[`date`] Starting CLassD" | logger -t ${CLASSD_LOG}
 
     start_classd
     sleep 2
-    echo "[`date`] Monitoring ClassD (monitor: $$) (classd: $CLASSD_PID)"
+    echo "[`date`] Monitoring ClassD (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
     wait $CLASSD_PID
 
-    echo "[`date`] ClassD Died!      (monitor: $$) (classd: $CLASSD_PID)"
+    echo "[`date`] ClassD Died!      (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
 done
 
