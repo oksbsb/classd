@@ -104,14 +104,23 @@ if (orig_proto == IPPROTO_TCP) pname = "TCP";
 else if (orig_proto == IPPROTO_UDP) pname = "UDP";
 else return(NFCT_CB_CONTINUE);
 
-// get the attributes we need
+// get all of the source and destination addresses
 orig_saddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_SRC);
-orig_sport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
 orig_daddr = nfct_get_attr_u32(ct,ATTR_ORIG_IPV4_DST);
-orig_dport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST);
 repl_saddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_SRC);
-repl_sport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC);
 repl_daddr = nfct_get_attr_u32(ct,ATTR_REPL_IPV4_DST);
+
+// ignore anything on the loopback interface by looking at the least
+// significant byte because these values are in network byte order
+if ((orig_saddr & 0x000000FF) == 0x0000007F) return(NFCT_CB_CONTINUE);
+if ((orig_daddr & 0x000000FF) == 0x0000007F) return(NFCT_CB_CONTINUE);
+if ((repl_saddr & 0x000000FF) == 0x0000007F) return(NFCT_CB_CONTINUE);
+if ((repl_daddr & 0x000000FF) == 0x0000007F) return(NFCT_CB_CONTINUE);
+
+// get all of the source and destination ports
+orig_sport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_SRC);
+orig_dport = nfct_get_attr_u16(ct,ATTR_ORIG_PORT_DST);
+repl_sport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_SRC);
 repl_dport = nfct_get_attr_u16(ct,ATTR_REPL_PORT_DST);
 
 // extract the client and server addresses
@@ -122,26 +131,41 @@ inet_ntop(AF_INET,&repl_daddr,repl_dname,sizeof(repl_dname));
 
 sprintf(finder,"%s-%s:%u-%s:%u",pname,repl_sname,ntohs(repl_sport),repl_dname,ntohs(repl_dport));
 
-	if (type & NFCT_T_NEW)
+	switch(type)
 	{
-	tracker = new TrackerObject(orig_proto,finder);
-	tracker->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	g_trackertable->InsertObject(tracker);
-	LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER INSERT %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-	}
+	// for new conntract events we create an entry in our tracker table
+	case NFCT_T_NEW:
+		tracker = new TrackerObject(orig_proto,finder);
+		tracker->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
+		g_trackertable->InsertObject(tracker);
+		LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER INSERT %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		break;
 
-	if (type & NFCT_T_UPDATE)
-	{
-	tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(finder));
-	if (tracker != NULL) tracker->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
-	LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER UPDATE %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-	}
+	// we don't subscribe to these so this should never hit
+	case NFCT_T_UPDATE:
+		tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(finder));
+		if (tracker == NULL) break;
+		tracker->UpdateObject(orig_saddr,orig_sport,orig_daddr,orig_dport);
+		LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER UPDATE %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		break;
 
-	if (type & NFCT_T_DESTROY)
-	{
-	tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(finder));
-	if (tracker != NULL) tracker->ScheduleExpiration();
-	LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER EXPIRE %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+	// for destroy events we search our table and schedule for expiration
+	case NFCT_T_DESTROY:
+		tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(finder));
+		if (tracker == NULL) break;
+		tracker->ScheduleExpiration();
+		LOGMESSAGE(CAT_TRACKER,LOG_DEBUG,"TRACKER EXPIRE %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
+		break;
+
+	// blah blah blah
+	case NFCT_T_ERROR:
+		tracker_error++;
+		break;
+
+	// gotta have a default or gcc bitches about unhandled enum values
+	default:
+		tracker_unknown++;
+		break;
 	}
 
 return(NFCT_CB_CONTINUE);
@@ -151,8 +175,10 @@ int conntrack_startup(void)
 {
 int		ret;
 
-// open a conntrack netlink handler
-nfcth = nfct_open(CONNTRACK,NFNL_SUBSYS_CTNETLINK);
+// open a netlink conntrack handle.  the header file defines
+// NFCT_ALL_CT_GROUPS but we really only care about new and
+// destroy so we subscribe to just those ignoring update
+nfcth = nfct_open(CONNTRACK,NF_NETLINK_CONNTRACK_NEW | NF_NETLINK_CONNTRACK_DESTROY);
 
 	if (nfcth == NULL)
 	{

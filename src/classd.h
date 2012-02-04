@@ -208,12 +208,6 @@ public:
 		short aState);
 
 	char *GetObjectString(char *target,int maxlen);
-	void ScheduleExpiration(void);
-
-	inline void AssociateTracker(TrackerObject *aObject)
-	{
-	if (tracker == NULL) tracker = aObject;
-	}
 
 	inline const char *GetApplication(void)	{ return(application); }
 	inline const char *GetProtochain(void)	{ return(protochain); }
@@ -233,7 +227,6 @@ private:
 
 	int GetObjectSize(void);
 
-	TrackerObject			*tracker;
 	short					confidence;
 	short					state;
 	char					*application;
@@ -380,5 +373,7 @@ DATALOC u_int64_t			pkt_sizedrop;
 DATALOC u_int64_t			pkt_faildrop;
 DATALOC int					client_misscount;
 DATALOC int					client_hitcount;
+DATALOC int					tracker_unknown;
+DATALOC int					tracker_error;
 /*--------------------------------------------------------------------------*/
 

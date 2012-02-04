@@ -328,6 +328,9 @@ g_trackertable->GetTableSize(count,bytes);
 replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Items ........ %s\r\n",pad(temp,count));
 replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
 
+replyoff+=sprintf(&replybuff[replyoff],"  Tracker Unknown Count ........... %s\r\n",pad(temp,tracker_unknown));
+replyoff+=sprintf(&replybuff[replyoff],"  Tracker Error Count ............. %s\r\n",pad(temp,tracker_error));
+
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO MEMORY Errors ....... %s\r\n",pad(temp,err_nomem));
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO FLOW Errors ......... %s\r\n",pad(temp,err_nobufs));
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO RESOURCE Errors ..... %s\r\n",pad(temp,err_nosr));

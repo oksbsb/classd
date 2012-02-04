@@ -17,7 +17,6 @@ SessionObject::SessionObject(const char *aHashname,
 application = NULL;
 protochain = NULL;
 detail = NULL;
-tracker = NULL;
 
 confidence = 0;
 state = 0;
@@ -75,16 +74,6 @@ char *SessionObject::GetObjectString(char *target,int maxlen)
 {
 snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,detail);
 return(target);
-}
-/*--------------------------------------------------------------------------*/
-void SessionObject::ScheduleExpiration(void)
-{
-// first call the parent class function
-HashObject::ScheduleExpiration();
-
-// if a tracker object has been associated with the session
-// then schedule that for expiration as well
-if (tracker != NULL) tracker->ScheduleExpiration();
 }
 /*--------------------------------------------------------------------------*/
 

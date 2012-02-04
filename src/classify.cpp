@@ -183,7 +183,6 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		if (session != NULL)
 		{
 		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetDaddr();
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
@@ -201,7 +200,6 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		if (session != NULL)
 		{
 		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetSaddr();
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
@@ -237,7 +235,6 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		if (session != NULL)
 		{
 		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetDaddr();
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
@@ -255,7 +252,6 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		if (session != NULL)
 		{
 		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		session->AssociateTracker(tracker);
 		iphead->saddr = tracker->GetSaddr();
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
