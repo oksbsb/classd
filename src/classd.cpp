@@ -101,8 +101,10 @@ sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd %d-Bit Version %s Build %s\n",(in
 
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
+
 if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
 else sysmessage(LOG_NOTICE,"Traffic processing message queue is active\n");
+
 if (g_skiptcp != 0) sysmessage(LOG_NOTICE,"Ignoring all TCP traffic\n");
 if (g_skipudp != 0) sysmessage(LOG_NOTICE,"Ignoring all UDP traffic\n");
 
@@ -198,6 +200,8 @@ currtime = lasttime = time(NULL);
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from session table\n",ret);
 		ret = g_trackertable->PurgeStaleObjects(currtime);
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from tracker table\n",ret);
+
+		periodic_checkup();
 		}
 
 		if (g_logrecycle != 0)
@@ -522,6 +526,9 @@ grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
 cfg_hash_buckets = atoi(work);
 
+grab_config_item(filedata,"CLASSD_MEMORY_LIMIT",work,sizeof(work),"102400");
+cfg_mem_limit = atoi(work);
+
 grab_config_item(filedata,"CLASSD_MAX_FLOWS",work,sizeof(work),"8192");
 cfg_navl_flows = atoi(work);
 
@@ -626,6 +633,46 @@ while ((*find != 0) && (isspace((int)*find) == 0) && (*find != '#')) find++;
 *find = 0;
 
 return(target);
+}
+/*--------------------------------------------------------------------------*/
+void periodic_checkup(void)
+{
+pid_t		mypid;
+char		filename[256];
+char		buffer[4096];
+char		*find;
+int			fid,len,mem;
+
+// get our process id and open our status file
+mypid = getpid();
+sprintf(filename,"/proc/%d/status",mypid);
+fid = open(filename,O_RDONLY);
+if (fid < 0) return;
+
+// read our status information from the file
+len = read(fid,buffer,sizeof(buffer));
+close(fid);
+if (len < 0) return;
+
+// make sure the buffer is null terminated
+buffer[len] = 0;
+
+// look for the VmRSS label and extract the size
+find = strstr(buffer,"VmRSS:");
+if (find == NULL) return;
+find = (find + 6);
+while ((isspace(*find)) && (*find != 0)) find++;
+mem = atoi(find);
+
+	// if we are below the limit we just return
+	if (mem < cfg_mem_limit)
+	{
+	LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Memory size %d kB is below the %d kB limit\n",mem,cfg_mem_limit);
+	return;
+	}
+
+sysmessage(LOG_ERR,"Setting shutdown flag due to high memory usage of %d kB\n",mem);
+g_shutdown++;
 }
 /*--------------------------------------------------------------------------*/
 
