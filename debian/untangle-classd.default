@@ -19,6 +19,9 @@
 ## Directory where the vineyard navl library plugins are located
 #CLASSD_PLUGIN_PATH=/usr/share/untangle-classd/plugins
 
+## Flag to enable the vineyard library debug logging
+#CLASSD_LIBRARY_DEBUG=0
+
 ## Number of hash buckets for the status and lookup tables
 ## This needs to be a prime number at least as large as the total number
 ## number of TCP and UDP sessions expected to be active at any given time

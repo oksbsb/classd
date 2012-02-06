@@ -528,6 +528,9 @@ cfg_navl_flows = atoi(work);
 grab_config_item(filedata,"CLASSD_IP_DEFRAG",work,sizeof(work),"1");
 cfg_navl_defrag = atoi(work);
 
+grab_config_item(filedata,"CLASSD_LIBRARY_DEBUG",work,sizeof(work),"0");
+cfg_navl_debug = atoi(work);
+
 grab_config_item(filedata,"CLASSD_SOCKET_BUFFER",work,sizeof(work),"1048576");
 cfg_sock_buffer = atoi(work);
 

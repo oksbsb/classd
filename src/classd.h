@@ -352,6 +352,7 @@ DATALOC int					cfg_packet_maximum;
 DATALOC int					cfg_packet_thread;
 DATALOC int					cfg_hash_buckets;
 DATALOC int					cfg_navl_defrag;
+DATALOC int					cfg_navl_debug;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
 DATALOC int					cfg_purge_delay;

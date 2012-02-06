@@ -417,8 +417,11 @@ int		marker = 0;
 // spin up the vineyard engine
 if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
 
-// set the vineyard log level
-if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);
+	if (cfg_navl_debug != 0)
+	{
+	// set the vineyard log level
+	if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);
+	}
 
 // set the number of of http request+response pairs to analyze before giving up
 sprintf(work,"%d",cfg_http_limit);
