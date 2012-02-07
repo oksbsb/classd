@@ -305,7 +305,6 @@ void hexmessage(int category,int priority,const void *buffer,int size);
 void logmessage(int category,int priority,const char *format,...);
 void sysmessage(int priority,const char *format,...);
 void rawmessage(int priority,const char *message);
-void logproblem(Problem *aProblem);
 const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init);
 void load_configuration(void);
 void periodic_checkup(void);

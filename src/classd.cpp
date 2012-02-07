@@ -395,12 +395,6 @@ fputs(message,g_logfile);
 fflush(g_logfile);
 }
 /*--------------------------------------------------------------------------*/
-void logproblem(Problem *aProblem)
-{
-if (aProblem->string != NULL) sysmessage(LOG_WARNING,"PROBLEM:%s  RETCODE:%d\n",aProblem->string,aProblem->value);
-delete(aProblem);
-}
-/*--------------------------------------------------------------------------*/
 char *nowtimestr(char *target)
 {
 struct tm	*today;

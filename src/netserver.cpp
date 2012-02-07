@@ -24,14 +24,33 @@ pthread_create(&ThreadHandle,NULL,ThreadMaster,this);
 // allocate our main server socket
 netsock = socket(AF_INET,SOCK_STREAM,0);
 
+	if (netsock == -1)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from socket()\n",errno);
+	g_shutdown = 1;
+	return;
+	}
+
 // set the reuse address option
 val = 1;
 ret = setsockopt(netsock,SOL_SOCKET,SO_REUSEADDR,(char *)&val,sizeof(val));
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network setsockopt(SO_REUSEADDR)\n",errno);
+
+	if (ret == -1)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from network setsockopt(SO_REUSEADDR)\n",errno);
+	g_shutdown = 1;
+	return;
+	}
 
 // set the socket to non blocking mode
 ret = fcntl(netsock,F_SETFL,O_NONBLOCK);
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network fcntl(O_NONBLOCK)\n",errno);
+
+	if (ret == -1)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from network fcntl(O_NONBLOCK)\n",errno);
+	g_shutdown = 1;
+	return;
+	}
 
 // bind the socket to our server port
 memset(&addr,0,sizeof(addr));
@@ -39,11 +58,23 @@ addr.sin_family = AF_INET;
 addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 addr.sin_port = htons(cfg_client_port);
 ret = bind(netsock,(struct sockaddr *)&addr,sizeof(addr));
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from bind(netsock)\n",errno);
+
+	if (ret == -1)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from bind(netsock)\n",errno);
+	g_shutdown = 1;
+	return;
+	}
 
 // listen for incomming connections
 ret = listen(netsock,8);
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from listen()\n",errno);
+
+	if (ret == -1)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from listen()\n",errno);
+	g_shutdown = 1;
+	return;
+	}
 }
 /*--------------------------------------------------------------------------*/
 NetworkServer::~NetworkServer(void)
@@ -122,7 +153,7 @@ int					ret,val,max;
 
 sysmessage(LOG_INFO,"The netserver thread is starting\n");
 
-	for(;;)
+	while (g_shutdown == 0)
 	{
 	// watch the thread signal for termination
 	val = 0;
@@ -158,7 +189,8 @@ sysmessage(LOG_INFO,"The netserver thread is starting\n");
 
 			catch(Problem *err)
 			{
-			logproblem(err);
+			if (err->string != NULL) sysmessage(LOG_WARNING,"%s CODE:%d\n",err->string,err->value);
+			delete(err);
 			local = NULL;
 			}
 
