@@ -27,11 +27,11 @@ netsock = socket(AF_INET,SOCK_STREAM,0);
 // set the reuse address option
 val = 1;
 ret = setsockopt(netsock,SOL_SOCKET,SO_REUSEADDR,(char *)&val,sizeof(val));
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network setsockopt(SO_REUSEADDR)",errno);
+if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network setsockopt(SO_REUSEADDR)\n",errno);
 
 // set the socket to non blocking mode
 ret = fcntl(netsock,F_SETFL,O_NONBLOCK);
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network fcntl(O_NONBLOCK)",errno);
+if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from network fcntl(O_NONBLOCK)\n",errno);
 
 // bind the socket to our server port
 memset(&addr,0,sizeof(addr));
@@ -39,11 +39,11 @@ addr.sin_family = AF_INET;
 addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 addr.sin_port = htons(cfg_client_port);
 ret = bind(netsock,(struct sockaddr *)&addr,sizeof(addr));
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from bind(netsock)",errno);
+if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from bind(netsock)\n",errno);
 
 // listen for incomming connections
 ret = listen(netsock,8);
-if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from listen()",errno);
+if (ret == -1) sysmessage(LOG_ERR,"Error %d returned from listen()\n",errno);
 }
 /*--------------------------------------------------------------------------*/
 NetworkServer::~NetworkServer(void)
@@ -69,10 +69,10 @@ pthread_join(ThreadHandle,NULL);
 	if (netsock > 0)
 	{
 	ret = shutdown(netsock,SHUT_RDWR);
-	if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from shutdown()",errno);
+	if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from shutdown()\n",errno);
 
 	ret = close(netsock);
-	if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from close()",errno);
+	if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from close()\n",errno);
 	}
 }
 /*--------------------------------------------------------------------------*/
