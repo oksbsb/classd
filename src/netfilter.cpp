@@ -215,7 +215,7 @@ ret = nfq_bind_pf(nfqh,AF_INET);
 	}
 
 // create a new netfilter queue
-nfqqh = nfq_create_queue(nfqh,cfg_net_queue,&netq_callback,NULL);
+nfqqh = nfq_create_queue(nfqh,cfg_net_queue,netq_callback,NULL);
 
 	if (nfqqh == 0)
 	{

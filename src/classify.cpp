@@ -139,7 +139,7 @@ session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(forward));
 	if (session != NULL)
 	{
 	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-	log_packet(rawpkt,rawlen);
+	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 	return;
 	}
@@ -153,7 +153,7 @@ session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(reverse));
 	if (session != NULL)
 	{
 	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-	log_packet(rawpkt,rawlen);
+	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 	return;
 	}
@@ -187,7 +187,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
 		xphead->dport = tracker->GetSport();
-		log_packet(rawpkt,rawlen);
+		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
@@ -204,7 +204,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
 		xphead->dport = tracker->GetDport();
-		log_packet(rawpkt,rawlen);
+		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
@@ -239,7 +239,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		xphead->sport = tracker->GetDport();
 		iphead->daddr = tracker->GetSaddr();
 		xphead->dport = tracker->GetSport();
-		log_packet(rawpkt,rawlen);
+		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
@@ -256,7 +256,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		xphead->sport = tracker->GetSport();
 		iphead->daddr = tracker->GetDaddr();
 		xphead->dport = tracker->GetDport();
-		log_packet(rawpkt,rawlen);
+		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 		return;
 		}
@@ -267,7 +267,7 @@ session = new SessionObject(forward,iphead->protocol,iphead->saddr,xphead->sport
 g_sessiontable->InsertObject(session);
 LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION INSERT %s\n",forward);
 
-log_packet(rawpkt,rawlen);
+if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
 }
 /*--------------------------------------------------------------------------*/
@@ -278,9 +278,6 @@ struct iphdr	*iphead;
 const char		*pname;
 char			src_addr[32],dst_addr[32];
 u_int16_t		src_port,dst_port;
-
-// if packet logging is not active return immediately
-if ((g_debug & CAT_PACKET) == 0) return;
 
 // use the iphdr structure for parsing
 iphead = (iphdr *)rawpkt;
