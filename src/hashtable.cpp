@@ -1,6 +1,6 @@
 // HASHTABLE.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011 Untangle, Inc.
+// Copyright (c) 2011-2012 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 

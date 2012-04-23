@@ -1,6 +1,6 @@
 // CLASSD.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011 Untangle, Inc.
+// Copyright (c) 2011-2012 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -89,6 +89,7 @@ pthread_attr_destroy(&attr);
 	freopen("/dev/null","w",stderr);
 	}
 
+signal(SIGALRM,sighandler);
 signal(SIGTERM,sighandler);
 signal(SIGQUIT,sighandler);
 signal(SIGINT,sighandler);
@@ -220,18 +221,51 @@ g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 // tell the conntrack thread we're shutting down
 pthread_kill(g_conntrack_tid,SIGUSR1);
 
-// wait for the netfilter and classify threads to finish
+// give the classify, conntrack, and netfilter threads a chance to
+// terminate gracefully but if they don't respond within a couple
+// seconds we assume they have gone haywire and kill them
+
+g_alarm = 0;
+alarm(2);
 pthread_join(g_classify_tid,NULL);
+alarm(0);
+
+	if (g_alarm != 0)
+	{
+	sysmessage(LOG_WARNING,"The classify thread is being killed\n");
+	pthread_kill(g_classify_tid,SIGKILL);
+	}
+
+g_alarm = 0;
+alarm(2);
 pthread_join(g_conntrack_tid,NULL);
+alarm(0);
+
+	if (g_alarm != 0)
+	{
+	sysmessage(LOG_WARNING,"The conntrack thread is being killed\n");
+	pthread_kill(g_conntrack_tid,SIGKILL);
+	}
+
+alarm(2);
 pthread_join(g_netfilter_tid,NULL);
+alarm(0);
+
+	if (g_alarm != 0)
+	{
+	sysmessage(LOG_WARNING,"The netfilter thread is being killed\n");
+	pthread_kill(g_netfilter_tid,SIGKILL);
+	}
 
 // clean up the thread semaphores
 sem_destroy(&g_classify_sem);
 sem_destroy(&g_conntrack_sem);
 sem_destroy(&g_netfilter_sem);
 
-// cleanup all the global objects we created
+// cleanup the network server
 delete(g_netserver);
+
+// cleanup all the global objects we created
 delete(g_sessiontable);
 delete(g_trackertable);
 delete(g_messagequeue);
@@ -251,6 +285,11 @@ void sighandler(int sigval)
 {
 	switch(sigval)
 	{
+	case SIGALRM:
+		signal(sigval,sighandler);
+		g_alarm++;
+		break;
+
 	case SIGTERM:
 	case SIGQUIT:
 	case SIGINT:
