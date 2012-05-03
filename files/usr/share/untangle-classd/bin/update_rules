@@ -67,8 +67,9 @@ insert_classd_iptables_rules()
         ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d ${CLASSD_DEV_NETWORK} -j RETURN
     fi
 
-    # all other traffic will be handed off to our netfilter queue
-    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
+    # all other TCP and UDP traffic will be handed off to our netfilter queue
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -p tcp -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -p udp -j NFQUEUE --queue-num ${CLASSD_QUEUE_NUM}
 
     # ----- now that we have created our table we need some rules to send us traffic
     # ----- these next rules will grab only traffic that we need to classify
