@@ -296,10 +296,11 @@ char		temp[64];
 int			count,bytes,hicnt,himem;
 
 replyoff = sprintf(replybuff,"========== CLASSD DEBUG INFO ==========\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"  Version: %s  Build: %s  (%d Bit)\r\n",VERSION,BUILDID,(int)sizeof(void*)*8);
-replyoff+=sprintf(&replybuff[replyoff],"\r\n");
-
+replyoff+=sprintf(&replybuff[replyoff],"  Current Time .................... %s\r\n",nowtimestr(temp));
 replyoff+=sprintf(&replybuff[replyoff],"  Run Time ........................ %s\r\n",runtimestr(temp));
+replyoff+=sprintf(&replybuff[replyoff],"  Version ......................... %s\r\n",VERSION);
+replyoff+=sprintf(&replybuff[replyoff],"  Build ........................... %s\r\n",BUILDID);
+replyoff+=sprintf(&replybuff[replyoff],"  Architecture .................... %d Bit\r\n",(int)sizeof(void*)*8);
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
@@ -373,28 +374,31 @@ void NetworkClient::BuildConfiguration(void)
 {
 replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ......... %s\r\n",cfg_log_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ......... %s\r\n",cfg_log_file);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ........ %s\r\n",cfg_dump_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CORE_PATH ........ %s\r\n",cfg_core_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ...... %s\r\n",cfg_navl_plugins);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LIBRARY_DEBUG .... %d\r\n",cfg_navl_debug);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MEMORY_LIMIT ..... %d\r\n",cfg_mem_limit);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ..... %d\r\n",cfg_hash_buckets);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........ %d\r\n",cfg_navl_flows);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ........ %d\r\n",cfg_navl_defrag);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ...... %d\r\n",cfg_sock_buffer);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ...... %d\r\n",cfg_tcp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ...... %d\r\n",cfg_udp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT ....... %d\r\n",cfg_http_limit);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ...... %d\r\n",cfg_purge_delay);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ...... %d\r\n",cfg_client_port);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ........ %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_MAXLEN ..... %d\r\n",cfg_net_maxlen);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_BUFFER ..... %d\r\n",cfg_net_buffer);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT ... %d\r\n",cfg_packet_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM ... %d\r\n",cfg_packet_maximum);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD .... %d\r\n",cfg_packet_thread);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ............ %s\r\n",cfg_log_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ............ %s\r\n",cfg_log_file);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ........... %s\r\n",cfg_dump_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CORE_PATH ........... %s\r\n",cfg_core_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ......... %s\r\n",cfg_navl_plugins);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LIBRARY_DEBUG ....... %d\r\n",cfg_navl_debug);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MEMORY_LIMIT ........ %d\r\n",cfg_mem_limit);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ........ %d\r\n",cfg_hash_buckets);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........... %d\r\n",cfg_navl_flows);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ........... %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ......... %d\r\n",cfg_sock_buffer);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ......... %d\r\n",cfg_tcp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ......... %d\r\n",cfg_udp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT .......... %d\r\n",cfg_http_limit);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ......... %d\r\n",cfg_purge_delay);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ......... %d\r\n",cfg_client_port);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ........... %d\r\n",cfg_net_queue);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_MAXLEN ........ %d\r\n",cfg_net_maxlen);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_BUFFER ........ %d\r\n",cfg_net_buffer);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT ...... %d\r\n",cfg_packet_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM ...... %d\r\n",cfg_packet_maximum);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD ....... %d\r\n",cfg_packet_thread);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_FACEBOOK_SUBCLASS ... %d\r\n",cfg_facebook_subclass);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_RANDTHRESH .... %d\r\n",cfg_skype_randthresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_NEEDHIST ...... %d\r\n",cfg_skype_needhist);
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
@@ -434,34 +438,28 @@ stream = fopen(dumpfile,"a");
 	return;
 	}
 
-// dump our build information
+fputs("##############################################################################\r\n",stream);
+// dump the debug information
+BuildDebugInfo();
+fputs(replybuff,stream);
 
-fprintf(stream,"===========================================================================\r\n");
-fprintf(stream,"=                    Untangle CLASSd Debug Information                    =\r\n");
-fprintf(stream,"===========================================================================\r\n");
-fprintf(stream,"  Report Date: %s\r\n",nowtimestr(temp));
-fprintf(stream,"  Run Time: %s\r\n",runtimestr(temp));
-fprintf(stream,"  Version: %s\r\n",VERSION);
-fprintf(stream,"  Build: %s\r\n",BUILDID);
-fprintf(stream,"  Architecture: %d Bit\r\n",(int)sizeof(int) * 8);
-fprintf(stream,"  Debug Level: 0x%04X\r\n",g_debug);
-fprintf(stream,"  No Fork Flag: %d\r\n",g_nofork);
-fprintf(stream,"  Console Flag: %d\r\n",g_console);
-fprintf(stream,"  Bypass Flag: %d\r\n",g_bypass);
-fprintf(stream,"\r\n");
+// dump the daemon configuration
+BuildConfiguration();
+fputs(replybuff,stream);
 
 // dump everything in the session hash table
-fprintf(stream,"========== SESSION HASH TABLE ==========\r\n");
+fprintf(stream,"========== CLASSD SESSION HASH TABLE ==========\r\n");
 g_sessiontable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
 // dump everything in the conntrack has htable
-fprintf(stream,"========== TRACKER HASH TABLE ==========\r\n");
+fprintf(stream,"========== CLASSD TRACKER HASH TABLE ==========\r\n");
 g_trackertable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
 // dump the vineyard diagnostic info and wrap in calls
 // to fflush since we're passing the file descriptor
+fprintf(stream,"========== VINEYARD DIAGNOSTIC INFO ==========\r\n");
 fflush(stream);
 navl_diag(fileno(stream));
 fflush(stream);

@@ -21,7 +21,6 @@ extern "C" {
 /* ETH */
 #define GUID_IP			"IP"		/* Internet Protocol */
 #define GUID_IPV6     	"IPV6"		/* Internet Protocol Version 6*/
-#define GUID_8021Q		"8021Q"		/* VLAN Tag */
 #define GUID_X25		"X.25"		/* X.25 */
 #define GUID_ARP		"ARP"		/* Address Resolution Protocol */
 #define GUID_RARP		"RARP"		/* Reverse Address Resolution Protocol */
@@ -440,7 +439,6 @@ extern "C" {
 #define GUID_SCURSGHT	"SCURSGHT"	/* SecurSight */
 
 /* Higher Layer / Non-registered */
-#define GUID_X224		"X.224"		/* x.224 */
 #define GUID_RTP		"RTP"		/* Real-Time Transport Protocol */
 #define GUID_RTCP		"RTCP"		/* Real-Time Transport Control Protocol */
 #define GUID_MSBITS		"MSBITS"	/* Microsoft Background Intelligent Transfer Service */
@@ -605,6 +603,117 @@ extern "C" {
 #define GUID_MANOLITO	"MANOLITO"	/* Manolito P2P Protocol */
 #define GUID_PANDO		"PANDO"		/* Pando P2P File Distribution */
 #define GUID_WINMX		"WINMX"		/* WinMX P2P Protocol */
+#define GUID_PT         "PT"        /* Paltalk Instant Messaging application */
+#define GUID_PT_CHAT    "PT_CHAT"   /* Paltalk Instant Messaging*/
+#define GUID_PT_VOICE   "PT_VOICE"  /* Voice chat using Paltalk*/
+#define GUID_PT_VIDEO   "PT_VIDEO"  /* Video chat using Paltalk*/
+#define GUID_PT_FILE    "PT_FILE"   /* Paltalk file transfer*/
+#define GUID_APPLJUCE   "APPLJUCE"  /* Apple Juice P2P file sharing */
+#define GUID_APPLGUI    "APPLGUI"   /* Apple Juice GUI to Core communication */
+#define GUID_WINUPDAT   "WINUPDAT"  /* Microsoft Windows Update */
+#define GUID_GOOGPLUS   "GOOGPLUS"  /* Google Plus Social Netoworking Site */
+#define GUID_MUTENET    "MUTENET"   /* MUTE Net p2p anonymous file sharing */
+#define GUID_SHOWMYPC	"SHOWMYPC"  /* SHOWMYPC remote desktop connection*/
+#define GUID_TWITPIC    "TWITPIC"   /* Twitpic */
+#define GUID_XUNLEI		"XUNLEI"	/* Xunlei p2p application */
+#define GUID_PRIVAX		"PRIVAX"	/* Privax web proxies */
+#define GUID_SCCM		"SCCM"		/* Microsoft System Center Configuration Manager */
+#define GUID_SCCMCTRL	"SCCMCTRL"	/* Micorosft System Center Remote Control */
+#define GUID_WHATSAPP	"WHATSAPP"	/* Whatsapp free texting / messaging Application */
+#define GUID_STEAM		"STEAM"		/* Steam Game Distribution */
+#define GUID_STEAMDLC	"STEAMDLC"	/* Steam Downloads (games/client updates) */
+#define GUID_STEAMGME	"STEAMGME"	/* Steam Online Game Play */
+#define GUID_STEAMCLI	"STEAMCLI"	/* Steam Client Web access */
+#define GUID_STEAMSOC	"STEAMSOC"	/* Steam Social Networking */
+#define GUID_DYNGATE	"DYNGATE"	/* NAT traversal tunnel Dyngate - used by Teamviewer */
+#define GUID_PINGER	"PINGER"	/* Pinger text and voice service */
+#define GUID_LINE2	"LINE2"		/* Line2 messaging application */
+#define GUID_DRCTCONN	"DRCTCONN"	/* Direct Connect P2P Protocol */
+#define GUID_HAMACHI    "HAMACHI"       /* LogMEIn Hamachi Virtual Private Network*/
+#define GUID_GOOGMAPS   "GOOGMAPS"  	/* Google maps */
+#define GUID_C2DM       "C2DM"		/* Cloud to Device Messaging (Android push notifications) */
+#define GUID_APNS		"APNS"		/* Apple Push Notification Service */
+#define GUID_ICLOUD		"ICLOUD"	/* Apple Cloud Services */
+#define GUID_APPLE		"APPLE"		/* Apple website */
+#define GUID_FACETIME	"FACETIME" 	/* Apple iOS Facetime video calling */
+#define GUID_PCOIP		"PCOIP"		/* Teradici PCoIP remote desktop protocol */
+#define GUID_PANDORA	"PANDORA"	/* Pandora Internet radio streaming */
+#define GUID_PNDRAUDI	"PNDRAUDI"	/* Pandora Audio */
+#define GUID_ABOUT	"ABOUT"	/* Source for original information and advice */
+#define GUID_ANSWERS	"ANSWERS"	/* Internet based knowledge exchange */
+#define GUID_BARNSNBL	"BARNSNBL"	/* Book, DVD, toy, and music marketplace */
+#define GUID_BIGUPLOD	"BIGUPLOD"	/* Secure uploading, transferring and filesharing */
+#define GUID_CLASSMTE	"CLASSMTE"	/* High-school oriented social network */
+#define GUID_CNET	"CNET"	/* Tech media website */
+#define GUID_CNETDWLD	"CNETDWLD"	/* CNET focused on software downloads */
+#define GUID_DELL	"DELL"	/* Official DELL website */
+#define GUID_DOMNTOOL	"DOMNTOOL"	/* Internet domain name intelligence service */
+#define GUID_HP	"HP"	/* Official HP website */
+#define GUID_IBM	"IBM"	/* Official IBM website */
+#define GUID_ISOHUNT	"ISOHUNT"	/* Torrent repository */
+#define GUID_MEGASHRS	"MEGASHRS"	/* File sharing and media streaming */
+#define GUID_MOVIE2K	"MOVIE2K"	/* Media linking */
+#define GUID_MULTIPLY	"MULTIPLY"	/* Social shopping */
+#define GUID_MULTUPLD	"MULTUPLD"	/* File transfer and storage website */
+#define GUID_OPENWEBM	"OPENWEBM"	/* Webmail*/
+#define GUID_SLIDESHR	"SLIDESHR"	/* Slide hosting service */
+#define GUID_SRCFORGE	"SRCFORGE"	/* Online source code repository */
+#define GUID_SURVMONK	"SURVMONK"	/* Custom web-survey creation */
+#define GUID_TORRENTZ	"TORRENTZ"	/* BitTorrent meta-search engine */
+#define GUID_VIDEOBB	"VIDEOBB"	/* Video hosting */
+#define GUID_W3SCHOOL	"W3SCHOOL"	/* Online Web Tutorials */
+#define GUID_WEEBLY	"WEEBLY"	/* Custom website creation */
+#define GUID_12306CN	"12306CN"	 /* Chinese Railway customer service center */
+#define GUID_126COM	"126COM"	 /* Chinese webmail service */
+#define GUID_39NET	"39NET"	 /* Chinese health web portal */
+#define GUID_ADRIVE	"ADRIVE"	 /* Online cloud storage */
+#define GUID_AIZHAN	"AIZHAN"	 /* Webmaster assistance */
+#define GUID_BET365	"BET365"	 /* Online gambling website */
+#define GUID_BRGHTTLK	"BRGHTTLK"	 /* Online webinar and video provider */
+#define GUID_BROSOFT	"BROSOFT"	 /* Free software download website */
+#define GUID_DEPOFILE	"DEPOFILE"	 /* File storage */
+#define GUID_ENETCN	"ENETCN"	 /* Web portal for IT people */
+#define GUID_ENVATO	"ENVATO"	 /* Web tutorial services */
+#define GUID_EXTRTORR	"EXTRTORR"	 /* BitTorrent provider */
+#define GUID_GLYPEPRX	"GLYPEPRX"	 /* Web proxy */
+#define GUID_GOONEJP	"GOONEJP"	 /* Japanese web portal */
+#define GUID_IMGVENUE	"IMGVENUE"	 /* Image hosting/sharing site */
+#define GUID_KATORRNT	"KATORRNT"	 /* Torrent aggregator */
+#define GUID_LEBNCOIN	"LEBNCOIN"	 /* French sales website */
+#define GUID_MSN2GO	"MSN2GO"	 /* Internet alternative to MSN messenger */
+#define GUID_NETEASE	"NETEASE"	 /* Chinese web portal */
+#define GUID_ONLINEFF	"ONLINEFF"	 /* Online file storage */
+#define GUID_PUTLOCKR	"PUTLOCKR"	 /* Online file storage */
+#define GUID_RGINBULL	"RGINBULL"	 /* Financial investment website */
+#define GUID_SOKU	"SOKU"	 /* Chinese web portal and search engine */
+#define GUID_THEMFRST	"THEMFRST"	 /* Website template marketplace */
+#define GUID_WEBSCOM	"WEBSCOM"	 /* Website creation */
+#define GUID_WYSE_TCX	"WYSE_TCX"	/* Wyse TCX */
+#define GUID_TCXFLASH	"TCXFLASH"	/* Wyse TCX Flash Redirection */
+#define GUID_TCXMEDIA	"TCXMEDIA"	/* Wyse TCX Multimedia Redirection */
+#define GUID_TCXUSB		"TCXUSB"	/* Wyse TCX USB Redirection */
+#define GUID_TCXSOUND	"TCXSOUND"	/* Wyse TCX Rich Sound */
+
+#define GUID_4399COM	"4399COM"	/* Chinese gaming site */
+#define GUID_ADFLY	"ADFLY"	/* URL shortener service */
+#define GUID_ADMIN5	"ADMIN5"	/* Webmaster information */
+#define GUID_BLOOMBRG	"BLOOMBRG"	/* Business and Finance news */
+#define GUID_DATEITO	"DATEITO"	/* File hosting website */
+#define GUID_DIVSHARE	"DIVSHARE"	/* File sharing website */
+#define GUID_FILESONC	"FILESONC"	/* Cloud storage */
+#define GUID_IMGSHACK	"IMGSHACK"	/* Free image hosting website */
+#define GUID_MOZILLA	"MOZILLA"	/* Not-for-profite internet collective */
+#define GUID_PINTERST	"PINTERST"	/* Social media sharing website */
+#define GUID_SURESOME	"SURESOME"	/* HTTPS web proxy */
+#define GUID_SUROGAFR	"SUROGAFR"	/* Web proxy */
+#define GUID_WRETCH	"WRETCH"	/* Taiwanese community website */
+#define GUID_Y8		"Y8"	/* Flash gaming */
+#define GUID_FB_SRCH	"FB_SRCH"	/* Facebook Search Query */
+#define GUID_FB_EVENT	"FB_EVENT"	/* Facebook Event */
+#define GUID_FB_POST	"FB_POST"	/* Facebook Wall Post */
+#define GUID_FB_VDCHT	"FB_VDCHT"	/* Facebook Video Chat */
+#define GUID_FB_MSGS	"FB_MSGS"	/* Facebook Messages (Chat and Email) */
+#define GUID_FB_VIDEO	"FB_VIDEO"	/* Facebook Video */
 
 
 #ifdef __cplusplus

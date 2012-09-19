@@ -424,6 +424,19 @@ if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(ma
 sprintf(work,"%d",cfg_http_limit);
 if ((++marker) && (navl_command("classification http persistence set",work,buffer,sizeof(buffer)) != 0)) return(marker);
 
+// set the facebook subclassification flag
+if (cfg_facebook_subclass != 0) strcpy(work,"on");
+else strcpy(work,"off");
+if ((++marker) && (navl_command("classification facebook subclassification set",work,buffer,sizeof(buffer)) != 0)) return(marker);
+
+// set the skype random threshold
+sprintf(work,"%d",cfg_skype_randthresh);
+if ((++marker) && (navl_command("classification skype random_thresh",work,buffer,sizeof(buffer)) != 0)) return(marker);
+
+// set the skype require history flag
+sprintf(work,"%d",cfg_skype_needhist);
+if ((++marker) && (navl_command("classification skype require_history",work,buffer,sizeof(buffer)) != 0)) return(marker);
+
 // set the protocol idle timeout values
 if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0)) return(marker);
 if ((++marker) && (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0)) return(marker);

@@ -24,7 +24,7 @@
 
 ## Maximum kB of VmRSS memory we are allowed to consume before we
 ## assume something has gone haywire and force a daemon restart
-#CLASSD_MEMORY_LIMIT=102400
+#CLASSD_MEMORY_LIMIT=262144
 
 ## Number of hash buckets for the status and lookup tables
 ## This needs to be a prime number at least as large as the total number
@@ -32,7 +32,7 @@
 #CLASSD_HASH_BUCKETS=99991
 
 ## Maximum connection count value passed in the call to navl_open
-#CLASSD_MAX_FLOWS=8192
+#CLASSD_MAX_FLOWS=32768
 
 ## Flag to enable IP fragment processing in the navl library
 #CLASSD_IP_DEFRAG=1
@@ -81,6 +81,18 @@
 ## pile up in the classify queue before we start throwing
 ## them on the floor.  Mainly a worst case failsafe thing.
 #CLASSD_PACKET_MAXIMUM=1000000
+
+## Flag to enable facebook subclassification.
+#CLASSD_FACEBOOK_SUBCLASS=1
+
+## Set the detection threshold based on randomness of data
+## measured in a flow being inspected by Skype.  Use a value
+## between 0 and 100.  Lower values = more aggressive detection.
+#CLASSD_SKYPE_RANDTHRESH=95
+
+## Flog to determine if hosts in a transaction must have
+## previous Skype history... whatever that means.
+#CLASSD_SKYPE_NEEDHIST=1
 
 ## Path to the classd binary
 #CLASSD_BIN=/usr/bin/classd

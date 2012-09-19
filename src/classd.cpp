@@ -556,13 +556,22 @@ grab_config_item(filedata,"CLASSD_DUMP_PATH",cfg_dump_path,sizeof(cfg_dump_path)
 grab_config_item(filedata,"CLASSD_CORE_PATH",cfg_core_path,sizeof(cfg_core_path),"/usr/share/untangle-classd");
 grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_plugins),"/usr/share/untangle-classd/plugins");
 
+grab_config_item(filedata,"CLASSD_FACEBOOK_SUBCLASS",work,sizeof(work),"1");
+cfg_facebook_subclass = atoi(work);
+
+grab_config_item(filedata,"CLASSD_SKYPE_RANDTHRESH",work,sizeof(work),"95");
+cfg_skype_randthresh = atoi(work);
+
+grab_config_item(filedata,"CLASSD_SKYPE_NEEDHIST",work,sizeof(work),"1");
+cfg_skype_needhist = atoi(work);
+
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
 cfg_hash_buckets = atoi(work);
 
-grab_config_item(filedata,"CLASSD_MEMORY_LIMIT",work,sizeof(work),"102400");
+grab_config_item(filedata,"CLASSD_MEMORY_LIMIT",work,sizeof(work),"262144");
 cfg_mem_limit = atoi(work);
 
-grab_config_item(filedata,"CLASSD_MAX_FLOWS",work,sizeof(work),"8192");
+grab_config_item(filedata,"CLASSD_MAX_FLOWS",work,sizeof(work),"32768");
 cfg_navl_flows = atoi(work);
 
 grab_config_item(filedata,"CLASSD_IP_DEFRAG",work,sizeof(work),"1");

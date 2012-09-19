@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 typedef enum {
 	NAVL_STATE_INSPECTING = 0,	/* Indicates the connection is under inspection */
 	NAVL_STATE_CLASSIFIED = 1,	/* Indicates the connection is fully classified */
@@ -163,7 +165,7 @@ int navl_remove_protocol_rule(int proto_id, const char *module, const char *rule
 void navl_set_clock_mode(int value);
 
 /* manually set the wallclock time */
-void navl_set_clock(unsigned long msecs);
+void navl_set_clock(uint64_t msecs);
 
 #ifdef __cplusplus
 }
