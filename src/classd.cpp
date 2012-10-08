@@ -583,10 +583,10 @@ cfg_navl_debug = atoi(work);
 grab_config_item(filedata,"CLASSD_SOCKET_BUFFER",work,sizeof(work),"1048576");
 cfg_sock_buffer = atoi(work);
 
-grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"3600");
+grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"60");
 cfg_tcp_timeout = atoi(work);
 
-grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"300");
+grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"60");
 cfg_udp_timeout = atoi(work);
 
 grab_config_item(filedata,"CLASSD_HTTP_LIMIT",work,sizeof(work),"0");

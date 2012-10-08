@@ -41,10 +41,10 @@
 #CLASSD_SOCK_BUFFER=1048576
 
 ## Sets the timeout for TCP sessions
-#CLASSD_TCP_TIMEOUT=3600
+#CLASSD_TCP_TIMEOUT=60
 
 ## Sets the timeout for UDP sessions
-#CLASSD_UDP_TIMEOUT=300
+#CLASSD_UDP_TIMEOUT=60
 
 ## Sets the number of HTTP request/response pairs to analyze
 ## before giving up.  Can be 1 thru 99 or 0 for unlimited
