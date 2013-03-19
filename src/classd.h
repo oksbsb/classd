@@ -25,6 +25,7 @@ const unsigned int CAT_PACKET	= 0x0004;
 const unsigned int CAT_SESSION	= 0x0008;
 const unsigned int CAT_TRACKER	= 0x0010;
 
+const unsigned char MSG_DEBUG		= 'D';
 const unsigned char MSG_PACKET		= 'P';
 const unsigned char MSG_SHUTDOWN	= 'S';
 /*--------------------------------------------------------------------------*/
@@ -124,6 +125,7 @@ friend class MessageQueue;
 public:
 
 	MessageWagon(u_int8_t argCommand,const unsigned char *argBuffer,int argLength);
+	MessageWagon(u_int8_t argCommand,const char *argString);
 	MessageWagon(u_int8_t argCommand);
 	virtual ~MessageWagon(void);
 
@@ -290,11 +292,15 @@ void netfilter_shutdown(void);
 int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
-int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error);
+int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_id_t conn,void *arg,int error);
 void process_packet(unsigned char *rawpkt,int rawlen);
 void log_packet(unsigned char *rawpkt,int rawlen);
 void vineyard_shutdown(void);
+void vineyard_debug(const char *dumpfile);
 int vineyard_startup(void);
+void navl_bind_externals(void);
+int	vineyard_logger(const char *level,const char *func,const char *format,...);
+int vineyard_printf(const char *format,...);
 /*--------------------------------------------------------------------------*/
 void* conntrack_thread(void *arg);
 int conn_callback(enum nf_conntrack_msg_type type,struct nf_conntrack *ct,void *data);
@@ -334,6 +340,7 @@ DATALOC HashTable			*g_sessiontable;
 DATALOC HashTable			*g_trackertable;
 DATALOC FILE				*g_logfile;
 DATALOC char				g_cfgfile[256];
+DATALOC char				*g_protolist;
 DATALOC int					g_logrecycle;
 DATALOC int					g_shutdown;
 DATALOC int					g_console;

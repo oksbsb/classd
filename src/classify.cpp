@@ -7,29 +7,19 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-// vars for all of the protocol and application id values
-static int l_proto_eth = 0;
-static int l_proto_ip = 0;
+// vars for the protocol and application id values we want
 static int l_proto_tcp = 0;
 static int l_proto_udp = 0;
-static int l_proto_http = 0;
-static int l_proto_ssl = 0;
-static int l_proto_sip = 0;
-static int l_proto_ctrxica = 0;
 static int l_proto_fbookapp = 0;
-static int l_proto_ymsgfile = 0;
+static int l_proto_ssl = 0;
 
-// vars for the dynamic attributes we use
-static int l_attr_tcp_sport = 0;
-static int l_attr_tcp_dport = 0;
-static int l_attr_udp_sport = 0;
-static int l_attr_udp_dport = 0;
-static int l_attr_ip_saddr = 0;
-static int l_attr_ip_daddr = 0;
-static int l_attr_conn_id = 0;
+// vars for the dynamic attributes we want
 static int l_attr_fbook_app = 0;
 static int l_attr_tls_host = 0;
-static int l_attr_http_info = 0;
+
+// local variables
+static navl_handle_t l_navl_handle = NULL;
+static int l_navl_logfile = 0;
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg)
 {
@@ -59,11 +49,11 @@ ret = vineyard_startup();
 // signal the startup complete semaphore
 sem_post(&g_classify_sem);
 
+	// if there were any vineyard startup errors set the shutdown flag
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from vineyard_startup()\n",ret);
 	g_shutdown = 1;
-	return(NULL);
 	}
 
 	while (g_shutdown == 0)
@@ -89,6 +79,14 @@ sem_post(&g_classify_sem);
 
 			delete(wagon);
 			break;
+
+		case MSG_DEBUG:
+			vineyard_debug((char *)wagon->buffer);
+			delete(wagon);
+			break;
+
+		default:
+			sysmessage(LOG_WARNING,"Unknown thread message received = %c\n",wagon->command);
 		}
 	}
 
@@ -140,7 +138,7 @@ session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(forward));
 	{
 	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+	if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 	return;
 	}
 
@@ -154,7 +152,7 @@ session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(reverse));
 	{
 	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+	if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 	return;
 	}
 
@@ -188,7 +186,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		iphead->daddr = tracker->GetSaddr();
 		xphead->dport = tracker->GetSport();
 		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 		return;
 		}
 
@@ -205,7 +203,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
 		iphead->daddr = tracker->GetDaddr();
 		xphead->dport = tracker->GetDport();
 		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 		return;
 		}
 	}
@@ -240,7 +238,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		iphead->daddr = tracker->GetSaddr();
 		xphead->dport = tracker->GetSport();
 		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 		return;
 		}
 
@@ -257,7 +255,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 		iphead->daddr = tracker->GetDaddr();
 		xphead->dport = tracker->GetDport();
 		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 		return;
 		}
 	}
@@ -268,7 +266,7 @@ g_sessiontable->InsertObject(session);
 LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION INSERT %s\n",forward);
 
 if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-if (g_bypass == 0) navl_conn_classify(0,0,0,0,IPPROTO_IP,NULL,rawpkt,rawlen,navl_callback,session);
+if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
 }
 /*--------------------------------------------------------------------------*/
 void log_packet(unsigned char *rawpkt,int rawlen)
@@ -297,7 +295,7 @@ inet_ntop(AF_INET,&iphead->daddr,dst_addr,sizeof(dst_addr));
 LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (%d) = %s-%s:%u-%s:%u\n",rawlen,pname,src_addr,src_port,dst_addr,dst_port);
 }
 /*--------------------------------------------------------------------------*/
-int navl_callback(navl_result_t result,navl_state_t state,void *arg,int error)
+int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_id_t conn,void *arg,int error)
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
@@ -305,11 +303,10 @@ char				application[32];
 char				protochain[256];
 char				namestr[256];
 char				detail[256];
-char				xtra[256];
 char				work[32];
 int					confidence,ipproto;
 int					appid,value;
-int					ret,idx;
+int					idx;
 
 	// if callback and object state are both classified no need to process
 	// but we will reset the timeout so it isn't prematurely purged
@@ -338,23 +335,18 @@ idx = 0;
 	}
 
 // get the application and confidence
-appid = navl_app_get(result,&confidence);
-navl_proto_get_name(appid,application,sizeof(application));
+appid = navl_app_get(handle,result,&confidence);
+navl_proto_get_name(handle,appid,application,sizeof(application));
 
 	// build the protochain grabbing extra info for certain protocols
-	for(it = navl_proto_first(result);navl_proto_valid(it);navl_proto_next(it))
+	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
 	{
-	value = navl_proto_get_id(it);
+	value = navl_proto_get_index(handle,it);
 
 	if (value == l_proto_tcp) ipproto = IPPROTO_TCP;
 	if (value == l_proto_udp) ipproto = IPPROTO_UDP;
 
-		// get the content type for HTTP connections
-		if (value == l_proto_http)
-		{
-		ret = navl_attr_get(it,l_attr_http_info,xtra,sizeof(xtra));
-		if (ret == 0) strcpy(detail,xtra);
-		}
+/* FUCK
 
 		// get the application name for facebook apps
 		if (value == l_proto_fbookapp)
@@ -369,10 +361,11 @@ navl_proto_get_name(appid,application,sizeof(application));
 		ret = navl_attr_get(it,l_attr_tls_host,xtra,sizeof(xtra));
 		if (ret == 0) strcpy(detail,xtra);
 		}
+*/
 
 	// append the protocol name to the chain
 	work[0] = 0;
-	navl_proto_get_name(value,work,sizeof(work));
+	navl_proto_get_name(handle,value,work,sizeof(work));
 	idx+=sprintf(&protochain[idx],"/%s",work);
 	}
 
@@ -401,80 +394,206 @@ return(0);
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
 {
-char	buffer[1024];
-char	work[32];
-int		marker = 0;
+char	temp[32],work[32];
+int		problem;
+int		ret,x;
 
-/*
-** The goofy marker math at the beginning of each line just gives us
-** a quick and easy way to increment a return code value that will
-** tell us which call failed if any of these calls return an error
-*/
+// bind the vineyard external references
+navl_bind_externals();
 
 // spin up the vineyard engine
-if ((++marker) && (navl_open(cfg_navl_flows,1,cfg_navl_plugins) != 0)) return(marker);
+l_navl_handle = navl_open(cfg_navl_plugins);
 
-	if (cfg_navl_debug != 0)
+	if (l_navl_handle == -1)
 	{
-	// set the vineyard log level
-	if ((++marker) && (navl_command("log level set","debug",buffer,sizeof(buffer)) != 0)) return(marker);
+	ret = navl_error_get(0);
+	sysmessage(LOG_ERR,"Error %d returned from navl_open()\n",ret);
+	return(1);
+	}
+
+// initialize the vineyard handle for the active thread
+ret = navl_init(l_navl_handle);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from navl_init()\n",ret);
+	return(1);
+	}
+
+// set the vineyard system loglevel parameter
+sprintf(work,"%d",cfg_navl_debug);
+ret = navl_config_set(l_navl_handle,"system.loglevel",work);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_config_set(system.loglevel)\n");
+	return(1);
 	}
 
 // set the number of of http request+response pairs to analyze before giving up
 sprintf(work,"%d",cfg_http_limit);
-if ((++marker) && (navl_command("classification http persistence set",work,buffer,sizeof(buffer)) != 0)) return(marker);
+ret = navl_config_set(l_navl_handle,"http.maxpersist",work);
 
-// set the facebook subclassification flag
-if (cfg_facebook_subclass != 0) strcpy(work,"on");
-else strcpy(work,"off");
-if ((++marker) && (navl_command("classification facebook subclassification set",work,buffer,sizeof(buffer)) != 0)) return(marker);
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_config_set(http.maxpersist)\n");
+	return(1);
+	}
 
-// set the skype random threshold
-sprintf(work,"%d",cfg_skype_randthresh);
-if ((++marker) && (navl_command("classification skype random_thresh",work,buffer,sizeof(buffer)) != 0)) return(marker);
+sprintf(work,"%d",cfg_tcp_timeout);
+ret = navl_config_set(l_navl_handle,"tcp.timeout",work);
 
-// set the skype require history flag
-sprintf(work,"%d",cfg_skype_needhist);
-if ((++marker) && (navl_command("classification skype require_history",work,buffer,sizeof(buffer)) != 0)) return(marker);
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_config_set(tcp.timeout)\n");
+	return(1);
+	}
 
-// set the protocol idle timeout values
-if ((++marker) && (navl_conn_idle_timeout(IPPROTO_TCP,cfg_tcp_timeout) != 0)) return(marker);
-if ((++marker) && (navl_conn_idle_timeout(IPPROTO_UDP,cfg_udp_timeout) != 0)) return(marker);
+sprintf(work,"%d",cfg_udp_timeout);
+ret = navl_config_set(l_navl_handle,"udp.timeout",work);
 
-// enable fragment processing
-if ((++marker) && (navl_ip_defrag(cfg_navl_defrag) != 0)) return(marker);
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_config_set(udp.timeout)\n");
+	return(1);
+	}
 
-// grab the id values for all protocols
-if ((++marker) && ((l_proto_eth = navl_proto_find_id("ETH")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ip = navl_proto_find_id("IP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_tcp = navl_proto_find_id("TCP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_udp = navl_proto_find_id("UDP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_http = navl_proto_find_id("HTTP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ssl = navl_proto_find_id("SSL")) < 1)) return(marker);
-if ((++marker) && ((l_proto_sip = navl_proto_find_id("SIP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ctrxica = navl_proto_find_id("CTRXICA")) < 1)) return(marker);
-if ((++marker) && ((l_proto_fbookapp = navl_proto_find_id("FBOOKAPP")) < 1)) return(marker);
-if ((++marker) && ((l_proto_ymsgfile = navl_proto_find_id("YMSGFILE")) < 1)) return(marker);
+// enable IP fragment processing
+sprintf(work,"%d",cfg_navl_defrag);
+ret = navl_config_set(l_navl_handle,"ip.defrag",work);
 
-// enable and grab the id values of the attributes we care about
-if ((++marker) && ((l_attr_conn_id = navl_attr("conn.id",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_ip_saddr = navl_attr("ip.src_addr",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_ip_daddr = navl_attr("ip.dst_addr",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tcp_sport = navl_attr("tcp.src_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tcp_dport = navl_attr("tcp.dst_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_udp_sport = navl_attr("udp.src_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_udp_dport = navl_attr("udp.dst_port",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_fbook_app = navl_attr("facebook.app",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_tls_host = navl_attr("tls.host",1)) < 1)) return(marker);
-if ((++marker) && ((l_attr_http_info = navl_attr("http.response.content-type",1)) < 1)) return(marker);
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_config_set(ip.defrag)\n");
+	return(1);
+	}
+
+
+problem = 0;
+
+// grab the index values for protocols we care about
+if ((l_proto_tcp = navl_proto_find_index(l_navl_handle,"TCP")) == -1) problem|=0x01;
+if ((l_proto_udp = navl_proto_find_index(l_navl_handle,"UDP")) == -1) problem|=0x02;
+if ((l_proto_ssl = navl_proto_find_index(l_navl_handle,"SSL")) == -1) problem|=0x04;
+if ((l_proto_fbookapp = navl_proto_find_index(l_navl_handle,"FBOOKAPP")) == -1) problem|=0x08;
+
+	if (problem != 0)
+	{
+	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol indexes\n",problem);
+	return(1);
+	}
+
+// grab the key values of the attributes we care about
+if ((l_attr_fbook_app = navl_attr_key_get(l_navl_handle,"facebook.app")) == -1) problem|=0x01;
+if ((l_attr_tls_host = navl_attr_key_get(l_navl_handle,"tls.host") == -1)) problem|=0x02;
+
+	if (problem != 0)
+	{
+	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol attributes\n",problem);
+	return(1);
+	}
+
+// get the total number of protocols from the vineyard library
+ret = navl_proto_max_index(l_navl_handle);
+
+	if (ret == -1)
+	{
+	sysmessage(LOG_ERR,"Error calling navl_proto_max_index()\n");
+	return(1);
+	}
+
+// allocate a chunk of memory and store the protocol list
+g_protolist = (char *)malloc(ret * 16);
+g_protolist[0] = 0;
+
+	// get the name of each protocol and append to buffer
+	for(x = 0;x < ret;x++)
+	{
+	work[0] = 0;
+	navl_proto_get_name(l_navl_handle,x,work,sizeof(work));
+	if (strlen(work) == 0) continue;
+	sprintf(temp,"%d = %s\r\n",x,work);
+	strcat(g_protolist,temp);
+	}
 
 return(0);
 }
 /*--------------------------------------------------------------------------*/
 void vineyard_shutdown(void)
 {
+// finalize the vineyard library
+navl_fini(l_navl_handle);
+
 // shut down the vineyard engine
-navl_close();
+navl_close(l_navl_handle);
+}
+/*--------------------------------------------------------------------------*/
+void vineyard_debug(const char *dumpfile)
+{
+FILE		*stream;
+
+// open the dumpfile for append
+stream = fopen(dumpfile,"a");
+
+// set file descriptor to capture output from vineyard
+l_navl_logfile = fileno(stream);
+
+// dump the vineyard diagnostic info and include calls
+// to fflush since we're passing the file descriptor
+
+fprintf(stream,"========== VINEYARD SYSTEM INFO ==========\r\n");
+fflush(stream);
+navl_diag(l_navl_handle,"SYSTEM","");
+
+fprintf(stream,"========== VINEYARD TCP INFO ==========\r\n");
+fflush(stream);
+navl_diag(l_navl_handle,"TCP","");
+
+fprintf(stream,"========== VINEYARD UDP INFO ==========\r\n");
+fflush(stream);
+navl_diag(l_navl_handle,"UDP","");
+
+// clear the file descriptor before we close the file
+l_navl_logfile = 0;
+
+fprintf(stream,"\r\n");
+fclose(stream);
+}
+/*--------------------------------------------------------------------------*/
+int	vineyard_logger(const char *level,const char *func,const char *format,...)
+{
+va_list		args;
+char		header[256];
+char		buffer[4096];
+int			len;
+
+sprintf(header,"VINEYARD %s %s",level,func);
+
+va_start(args,format);
+len = vsnprintf(buffer,sizeof(buffer),format,args);
+va_end(args);
+
+sysmessage(LOG_NOTICE,"%s --> %s\n",header,buffer);
+
+return(len);
+}
+/*--------------------------------------------------------------------------*/
+int vineyard_printf(const char *format,...)
+{
+va_list		args;
+char		buffer[4096];
+int			len;
+
+// if the file descriptor is clear just ignore
+if (l_navl_logfile == 0) return(0);
+
+va_start(args,format);
+len = vsnprintf(buffer,sizeof(buffer),format,args);
+va_end(args);
+
+write(l_navl_logfile,buffer,len);
+
+return(len);
 }
 /*--------------------------------------------------------------------------*/
 

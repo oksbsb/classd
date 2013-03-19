@@ -343,31 +343,8 @@ replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildProtoList(void)
 {
-char	temp[64];
-int		total;
-int		x;
-
 replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST =====\r\n");
-
-// get the total number of protocols from the vineyard library
-total = navl_proto_max_id();
-
-	if (total == -1)
-	{
-	replyoff = sprintf(replybuff,"ERROR RETURNED FROM navl_proto_max_id()\r\n\r\n");
-	return;
-	}
-
-	// get the name of each protocol and append to reply buffer
-	for(x = 0;x < total;x++)
-	{
-	temp[0] = 0;
-	navl_proto_get_name(x,temp,sizeof(temp));
-	if (strlen(temp) == 0) continue;
-	replyoff+=sprintf(&replybuff[replyoff],"%d = %s\r\n",x,temp);
-	}
-
-replyoff+=sprintf(&replybuff[replyoff],"\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"%s\r\n",g_protolist);
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildConfiguration(void)
@@ -423,10 +400,8 @@ replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the con
 /*--------------------------------------------------------------------------*/
 void NetworkClient::DumpEverything(void)
 {
-FILE		*stream;
-unsigned	dumpsize;
-char		dumpfile[256];
-char		temp[64];
+FILE	*stream;
+char	dumpfile[256];
 
 // create the dump file
 sprintf(dumpfile,"%s/classd-dump.txt",cfg_dump_path);
@@ -457,23 +432,15 @@ fprintf(stream,"========== CLASSD TRACKER HASH TABLE ==========\r\n");
 g_trackertable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
-// dump the vineyard diagnostic info and wrap in calls
-// to fflush since we're passing the file descriptor
-fprintf(stream,"========== VINEYARD DIAGNOSTIC INFO ==========\r\n");
+// flush and close the dump file
 fflush(stream);
-navl_diag(fileno(stream));
-fflush(stream);
-fprintf(stream,"\r\n");
-
-// get the size of the file and read into buffer
-dumpsize = ftell(stream);
-
-// close the dump file
 fclose(stream);
+
+// tell the classify thread to dump the vineyard debug info
+g_messagequeue->PushMessage(new MessageWagon(MSG_DEBUG,dumpfile));
 
 replyoff = sprintf(replybuff,"========== DUMP FILE CREATED ==========\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"  FILE: %s\r\n",dumpfile);
-replyoff+=sprintf(&replybuff[replyoff],"  SIZE: %s\r\n\r\n",pad(temp,dumpsize));
 }
 /*--------------------------------------------------------------------------*/
 

@@ -150,6 +150,16 @@ memcpy(buffer,argBuffer,argLength);
 timestamp = time(NULL);
 }
 /*--------------------------------------------------------------------------*/
+MessageWagon::MessageWagon(u_int8_t argCommand,const char *argString)
+{
+next = NULL;
+command = argCommand;
+length = (strlen(argString) + 1);
+buffer = (unsigned char *)malloc(length);
+strcpy((char *)buffer,argString);
+timestamp = time(NULL);
+}
+/*--------------------------------------------------------------------------*/
 MessageWagon::MessageWagon(u_int8_t argCommand)
 {
 next = NULL;

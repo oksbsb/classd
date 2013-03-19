@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <ctype.h>
 #include <poll.h>
+#include <math.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
