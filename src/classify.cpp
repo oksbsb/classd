@@ -261,7 +261,7 @@ tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
 // create a new session object and store in session table
 session = new SessionObject(forward,iphead->protocol,iphead->saddr,xphead->sport,iphead->daddr,xphead->dport);
 g_sessiontable->InsertObject(session);
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION INSERT %s\n",forward);
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY INSERT %s\n",forward);
 
 if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
 if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
@@ -297,6 +297,7 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
+const char			*check;
 char				application[32];
 char				protochain[256];
 char				namestr[256];
@@ -344,8 +345,9 @@ navl_proto_get_name(handle,appid,application,sizeof(application));
 
 	// append the protocol name to the chain
 	work[0] = 0;
-	navl_proto_get_name(handle,value,work,sizeof(work));
-	idx+=sprintf(&protochain[idx],"/%s",work);
+	check = navl_proto_get_name(handle,value,work,sizeof(work));
+	if (check == NULL) break;
+	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",work);
 	}
 
 // only TCP or UDP packets will set this flag allowing
@@ -377,14 +379,18 @@ SessionObject		*session = (SessionObject *)arg;
 char				namestr[256];
 char				detail[256];
 
-// search for each of the metadata types we asked to receive
+// if the session object passed is null we can't update
+// this should never happen but we check just in case
+if (session == NULL) return;
 
+	// check for the facebook application name
 	if (attr_type == l_attr_facebook_app)
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
 	}
 
+	// check for the tls host name
 	else if (attr_type == l_attr_tls_host)
 	{
 	memcpy(detail,attr_value,attr_length);
@@ -421,15 +427,6 @@ l_navl_handle = navl_open(cfg_navl_plugins);
 	return(1);
 	}
 
-// initialize the vineyard handle for the active thread
-ret = navl_init(l_navl_handle);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from navl_init()\n",ret);
-	return(1);
-	}
-
 // set the vineyard system loglevel parameter
 if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(1);
 
@@ -450,6 +447,15 @@ if (vineyard_config("skype.probe_thresh",cfg_skype_probe_thresh) != 0) return(1)
 if (vineyard_config("skype.packet_thresh",cfg_skype_packet_thresh) != 0) return(1);
 if (vineyard_config("skype.random_thresh",cfg_skype_random_thresh) != 0) return(1);
 if (vineyard_config("skype.require_history",cfg_skype_require_history) != 0) return(1);
+
+// initialize the vineyard handle for the active thread
+ret = navl_init(l_navl_handle);
+
+	if (ret != 0)
+	{
+	sysmessage(LOG_ERR,"Error %d returned from navl_init()\n",ret);
+	return(1);
+	}
 
 problem = 0;
 
@@ -540,6 +546,10 @@ l_navl_logfile = fileno(stream);
 
 // dump the vineyard diagnostic info and include calls
 // to fflush since we're passing the file descriptor
+
+fprintf(stream,"========== VINEYARD CONFIG INFO ==========\r\n");
+fflush(stream);
+navl_config_dump(l_navl_handle);
 
 fprintf(stream,"========== VINEYARD SYSTEM INFO ==========\r\n");
 fflush(stream);

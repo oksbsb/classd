@@ -215,7 +215,7 @@ public:
 
 	inline const char *GetApplication(void)	{ return(application); }
 	inline const char *GetProtochain(void)	{ return(protochain); }
-	inline const char *GetDetail(void)		{ return(detail); }
+	inline const char *GetDetail(void)		{ return(detail == NULL ? "" : detail); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
 

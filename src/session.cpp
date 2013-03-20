@@ -43,10 +43,10 @@ void SessionObject::UpdateObject(const char *aApplication,
 {
 ResetTimeout();
 
-application = (char *)realloc(application,strlen(aApplication)+1);
+application = (char *)realloc(application,strlen(aApplication) + 1);
 strcpy(application,aApplication);
 
-protochain = (char *)realloc(protochain,strlen(aProtochain)+1);
+protochain = (char *)realloc(protochain,strlen(aProtochain) + 1);
 strcpy(protochain,aProtochain);
 
 confidence = aConfidence;
@@ -57,7 +57,7 @@ upcount++;
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateDetail(const char *aDetail)
 {
-detail = (char *)realloc(detail,strlen(aDetail)+1);
+detail = (char *)realloc(detail,strlen(aDetail) + 1);
 strcpy(detail,aDetail);
 }
 /*--------------------------------------------------------------------------*/
@@ -74,7 +74,11 @@ return(mysize);
 /*--------------------------------------------------------------------------*/
 char *SessionObject::GetObjectString(char *target,int maxlen)
 {
-snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,detail);
+const char		*local;
+
+if (detail == NULL) local = "";
+else local = detail;
+snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,local);
 return(target);
 }
 /*--------------------------------------------------------------------------*/
