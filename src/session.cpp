@@ -38,7 +38,6 @@ if (detail != NULL) free(detail);
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateObject(const char *aApplication,
 	const char *aProtochain,
-	const char *aDetail,
 	short aConfidence,
 	short aState)
 {
@@ -50,13 +49,16 @@ strcpy(application,aApplication);
 protochain = (char *)realloc(protochain,strlen(aProtochain)+1);
 strcpy(protochain,aProtochain);
 
-detail = (char *)realloc(detail,strlen(aDetail)+1);
-strcpy(detail,aDetail);
-
 confidence = aConfidence;
 state = aState;
 
 upcount++;
+}
+/*--------------------------------------------------------------------------*/
+void SessionObject::UpdateDetail(const char *aDetail)
+{
+detail = (char *)realloc(detail,strlen(aDetail)+1);
+strcpy(detail,aDetail);
 }
 /*--------------------------------------------------------------------------*/
 int SessionObject::GetObjectSize(void)

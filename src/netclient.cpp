@@ -199,6 +199,23 @@ int		found = 0;
 	found++;
 	}
 
+
+	if (strcasecmp(querybuff,"-UPDATE") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Update debug logging has been disabled\n");
+	replyoff = sprintf(replybuff,"%s","Update debug logging been disabled\r\n\r\n");
+	g_debug&=~CAT_UPDATE;
+	found++;
+	}
+
+	if (strcasecmp(querybuff,"+UPDATE") == 0)
+	{
+	sysmessage(LOG_NOTICE,"Update debug logging has been enabled\n");
+	replyoff = sprintf(replybuff,"%s","Update debug logging has been enabled\r\n\r\n");
+	g_debug|=CAT_UPDATE;
+	found++;
+	}
+
 	if (strcasecmp(querybuff,"-PACKET") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Packet debug logging has been disabled\n");
@@ -389,7 +406,8 @@ replyoff+=sprintf(&replybuff[replyoff],"DEBUG - display daemon debug information
 replyoff+=sprintf(&replybuff[replyoff],"PROTO - retrieve the list of recognized protocols\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+/-LOGIC - enable/disable logic debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+/-CLIENT - enable/disable netclient request logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable packet classify logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-UPDATE - enable/disable classify status logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable network packet logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+/-SESSION - enable/disable netfilter session table logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+/-TRACKER - enable/disable netfilter tracker table logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");

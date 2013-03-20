@@ -21,9 +21,10 @@
 /*--------------------------------------------------------------------------*/
 const unsigned int CAT_LOGIC	= 0x0001;
 const unsigned int CAT_CLIENT	= 0x0002;
-const unsigned int CAT_PACKET	= 0x0004;
-const unsigned int CAT_SESSION	= 0x0008;
-const unsigned int CAT_TRACKER	= 0x0010;
+const unsigned int CAT_UPDATE	= 0x0004;
+const unsigned int CAT_PACKET	= 0x0008;
+const unsigned int CAT_SESSION	= 0x0010;
+const unsigned int CAT_TRACKER	= 0x0020;
 
 const unsigned char MSG_DEBUG		= 'D';
 const unsigned char MSG_PACKET		= 'P';
@@ -205,9 +206,10 @@ public:
 
 	void UpdateObject(const char *aApplication,
 		const char * aProtochain,
-		const char *aDetail,
 		short aConfidence,
 		short aState);
+
+	void UpdateDetail(const char *aDetail);
 
 	char *GetObjectString(char *target,int maxlen);
 
@@ -292,6 +294,7 @@ void netfilter_shutdown(void);
 int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
+void attr_callback(navl_handle_t handle,navl_conn_id_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg);
 int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_id_t conn,void *arg,int error);
 void process_packet(unsigned char *rawpkt,int rawlen);
 void log_packet(unsigned char *rawpkt,int rawlen);

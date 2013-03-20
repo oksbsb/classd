@@ -10,11 +10,9 @@
 // vars for the protocol and application id values we want
 static int l_proto_tcp = 0;
 static int l_proto_udp = 0;
-static int l_proto_fbookapp = 0;
-static int l_proto_ssl = 0;
 
 // vars for the dynamic attributes we want
-static int l_attr_fbook_app = 0;
+static int l_attr_facebook_app = 0;
 static int l_attr_tls_host = 0;
 
 // local variables
@@ -302,7 +300,6 @@ SessionObject		*session = (SessionObject *)arg;
 char				application[32];
 char				protochain[256];
 char				namestr[256];
-char				detail[256];
 char				work[32];
 int					confidence,ipproto;
 int					appid,value;
@@ -319,7 +316,6 @@ int					idx;
 // clear local variables that we fill in while building the protochain
 application[0] = 0;
 protochain[0] = 0;
-detail[0] = 0;
 confidence = 0;
 ipproto = 0;
 idx = 0;
@@ -346,23 +342,6 @@ navl_proto_get_name(handle,appid,application,sizeof(application));
 	if (value == l_proto_tcp) ipproto = IPPROTO_TCP;
 	if (value == l_proto_udp) ipproto = IPPROTO_UDP;
 
-/* FUCK
-
-		// get the application name for facebook apps
-		if (value == l_proto_fbookapp)
-		{
-		ret = navl_attr_get(it,l_attr_fbook_app,xtra,sizeof(xtra));
-		if (ret == 0) strcpy(detail,xtra);
-		}
-
-		// get the cert name for SSL connections
-		if (value == l_proto_ssl)
-		{
-		ret = navl_attr_get(it,l_attr_tls_host,xtra,sizeof(xtra));
-		if (ret == 0) strcpy(detail,xtra);
-		}
-*/
-
 	// append the protocol name to the chain
 	work[0] = 0;
 	navl_proto_get_name(handle,value,work,sizeof(work));
@@ -378,18 +357,49 @@ if (ipproto == 0) return(0);
 if (session == NULL) return(0);
 
 // update the session object with the new information
-session->UpdateObject(application,protochain,detail,confidence,state);
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+session->UpdateObject(application,protochain,confidence,state);
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 
 	// clean up terminated connections
 	if (state == NAVL_STATE_TERMINATED)
 	{
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION EXPIRE %s\n",session->GetHashname());
+	LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY EXPIRE %s\n",session->GetHashname());
 	session->ScheduleExpiration();
 	}
 
 // continue tracking the flow
 return(0);
+}
+/*--------------------------------------------------------------------------*/
+void attr_callback(navl_handle_t handle,navl_conn_id_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg)
+{
+SessionObject		*session = (SessionObject *)arg;
+char				namestr[256];
+char				detail[256];
+
+// search for each of the metadata types we asked to receive
+
+	if (attr_type == l_attr_facebook_app)
+	{
+	memcpy(detail,attr_value,attr_length);
+	detail[attr_length] = 0;
+	}
+
+	else if (attr_type == l_attr_tls_host)
+	{
+	memcpy(detail,attr_value,attr_length);
+	detail[attr_length] = 0;
+	}
+
+	// nothing we signed up for so just ignore and return
+	else
+	{
+	return;
+	}
+
+// update the session object with the data received
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY DETAIL %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+session->UpdateDetail(detail);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
@@ -468,14 +478,11 @@ ret = navl_config_set(l_navl_handle,"ip.defrag",work);
 	return(1);
 	}
 
-
 problem = 0;
 
 // grab the index values for protocols we care about
 if ((l_proto_tcp = navl_proto_find_index(l_navl_handle,"TCP")) == -1) problem|=0x01;
 if ((l_proto_udp = navl_proto_find_index(l_navl_handle,"UDP")) == -1) problem|=0x02;
-if ((l_proto_ssl = navl_proto_find_index(l_navl_handle,"SSL")) == -1) problem|=0x04;
-if ((l_proto_fbookapp = navl_proto_find_index(l_navl_handle,"FBOOKAPP")) == -1) problem|=0x08;
 
 	if (problem != 0)
 	{
@@ -484,12 +491,21 @@ if ((l_proto_fbookapp = navl_proto_find_index(l_navl_handle,"FBOOKAPP")) == -1) 
 	}
 
 // grab the key values of the attributes we care about
-if ((l_attr_fbook_app = navl_attr_key_get(l_navl_handle,"facebook.app")) == -1) problem|=0x01;
+if ((l_attr_facebook_app = navl_attr_key_get(l_navl_handle,"facebook.app")) == -1) problem|=0x01;
 if ((l_attr_tls_host = navl_attr_key_get(l_navl_handle,"tls.host") == -1)) problem|=0x02;
 
 	if (problem != 0)
 	{
 	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol attributes\n",problem);
+	return(1);
+	}
+
+if ((navl_attr_callback_set(l_navl_handle,"facebook.app",attr_callback) == -1)) problem|=0x01;
+if ((navl_attr_callback_set(l_navl_handle,"tls.host",attr_callback) == -1)) problem|=0x02;
+
+	if (problem != 0)
+	{
+	sysmessage(LOG_ERR,"Error 0x%02X enabling metadata callbacks\n");
 	return(1);
 	}
 
