@@ -1,6 +1,6 @@
 // SESSION.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2012 Untangle, Inc.
+// Copyright (c) 2011-2013 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 

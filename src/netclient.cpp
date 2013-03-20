@@ -1,6 +1,6 @@
 // NETCLIENT.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2012 Untangle, Inc.
+// Copyright (c) 2011-2013 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -368,31 +368,33 @@ void NetworkClient::BuildConfiguration(void)
 {
 replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ............ %s\r\n",cfg_log_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ............ %s\r\n",cfg_log_file);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ........... %s\r\n",cfg_dump_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CORE_PATH ........... %s\r\n",cfg_core_path);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ......... %s\r\n",cfg_navl_plugins);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LIBRARY_DEBUG ....... %d\r\n",cfg_navl_debug);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MEMORY_LIMIT ........ %d\r\n",cfg_mem_limit);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ........ %d\r\n",cfg_hash_buckets);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ........... %d\r\n",cfg_navl_flows);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ........... %d\r\n",cfg_navl_defrag);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ......... %d\r\n",cfg_sock_buffer);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ......... %d\r\n",cfg_tcp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ......... %d\r\n",cfg_udp_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT .......... %d\r\n",cfg_http_limit);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ......... %d\r\n",cfg_purge_delay);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ......... %d\r\n",cfg_client_port);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ........... %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_MAXLEN ........ %d\r\n",cfg_net_maxlen);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_BUFFER ........ %d\r\n",cfg_net_buffer);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT ...... %d\r\n",cfg_packet_timeout);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM ...... %d\r\n",cfg_packet_maximum);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD ....... %d\r\n",cfg_packet_thread);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_FACEBOOK_SUBCLASS ... %d\r\n",cfg_facebook_subclass);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_RANDTHRESH .... %d\r\n",cfg_skype_randthresh);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_NEEDHIST ...... %d\r\n",cfg_skype_needhist);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_PATH ................ %s\r\n",cfg_log_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LOG_FILE ................ %s\r\n",cfg_log_file);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_DUMP_PATH ............... %s\r\n",cfg_dump_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CORE_PATH ............... %s\r\n",cfg_core_path);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ............. %s\r\n",cfg_navl_plugins);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LIBRARY_DEBUG ........... %d\r\n",cfg_navl_debug);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MEMORY_LIMIT ............ %d\r\n",cfg_mem_limit);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ............ %d\r\n",cfg_hash_buckets);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ............... %d\r\n",cfg_navl_flows);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ............... %d\r\n",cfg_navl_defrag);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ............. %d\r\n",cfg_sock_buffer);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ............. %d\r\n",cfg_tcp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ............. %d\r\n",cfg_udp_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT .............. %d\r\n",cfg_http_limit);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ............. %d\r\n",cfg_purge_delay);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ............. %d\r\n",cfg_client_port);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ............... %d\r\n",cfg_net_queue);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_MAXLEN ............ %d\r\n",cfg_net_maxlen);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_BUFFER ............ %d\r\n",cfg_net_buffer);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT .......... %d\r\n",cfg_packet_timeout);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM .......... %d\r\n",cfg_packet_maximum);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD ........... %d\r\n",cfg_packet_thread);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_FACEBOOK_SUBCLASS ....... %d\r\n",cfg_facebook_subclass);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PROBE_THRESH ...... %d\r\n",cfg_skype_probe_thresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PACKET_THRESH ..... %d\r\n",cfg_skype_packet_thresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_RANDOM_THRESH ..... %d\r\n",cfg_skype_random_thresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_REQUIRE_HISTORY ... %d\r\n",cfg_skype_require_history);
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
@@ -401,18 +403,18 @@ void NetworkClient::BuildHelpPage(void)
 {
 replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 
-replyoff+=sprintf(&replybuff[replyoff],"CONFIG - display all daemon configuration values\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"DEBUG - display daemon debug information\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"PROTO - retrieve the list of recognized protocols\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-LOGIC - enable/disable logic debug logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-CLIENT - enable/disable netclient request logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-UPDATE - enable/disable classify status logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-PACKET - enable/disable network packet logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-SESSION - enable/disable netfilter session table logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+/-TRACKER - enable/disable netfilter tracker table logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"DUMP - dump low level debug information to file\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"HELP - display this spiffy help page\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT - disconnect the session\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"CONFIG = display all daemon configuration values\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"DEBUG = display daemon debug information\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"PROTO = display list of recognized protocols\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+LOGIC | -LOGIC = enable/disable logic debug logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+CLIENT | -CLIENT = enable/disable netclient request logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+UPDATE | -UPDATE = enable/disable classify status logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+PACKET | -PACKET = enable/disable network packet logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+SESSION | -SESSION = enable/disable netfilter session table logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"+TRACKER | -TRACKER = enable/disable netfilter tracker table logging\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"DUMP = dump low level debug information to file\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"HELP = display this spiffy help page\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT = disconnect the session\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"\nAll other requests will search the connection table\r\n\r\n");
 }
 /*--------------------------------------------------------------------------*/

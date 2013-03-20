@@ -1,6 +1,6 @@
 // CLASSIFY.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2012 Untangle, Inc.
+// Copyright (c) 2011-2013 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -431,52 +431,25 @@ ret = navl_init(l_navl_handle);
 	}
 
 // set the vineyard system loglevel parameter
-sprintf(work,"%d",cfg_navl_debug);
-ret = navl_config_set(l_navl_handle,"system.loglevel",work);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error calling navl_config_set(system.loglevel)\n");
-	return(1);
-	}
+if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(1);
 
 // set the number of of http request+response pairs to analyze before giving up
-sprintf(work,"%d",cfg_http_limit);
-ret = navl_config_set(l_navl_handle,"http.maxpersist",work);
+if (vineyard_config("http.maxpersist",cfg_http_limit) != 0) return(1);
 
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error calling navl_config_set(http.maxpersist)\n");
-	return(1);
-	}
+// set the TCP session timeout
+if (vineyard_config("tcp.timeout",cfg_tcp_timeout) != 0) return(1);
 
-sprintf(work,"%d",cfg_tcp_timeout);
-ret = navl_config_set(l_navl_handle,"tcp.timeout",work);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error calling navl_config_set(tcp.timeout)\n");
-	return(1);
-	}
-
-sprintf(work,"%d",cfg_udp_timeout);
-ret = navl_config_set(l_navl_handle,"udp.timeout",work);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error calling navl_config_set(udp.timeout)\n");
-	return(1);
-	}
+// set the UDP session timeout
+if (vineyard_config("udp.timeout",cfg_udp_timeout) != 0) return(1);
 
 // enable IP fragment processing
-sprintf(work,"%d",cfg_navl_defrag);
-ret = navl_config_set(l_navl_handle,"ip.defrag",work);
+if (vineyard_config("ip.defrag",cfg_navl_defrag) != 0) return(1);
 
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error calling navl_config_set(ip.defrag)\n");
-	return(1);
-	}
+// set all the low level skype parameters
+if (vineyard_config("skype.probe_thresh",cfg_skype_probe_thresh) != 0) return(1);
+if (vineyard_config("skype.packet_thresh",cfg_skype_packet_thresh) != 0) return(1);
+if (vineyard_config("skype.random_thresh",cfg_skype_random_thresh) != 0) return(1);
+if (vineyard_config("skype.require_history",cfg_skype_require_history) != 0) return(1);
 
 problem = 0;
 
@@ -533,6 +506,17 @@ g_protolist[0] = 0;
 	}
 
 return(0);
+}
+/*--------------------------------------------------------------------------*/
+int vineyard_config(const char *key,int value)
+{
+char		work[32];
+int			ret;
+
+sprintf(work,"%d",value);
+ret = navl_config_set(l_navl_handle,key,work);
+if (ret != 0) sysmessage(LOG_ERR,"Error calling navl_config_set(%s)\n",key);
+return(ret);
 }
 /*--------------------------------------------------------------------------*/
 void vineyard_shutdown(void)

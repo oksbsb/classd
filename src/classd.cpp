@@ -1,6 +1,6 @@
 // CLASSD.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2012 Untangle, Inc.
+// Copyright (c) 2011-2013 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -559,11 +559,17 @@ grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_
 grab_config_item(filedata,"CLASSD_FACEBOOK_SUBCLASS",work,sizeof(work),"1");
 cfg_facebook_subclass = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_RANDTHRESH",work,sizeof(work),"95");
-cfg_skype_randthresh = atoi(work);
+grab_config_item(filedata,"CLASSD_SKYPE_PACKETTHRESH",work,sizeof(work),"4");
+cfg_skype_packet_thresh = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_NEEDHIST",work,sizeof(work),"1");
-cfg_skype_needhist = atoi(work);
+grab_config_item(filedata,"CLASSD_SKYPE_RANDOMTHRESH",work,sizeof(work),"95");
+cfg_skype_random_thresh = atoi(work);
+
+grab_config_item(filedata,"CLASSD_SKYPE_PROBETHRESH",work,sizeof(work),"2");
+cfg_skype_probe_thresh = atoi(work);
+
+grab_config_item(filedata,"CLASSD_SKYPE_REQUIREHIST",work,sizeof(work),"1");
+cfg_skype_require_history = atoi(work);
 
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
 cfg_hash_buckets = atoi(work);

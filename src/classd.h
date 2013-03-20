@@ -1,6 +1,6 @@
 // CLASSD.H
 // Traffic Classification Engine
-// Copyright (c) 2011-2012 Untangle, Inc.
+// Copyright (c) 2011-2013 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -302,6 +302,7 @@ void vineyard_shutdown(void);
 void vineyard_debug(const char *dumpfile);
 int vineyard_startup(void);
 void navl_bind_externals(void);
+int vineyard_config(const char *key,int value);
 int	vineyard_logger(const char *level,const char *func,const char *format,...);
 int vineyard_printf(const char *format,...);
 /*--------------------------------------------------------------------------*/
@@ -359,8 +360,10 @@ DATALOC char				cfg_core_path[256];
 DATALOC char				cfg_log_path[256];
 DATALOC char				cfg_log_file[256];
 DATALOC int					cfg_facebook_subclass;
-DATALOC int					cfg_skype_randthresh;
-DATALOC int					cfg_skype_needhist;
+DATALOC int					cfg_skype_probe_thresh;
+DATALOC int					cfg_skype_packet_thresh;
+DATALOC int					cfg_skype_random_thresh;
+DATALOC int					cfg_skype_require_history;
 DATALOC int					cfg_packet_timeout;
 DATALOC int					cfg_packet_maximum;
 DATALOC int					cfg_packet_thread;
