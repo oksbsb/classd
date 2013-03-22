@@ -110,7 +110,8 @@
 ## you can use a mix of the following bit values
 ## -d1 = application logic
 ## -d2 = client/server requests from the uvm
-## -d4 = packets submitted for classification
-## -d8 = conntrack object lookup and processing
+## -d4 = classifcation object create/update/expire
+## -d8 = packets submitted for classification
 ## -d16 = session object lookup and processing
+## -d32 = conntrack object lookup processing
 #CLASSD_FLAGS=-d
