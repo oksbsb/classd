@@ -294,8 +294,8 @@ void netfilter_shutdown(void);
 int netfilter_startup(void);
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
-void attr_callback(navl_handle_t handle,navl_conn_id_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg);
-int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_id_t conn,void *arg,int error);
+void attr_callback(navl_handle_t handle,navl_conn_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg);
+int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_t conn,void *arg,int error);
 void process_packet(unsigned char *rawpkt,int rawlen);
 void log_packet(unsigned char *rawpkt,int rawlen);
 void vineyard_shutdown(void);

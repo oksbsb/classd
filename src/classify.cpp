@@ -11,10 +11,6 @@
 static int l_proto_tcp = 0;
 static int l_proto_udp = 0;
 
-// vars for the dynamic attributes we want
-static int l_attr_facebook_app = 0;
-static int l_attr_tls_host = 0;
-
 // local variables
 static navl_handle_t l_navl_handle = NULL;
 static int l_navl_logfile = 0;
@@ -293,7 +289,7 @@ inet_ntop(AF_INET,&iphead->daddr,dst_addr,sizeof(dst_addr));
 LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (%d) = %s-%s:%u-%s:%u\n",rawlen,pname,src_addr,src_port,dst_addr,dst_port);
 }
 /*--------------------------------------------------------------------------*/
-int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_id_t conn,void *arg,int error)
+int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_t conn,void *arg,int error)
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
@@ -373,7 +369,7 @@ LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(
 return(0);
 }
 /*--------------------------------------------------------------------------*/
-void attr_callback(navl_handle_t handle,navl_conn_id_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg)
+void attr_callback(navl_handle_t handle,navl_conn_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg)
 {
 SessionObject		*session = (SessionObject *)arg;
 char				namestr[256];
@@ -384,14 +380,16 @@ char				detail[256];
 if (session == NULL) return;
 
 	// check for the facebook application name
-	if (attr_type == l_attr_facebook_app)
+	// FIXME - do the key lookup once during init when vineyard fixes their shit
+	if (attr_type == navl_attr_key_get(handle,"facebook.app"))
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
 	}
 
 	// check for the tls host name
-	else if (attr_type == l_attr_tls_host)
+	// FIXME - do the key lookup once during init when vineyard fixes their shit
+	else if (attr_type == navl_attr_key_get(l_navl_handle,"tls.host"))
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
@@ -411,7 +409,7 @@ session->UpdateDetail(detail);
 int vineyard_startup(void)
 {
 char	temp[32],work[32];
-int		problem;
+int		problem = 0;
 int		ret,x;
 
 // bind the vineyard external references
@@ -457,8 +455,6 @@ ret = navl_init(l_navl_handle);
 	return(1);
 	}
 
-problem = 0;
-
 // grab the index values for protocols we care about
 if ((l_proto_tcp = navl_proto_find_index(l_navl_handle,"TCP")) == -1) problem|=0x01;
 if ((l_proto_udp = navl_proto_find_index(l_navl_handle,"UDP")) == -1) problem|=0x02;
@@ -466,16 +462,6 @@ if ((l_proto_udp = navl_proto_find_index(l_navl_handle,"UDP")) == -1) problem|=0
 	if (problem != 0)
 	{
 	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol indexes\n",problem);
-	return(1);
-	}
-
-// grab the key values of the attributes we care about
-if ((l_attr_facebook_app = navl_attr_key_get(l_navl_handle,"facebook.app")) == -1) problem|=0x01;
-if ((l_attr_tls_host = navl_attr_key_get(l_navl_handle,"tls.host") == -1)) problem|=0x02;
-
-	if (problem != 0)
-	{
-	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol attributes\n",problem);
 	return(1);
 	}
 
