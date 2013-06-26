@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/dash
 
 FLAG_FILE=/tmp/untangle-classd.flag
 PID_FILE=/var/run/untangle-classd.pid
@@ -6,7 +6,7 @@ PID_FILE=/var/run/untangle-classd.pid
 # on upgrade if we detect the pidfile then create the
 # flag file so postinst knows to restart the daemon
 
-if [ "$1" == "upgrade" ]; then
+if [ "$1" = "upgrade" ]; then
     if [ -f ${PID_FILE} ]; then
         date > ${FLAG_FILE}
     fi

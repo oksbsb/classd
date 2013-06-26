@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/dash
 
 FLAG_FILE=/tmp/untangle-classd.flag
 LOG_FILE=/var/log/untangle-classd/classd.log

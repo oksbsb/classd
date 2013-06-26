@@ -299,7 +299,7 @@ char				protochain[256];
 char				namestr[256];
 char				work[32];
 int					confidence,ipproto;
-int					appid,value;
+int					appid,value,previous;
 int					idx;
 
 	// if callback and object state are both classified no need to process
@@ -331,10 +331,24 @@ idx = 0;
 appid = navl_app_get(handle,result,&confidence);
 navl_proto_get_name(handle,appid,application,sizeof(application));
 
+previous = 1234567890;
+
 	// build the protochain grabbing extra info for certain protocols
 	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
 	{
 	value = navl_proto_get_index(handle,it);
+
+		// in the NAVL 4.0 release it seems like the vineyard iterator gets
+		// confused and returns the same thing over and over so to work around
+		// this we bail if current proto value is the same as the last
+		if (value == previous)
+		{
+		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Duplicate protocol %d in callback iterator\n",value);
+		vineyard_duplicate++;
+		break;
+		}
+
+	previous = value;
 
 	if (value == l_proto_tcp) ipproto = IPPROTO_TCP;
 	if (value == l_proto_udp) ipproto = IPPROTO_UDP;

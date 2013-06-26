@@ -390,6 +390,7 @@ DATALOC u_int64_t			pkt_totalcount;
 DATALOC u_int64_t			pkt_timedrop;
 DATALOC u_int64_t			pkt_sizedrop;
 DATALOC u_int64_t			pkt_faildrop;
+DATALOC int					vineyard_duplicate;
 DATALOC int					client_misscount;
 DATALOC int					client_hitcount;
 DATALOC int					tracker_unknown;

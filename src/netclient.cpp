@@ -355,6 +355,8 @@ replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO RESOURCE Errors ..... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO CONNECTION Errors ... %s\r\n",pad(temp,err_notconn));
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard UNKNOWN Errors ......... %s\r\n",pad(temp,err_unknown));
 
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard Duplicate Iterator ..... %s\r\n",pad(temp,vineyard_duplicate));
+
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
