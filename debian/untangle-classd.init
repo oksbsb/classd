@@ -48,9 +48,13 @@ stop()
     log_daemon_msg "Stopping $DESC"
 
     log_progress_msg "untangle-classd"
-    start-stop-daemon --pidfile ${PID_FILE} --stop --retry USR1/4/USR1/2/USR1/2/INT/1/TERM/1/KILL/1
-    RET=$?
-    log_end_msg $RET
+    if [ -f ${PID_FILE} ] ; then
+        start-stop-daemon --pidfile ${PID_FILE} --stop --retry USR1/4/USR1/2/USR1/2/INT/1/TERM/1/KILL/1
+    else 
+        echo " Not running"
+    fi
+
+    log_end_msg $?
 
     rm -f ${PID_FILE}
 }
