@@ -362,8 +362,15 @@ replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildProtoList(void)
 {
+char	temp[64];
+int		x;
+
 replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST =====\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"%s\r\n",g_protolist);
+
+	for(x = 0;x < g_protocount;x++)
+	{
+	replyoff+=sprintf(&replybuff[replyoff],"%-10s %s\r\n",g_protostats[x]->protocol_name,pad(temp,g_protostats[x]->packet_count));
+	}
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::BuildConfiguration(void)
@@ -436,6 +443,7 @@ stream = fopen(dumpfile,"a");
 	}
 
 fputs("##############################################################################\r\n",stream);
+
 // dump the debug information
 BuildDebugInfo();
 fputs(replybuff,stream);

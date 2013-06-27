@@ -6,6 +6,8 @@
 
 #include "common.h"
 #include "classd.h"
+
+#define INVALID_VALUE 1234567890
 /*--------------------------------------------------------------------------*/
 // vars for the protocol and application id values we want
 static int l_proto_tcp = 0;
@@ -14,6 +16,10 @@ static int l_proto_udp = 0;
 // local variables
 static navl_handle_t l_navl_handle = NULL;
 static int l_navl_logfile = 0;
+
+// vars to hold the detail attributes we track
+int l_attr_facebook_app = INVALID_VALUE;
+int l_attr_tls_host = INVALID_VALUE;
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg)
 {
@@ -293,11 +299,8 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
-const char			*check;
-char				application[32];
 char				protochain[256];
 char				namestr[256];
-char				work[32];
 int					confidence,ipproto;
 int					appid,value,previous;
 int					idx;
@@ -310,13 +313,6 @@ int					idx;
 	return(0);
 	}
 
-// clear local variables that we fill in while building the protochain
-application[0] = 0;
-protochain[0] = 0;
-confidence = 0;
-ipproto = 0;
-idx = 0;
-
 	// keep track of errors returned by vineyard
 	if (error != 0) switch (error)
 	{
@@ -327,11 +323,16 @@ idx = 0;
 	default:		err_unknown++;	break;
 	}
 
+// clear local variables that we fill in while building the protochain
+protochain[0] = 0;
+confidence = 0;
+ipproto = 0;
+idx = 0;
+
 // get the application and confidence
 appid = navl_app_get(handle,result,&confidence);
-navl_proto_get_name(handle,appid,application,sizeof(application));
 
-previous = 1234567890;
+previous = INVALID_VALUE;
 
 	// build the protochain grabbing extra info for certain protocols
 	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
@@ -341,6 +342,7 @@ previous = 1234567890;
 		// in the NAVL 4.0 release it seems like the vineyard iterator gets
 		// confused and returns the same thing over and over so to work around
 		// this we bail if current proto value is the same as the last
+		// TODO - we really need a fix from Vineyard
 		if (value == previous)
 		{
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Duplicate protocol %d in callback iterator\n",value);
@@ -354,10 +356,8 @@ previous = 1234567890;
 	if (value == l_proto_udp) ipproto = IPPROTO_UDP;
 
 	// append the protocol name to the chain
-	work[0] = 0;
-	check = navl_proto_get_name(handle,value,work,sizeof(work));
-	if (check == NULL) break;
-	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",work);
+	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",g_protostats[value]->protocol_name);
+	g_protostats[value]->packet_count++;
 	}
 
 // only TCP or UDP packets will set this flag allowing
@@ -369,7 +369,7 @@ if (ipproto == 0) return(0);
 if (session == NULL) return(0);
 
 // update the session object with the new information
-session->UpdateObject(application,protochain,confidence,state);
+session->UpdateObject(g_protostats[appid]->protocol_name,protochain,confidence,state);
 LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 
 	// clean up terminated connections
@@ -393,17 +393,21 @@ char				detail[256];
 // this should never happen but we check just in case
 if (session == NULL) return;
 
+// we can't initialize our l_attr_xxx values during startup because the values
+// returned by vineyard are different for each thread so to work around this
+// we set them as invalid during startup and init them first time we are called
+if (l_attr_facebook_app == INVALID_VALUE) l_attr_facebook_app = navl_attr_key_get(handle,"facebook.app");
+if (l_attr_tls_host == INVALID_VALUE) l_attr_tls_host = navl_attr_key_get(handle,"tls.host");
+
 	// check for the facebook application name
-	// FIXME - do the key lookup once during init when vineyard fixes their shit
-	if (attr_type == navl_attr_key_get(handle,"facebook.app"))
+	if (attr_type == l_attr_facebook_app)
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
 	}
 
 	// check for the tls host name
-	// FIXME - do the key lookup once during init when vineyard fixes their shit
-	else if (attr_type == navl_attr_key_get(l_navl_handle,"tls.host"))
+	else if (attr_type == l_attr_tls_host)
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
@@ -422,7 +426,7 @@ session->UpdateDetail(detail);
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
 {
-char	temp[32],work[32];
+char	work[32];
 int		problem = 0;
 int		ret,x;
 
@@ -497,21 +501,37 @@ ret = navl_proto_max_index(l_navl_handle);
 	return(1);
 	}
 
-// allocate a chunk of memory and store the protocol list
-g_protolist = (char *)malloc(ret * 16);
-g_protolist[0] = 0;
+// create the array of protocol statistics
+g_protocount = (ret + 1);
+g_protostats = (protostats **)malloc(g_protocount * sizeof(protostats *));
 
-	// get the name of each protocol and append to buffer
-	for(x = 0;x < ret;x++)
+	// get the name of each protocol add create new protolist entry
+	for(x = 0;x < g_protocount;x++)
 	{
 	work[0] = 0;
 	navl_proto_get_name(l_navl_handle,x,work,sizeof(work));
-	if (strlen(work) == 0) continue;
-	sprintf(temp,"%d = %s\r\n",x,work);
-	strcat(g_protolist,temp);
+	if (strlen(work) == 0) strcpy(work,"UNKNOWN");
+	g_protostats[x] = (protostats *)malloc(sizeof(protostats));
+	g_protostats[x]->packet_count = 0;
+	strcpy(g_protostats[x]->protocol_name,work);
 	}
 
 return(0);
+}
+/*--------------------------------------------------------------------------*/
+void vineyard_shutdown(void)
+{
+int		x;
+
+// finalize the vineyard library
+navl_fini(l_navl_handle);
+
+// shut down the vineyard engine
+navl_close(l_navl_handle);
+
+// free the protostats
+for(x = 0;x < g_protocount;x++) free(g_protostats[x]);
+free(g_protostats);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_config(const char *key,int value)
@@ -523,15 +543,6 @@ sprintf(work,"%d",value);
 ret = navl_config_set(l_navl_handle,key,work);
 if (ret != 0) sysmessage(LOG_ERR,"Error calling navl_config_set(%s)\n",key);
 return(ret);
-}
-/*--------------------------------------------------------------------------*/
-void vineyard_shutdown(void)
-{
-// finalize the vineyard library
-navl_fini(l_navl_handle);
-
-// shut down the vineyard engine
-navl_close(l_navl_handle);
 }
 /*--------------------------------------------------------------------------*/
 void vineyard_debug(const char *dumpfile)

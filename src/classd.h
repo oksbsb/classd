@@ -282,6 +282,12 @@ public:
 	int						value;
 };
 /*--------------------------------------------------------------------------*/
+struct protostats
+{
+	u_int64_t				packet_count;
+	char					protocol_name[9];
+};
+/*--------------------------------------------------------------------------*/
 struct xphdr
 {
 	u_int16_t				sport;
@@ -329,6 +335,7 @@ char *pad(char *target,u_int64_t value,int width = 0);
 #define DATALOC extern
 #endif
 /*--------------------------------------------------------------------------*/
+DATALOC protostats			**g_protostats;
 DATALOC pthread_t			g_netfilter_tid;
 DATALOC pthread_t			g_conntrack_tid;
 DATALOC pthread_t			g_classify_tid;
@@ -344,7 +351,7 @@ DATALOC HashTable			*g_sessiontable;
 DATALOC HashTable			*g_trackertable;
 DATALOC FILE				*g_logfile;
 DATALOC char				g_cfgfile[256];
-DATALOC char				*g_protolist;
+DATALOC int					g_protocount;
 DATALOC int					g_logrecycle;
 DATALOC int					g_shutdown;
 DATALOC int					g_console;
