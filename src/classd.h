@@ -352,7 +352,6 @@ DATALOC int					g_skiptcp;
 DATALOC int					g_skipudp;
 DATALOC int					g_nofork;
 DATALOC int					g_bypass;
-DATALOC int					g_alarm;
 DATALOC int					g_debug;
 DATALOC char				cfg_navl_plugins[256];
 DATALOC char				cfg_dump_path[256];

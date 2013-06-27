@@ -86,16 +86,7 @@ int					ret;
 sem_post(&ThreadSignal);
 
 // wait for the thread to terminate
-g_alarm = 0;
-alarm(2);
 pthread_join(ThreadHandle,NULL);
-alarm(0);
-
-	if (g_alarm != 0)
-	{
-	sysmessage(LOG_WARNING,"The netserver thread is being killed\n");
-
-	}
 
 	// delete any active clients
 	for(curr = ClientList;curr != NULL;)
