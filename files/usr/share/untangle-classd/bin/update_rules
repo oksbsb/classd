@@ -60,6 +60,7 @@ insert_classd_iptables_rules()
 
     # we also don't want to look at any traffic owned by the local machine
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m addrtype --dst-type local -j RETURN
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m addrtype --src-type local -j RETURN
 
     # special hook to allow bypass of a development machine or network
     if [ ! -z ${CLASSD_DEV_NETWORK} ]; then
