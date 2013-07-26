@@ -58,6 +58,9 @@ insert_classd_iptables_rules()
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -s 127.0.0.0/8 -j RETURN
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -d 127.0.0.0/8 -j RETURN
 
+    # dont queue utun packets
+    ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -i utun -j RETURN
+
     # we also don't want to look at any traffic owned by the local machine
     ${IPTABLES} -t ${TABLE_NAME} -A ${CHAIN_NAME} -m addrtype --dst-type local -j RETURN
 
