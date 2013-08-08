@@ -86,7 +86,7 @@ if ((crloc == NULL) && (lfloc == NULL)) return(1);
 if (crloc != NULL) crloc[0] = 0;
 if (lfloc != NULL) lfloc[0] = 0;
 
-LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT QUERY: %s --> %s\n",netname,querybuff);
+LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT COMMAND: %s --> %s\n",netname,querybuff);
 
 // handle the request
 ret = ProcessRequest();
@@ -107,32 +107,57 @@ return(1);
 /*--------------------------------------------------------------------------*/
 int NetworkClient::ProcessRequest(void)
 {
-SessionObject	*local;
+SessionObject		*local;
+u_int64_t			hashcode;
 
 // first check for all our special queries
-
 if (strcasecmp(querybuff,"CONFIG") == 0)	{ BuildConfiguration(); return(1); }
 if (strcasecmp(querybuff,"DEBUG") == 0)		{ BuildDebugInfo(); return(1); }
 if (strcasecmp(querybuff,"PROTO") == 0)		{ BuildProtoList(); return(1); }
 if (strcasecmp(querybuff,"HELP") == 0)		{ BuildHelpPage(); return(1); }
 if (strcasecmp(querybuff,"DUMP") == 0)		{ DumpEverything(); return(1); }
+if (strcasecmp(querybuff,"EXIT") == 0)		{ return(0); }
+if (strcasecmp(querybuff,"QUIT") == 0) 		{ return(0); }
 
+	// stuff that starts with plus or minus is for log control
 	if ((querybuff[0] == '+') || (querybuff[0] == '-'))
 	{
 	AdjustLogCategory();
 	return(1);
 	}
 
-if (strcasecmp(querybuff,"EXIT") == 0) return(0);
-if (strcasecmp(querybuff,"QUIT") == 0) return(0);
+	if (strncasecmp(querybuff,"CREATE:",7) == 0)
+	{
+	HandleCreate();
+	return(1);
+	}
 
-// not special so use the query string to search the connection hash table
-local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(querybuff));
+	if (strncasecmp(querybuff,"REMOVE:",7) == 0)
+	{
+	HandleRemove();
+	return(1);
+	}
 
-	// if we have a hit return the found result - note that we use
-	// IsActive() to make sure we don't return a newly created and thus
-	// empty object that hasn't yet been updated by the classify thread
-	if ((local != NULL) && (local->IsActive() != 0))
+hashcode = 0;
+
+// client and server data will be passed to the classify message queue
+if (strncasecmp(querybuff,"CLIENT:",7) == 0) hashcode = HandleClient();
+if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleServer();
+
+// if we don't have a hashcode yet then this is probably a console query
+if (hashcode == 0) hashcode = ExtractNetworkSession(querybuff);
+
+	// if still zero we have no idea what is going on so just return
+	if (hashcode == 0)
+	{
+	replyoff = sprintf(replybuff,"%s","Invalid command or query\r\n\r\n");
+	return(1);
+	}
+
+local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
+
+	// if we have a hit return the found result
+	if (local != NULL)
 	{
 	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
 		local->GetApplication(),
@@ -248,24 +273,163 @@ int		found = 0;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"-TRACKER") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Tracker debug logging has been disabled\n");
-	replyoff = sprintf(replybuff,"%s","Tracker debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_TRACKER;
-	found++;
-	}
-
-	if (strcasecmp(querybuff,"+TRACKER") == 0)
-	{
-	sysmessage(LOG_NOTICE,"Tracker debug logging has been enabled\n");
-	replyoff = sprintf(replybuff,"%s","Tracker debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_TRACKER;
-	found++;
-	}
-
 if (found != 0) return;
 replyoff = sprintf(replybuff,"%s","Unrecognized log control command\r\n\r\n");
+}
+/*--------------------------------------------------------------------------*/
+void NetworkClient::HandleCreate(void)
+{
+SessionObject		*session;
+char				*aa,*bb,*cc,*dd,*ee,*ff;
+navl_host_t			client,server;
+u_int64_t			hashcode;
+u_int8_t			protocol;
+
+// first we extract the connection details from the message
+
+aa = strchr(querybuff,':');		// points to session id
+if (aa == NULL) return;
+*aa++=0;
+
+bb = strchr(aa,':');			// points to protocol
+if (bb == NULL) return;
+*bb++=0;
+
+cc = strchr(bb,':');			// points to client address
+if (cc == NULL) return;
+*cc++=0;
+
+dd = strchr(cc,':');			// points to client port
+if (dd == NULL) return;
+*dd++=0;
+
+ee = strchr(dd,':');			// points to server address
+if (ee == NULL) return;
+*ee++=0;
+
+ff = strchr(ee,':');			// points to server port
+if (ff == NULL) return;
+*ff++=0;
+
+// get the session id value and set the protocol
+hashcode = ExtractNetworkSession(aa);
+protocol = 0;
+if (strcmp(bb,"TCP") == 0) protocol = IPPROTO_TCP;
+if (strcmp(bb,"UDP") == 0) protocol = IPPROTO_UDP;
+
+// fill the client structure
+client.family = NAVL_AF_INET;
+inet_aton(cc,(in_addr *)&client.in4_addr);
+client.port = strtol(dd,NULL,10);
+
+// fill the server structure
+server.family = NAVL_AF_INET;
+inet_aton(ee,(in_addr *)&server.in4_addr);
+server.port = strtol(ff,NULL,10);
+
+// insert the new session object in the hashtable
+session = new SessionObject(hashcode,protocol,client,server);
+g_sessiontable->InsertObject(session);
+
+// post the create message to the classify thread
+g_messagequeue->PushMessage(new MessageWagon(MSG_CREATE,hashcode));
+
+// have to return something even though the node currently does not use it
+replyoff = sprintf(replybuff,"CREATED: %"PRI64u"\r\n",hashcode);
+}
+/*--------------------------------------------------------------------------*/
+void NetworkClient::HandleRemove(void)
+{
+u_int64_t	hashcode;
+char		*aa;
+
+aa = strchr(querybuff,':');		// points to session id
+if (aa == NULL) return;
+*aa++=0;
+hashcode = ExtractNetworkSession(aa);
+
+// post the remove message to the classify thread
+g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
+
+// have to return something even though the node currently does not use it
+replyoff = sprintf(replybuff,"REMOVED: %"PRI64u"\r\n",hashcode);
+}
+/*--------------------------------------------------------------------------*/
+u_int64_t NetworkClient::HandleClient(void)
+{
+u_int64_t	hashcode;
+char		*aa,*bb;
+long		length,ret;
+
+aa = strchr(querybuff,':');		// points to session id
+if (aa == NULL) return(0);
+*aa++=0;
+
+bb = strchr(aa,':');			// points to data length
+if (bb == NULL) return(0);
+*bb++=0;
+
+hashcode = ExtractNetworkSession(aa);
+length = strtol(bb,NULL,10);
+
+// read data from the client into the reply buffer since it is larger
+ret = recv(netsock,replybuff,length,0);
+
+	// TODO - maybe we need to try multiple times
+	if (ret != length)
+	{
+	sysmessage(LOG_WARNING,"Only received %d of %d client bytes from %s\n",ret,length,netname);
+	}
+
+// push the data into the classify queue
+g_messagequeue->PushMessage(new MessageWagon(MSG_CLIENT,hashcode,replybuff,ret));
+
+return(hashcode);
+}
+/*--------------------------------------------------------------------------*/
+u_int64_t NetworkClient::HandleServer(void)
+{
+u_int64_t			hashcode;
+char				*aa,*bb;
+int					length,ret;
+
+aa = strchr(querybuff,':');		// points to session id
+if (aa == NULL) return(0);
+*aa++=0;
+
+bb = strchr(aa,':');			// points to data length
+if (bb == NULL) return(0);
+*bb++=0;
+
+hashcode = ExtractNetworkSession(aa);
+length = strtol(bb,NULL,10);
+
+// read data from the client into the reply buffer since it is larger
+ret = recv(netsock,replybuff,length,0);
+
+	// TODO - maybe we need to try multiple times
+	if (ret != length)
+	{
+	sysmessage(LOG_WARNING,"Only received %d of %d server bytes from %s\n",ret,length,netname);
+	}
+
+// push the data into the classify queue
+g_messagequeue->PushMessage(new MessageWagon(MSG_SERVER,hashcode,replybuff,ret));
+
+return(hashcode);
+}
+/*--------------------------------------------------------------------------*/
+u_int64_t NetworkClient::ExtractNetworkSession(const char *buffer)
+{
+u_int64_t		hashcode;
+
+#if __WORDSIZE == 64
+hashcode = strtoul(buffer,NULL,10);
+#else
+hashcode = strtoull(buffer,NULL,10);
+#endif
+
+return(hashcode);
 }
 /*--------------------------------------------------------------------------*/
 int NetworkClient::TransmitReply(void)
@@ -321,13 +485,11 @@ replyoff+=sprintf(&replybuff[replyoff],"  Architecture .................... %d B
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
-replyoff+=sprintf(&replybuff[replyoff],"  Bypass Flag ..................... %d\r\n",g_bypass);
 replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,client_hitcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,client_misscount));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Counter .......... %s\r\n",pad(temp,pkt_totalcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Timeout .......... %s\r\n",pad(temp,pkt_timedrop));
 replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Overrun .......... %s\r\n",pad(temp,pkt_sizedrop));
-replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Failure .......... %s\r\n",pad(temp,pkt_faildrop));
 
 // get the details for the message queue
 g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);
@@ -340,14 +502,6 @@ replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Highest Bytes ..... %s\r
 g_sessiontable->GetTableSize(count,bytes);
 replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Items ........ %s\r\n",pad(temp,count));
 replyoff+=sprintf(&replybuff[replyoff],"  Session Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
-
-// get the total size of the tracker table
-g_trackertable->GetTableSize(count,bytes);
-replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Items ........ %s\r\n",pad(temp,count));
-replyoff+=sprintf(&replybuff[replyoff],"  Tracker Hash Table Bytes ........ %s\r\n",pad(temp,bytes));
-
-replyoff+=sprintf(&replybuff[replyoff],"  Tracker Unknown Count ........... %s\r\n",pad(temp,tracker_unknown));
-replyoff+=sprintf(&replybuff[replyoff],"  Tracker Error Count ............. %s\r\n",pad(temp,tracker_error));
 
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO MEMORY Errors ....... %s\r\n",pad(temp,err_nomem));
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO FLOW Errors ......... %s\r\n",pad(temp,err_nobufs));
@@ -385,20 +539,13 @@ replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PLUGIN_PATH ............. %s\r\
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_LIBRARY_DEBUG ........... %d\r\n",cfg_navl_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MEMORY_LIMIT ............ %d\r\n",cfg_mem_limit);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HASH_BUCKETS ............ %d\r\n",cfg_hash_buckets);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_MAX_FLOWS ............... %d\r\n",cfg_navl_flows);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_IP_DEFRAG ............... %d\r\n",cfg_navl_defrag);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SOCK_BUFFER ............. %d\r\n",cfg_sock_buffer);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_TCP_TIMEOUT ............. %d\r\n",cfg_tcp_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_UDP_TIMEOUT ............. %d\r\n",cfg_udp_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_HTTP_LIMIT .............. %d\r\n",cfg_http_limit);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PURGE_DELAY ............. %d\r\n",cfg_purge_delay);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ............. %d\r\n",cfg_client_port);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_NUM ............... %d\r\n",cfg_net_queue);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_MAXLEN ............ %d\r\n",cfg_net_maxlen);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_QUEUE_BUFFER ............ %d\r\n",cfg_net_buffer);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT .......... %d\r\n",cfg_packet_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM .......... %d\r\n",cfg_packet_maximum);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_THREAD ........... %d\r\n",cfg_packet_thread);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_FACEBOOK_SUBCLASS ....... %d\r\n",cfg_facebook_subclass);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PROBE_THRESH ...... %d\r\n",cfg_skype_probe_thresh);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PACKET_THRESH ..... %d\r\n",cfg_skype_packet_thresh);
@@ -420,7 +567,6 @@ replyoff+=sprintf(&replybuff[replyoff],"+CLIENT | -CLIENT = enable/disable netcl
 replyoff+=sprintf(&replybuff[replyoff],"+UPDATE | -UPDATE = enable/disable classify status logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+PACKET | -PACKET = enable/disable network packet logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+SESSION | -SESSION = enable/disable netfilter session table logging\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"+TRACKER | -TRACKER = enable/disable netfilter tracker table logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DUMP = dump low level debug information to file\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"HELP = display this spiffy help page\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"EXIT or QUIT = disconnect the session\r\n");
@@ -455,11 +601,6 @@ fputs(replybuff,stream);
 // dump everything in the session hash table
 fprintf(stream,"========== CLASSD SESSION HASH TABLE ==========\r\n");
 g_sessiontable->DumpDetail(stream);
-fprintf(stream,"\r\n");
-
-// dump everything in the conntrack has htable
-fprintf(stream,"========== CLASSD TRACKER HASH TABLE ==========\r\n");
-g_trackertable->DumpDetail(stream);
 fprintf(stream,"\r\n");
 
 // flush and close the dump file

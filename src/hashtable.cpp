@@ -6,8 +6,6 @@
 
 #include "common.h"
 #include "classd.h"
-
-#define GET16BITS(d) (*((const u_int16_t *)(d)))
 /*--------------------------------------------------------------------------*/
 HashTable::HashTable(int aBuckets)
 {
@@ -61,7 +59,7 @@ int HashTable::InsertObject(HashObject *aObject)
 unsigned			key;
 
 // calculate bucket using the hash function
-key = GetHashValue(aObject->hashname);
+key = GetHashValue(aObject->netsession);
 
 // lock the bucket
 pthread_mutex_lock(&control[key]);
@@ -84,7 +82,7 @@ HashObject	*work,*prev;
 unsigned	key;
 
 // calculate bucket using the hash function
-key = GetHashValue(aObject->hashname);
+key = GetHashValue(aObject->netsession);
 
 // lock the bucket
 pthread_mutex_lock(&control[key]);
@@ -131,13 +129,13 @@ pthread_mutex_unlock(&control[key]);
 return(0);
 }
 /*--------------------------------------------------------------------------*/
-HashObject* HashTable::SearchObject(const char *aHashname)
+HashObject* HashTable::SearchObject(u_int64_t aValue)
 {
 HashObject	*find;
 unsigned	key;
 
 // calculate bucket using the hash function
-key = GetHashValue(aHashname);
+key = GetHashValue(aValue);
 
 // lock the bucket
 pthread_mutex_lock(&control[key]);
@@ -153,7 +151,7 @@ pthread_mutex_lock(&control[key]);
 	for(find = table[key];find != NULL;find = find->next)
 	{
 	if (find->next == find) break;
-	if (strcmp(aHashname,find->hashname) != 0) continue;
+	if (aValue != find->netsession) continue;
 
 	// unlock the bucket
 	pthread_mutex_unlock(&control[key]);
@@ -197,10 +195,10 @@ removed = 0;
 		kill = 0;
 
 		// look for stale TCP objects
-		if ((curr->netproto == IPPROTO_TCP) && (aStamp > curr->timeout)) kill++;
+		if ((curr->netprotocol == IPPROTO_TCP) && (aStamp > curr->timeout)) kill++;
 
 		// look for stale UDP objects
-		if ((curr->netproto == IPPROTO_UDP) && (aStamp > curr->timeout)) kill++;
+		if ((curr->netprotocol == IPPROTO_UDP) && (aStamp > curr->timeout)) kill++;
 
 			// if not stale adjust working pointers and continue
 			if (kill == 0)
@@ -232,54 +230,9 @@ removed = 0;
 return(removed);
 }
 /*--------------------------------------------------------------------------*/
-unsigned int HashTable::GetHashValue(const char *aString)
+u_int64_t HashTable::GetHashValue(u_int64_t aValue)
 {
-u_int32_t	hash,temp;
-int			len,rem;
-
-len = strlen(aString);
-hash = len;
-
-rem = (len & 3);
-len >>= 2;
-
-	for (;len > 0; len--)
-	{
-	hash += GET16BITS(aString);
-	temp = ((GET16BITS(aString+2) << 11) ^ hash);
-	hash = ((hash << 16) ^ temp);
-	aString += (2 * sizeof(u_int16_t));
-	hash += (hash >> 11);
-	}
-
-	switch (rem)
-	{
-	case 3:
-		hash += GET16BITS(aString);
-		hash ^= (hash << 16);
-		hash ^= (aString[sizeof (u_int16_t)] << 18);
-		hash += (hash >> 11);
-		break;
-	case 2:
-		hash += GET16BITS(aString);
-		hash ^= (hash << 11);
-		hash += (hash >> 17);
-		break;
-	case 1:
-		hash += (*aString);
-		hash ^= (hash << 10);
-		hash += (hash >> 1);
-		break;
-	}
-
-hash ^= (hash << 3);
-hash += (hash >> 5);
-hash ^= (hash << 4);
-hash += (hash >> 17);
-hash ^= (hash << 25);
-hash += (hash >> 6);
-
-return(hash % buckets);
+return((u_int64_t)aValue % (u_int64_t)buckets);
 }
 /*--------------------------------------------------------------------------*/
 void HashTable::GetTableSize(int &aCount,int &aBytes)

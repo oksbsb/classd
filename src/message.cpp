@@ -83,6 +83,9 @@ if (curr_count > high_count) high_count = curr_count;
 curr_bytes+=argMessage->length;
 if (curr_bytes > high_bytes) high_bytes = curr_bytes;
 
+// increment the packet counter
+pkt_totalcount++;
+
 // unlock our mutex
 pthread_mutex_unlock(&ListLock);
 
@@ -140,10 +143,11 @@ aHigh_bytes = high_bytes;
 }
 /*--------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------*/
-MessageWagon::MessageWagon(u_int8_t argCommand,const unsigned char *argBuffer,int argLength)
+MessageWagon::MessageWagon(u_int8_t argCommand,u_int64_t argIndex,const void *argBuffer,int argLength)
 {
 next = NULL;
 command = argCommand;
+index = argIndex;
 length = argLength;
 buffer = (unsigned char *)malloc(argLength);
 memcpy(buffer,argBuffer,argLength);
@@ -154,16 +158,27 @@ MessageWagon::MessageWagon(u_int8_t argCommand,const char *argString)
 {
 next = NULL;
 command = argCommand;
+index = 0;
 length = (strlen(argString) + 1);
 buffer = (unsigned char *)malloc(length);
 strcpy((char *)buffer,argString);
 timestamp = time(NULL);
 }
 /*--------------------------------------------------------------------------*/
+MessageWagon::MessageWagon(u_int8_t argCommand,u_int64_t argIndex)
+{
+next = NULL;
+command = argCommand;
+index = argIndex;
+length = 0;
+buffer = NULL;
+}
+/*--------------------------------------------------------------------------*/
 MessageWagon::MessageWagon(u_int8_t argCommand)
 {
 next = NULL;
 command = argCommand;
+index = 0;
 length = 0;
 buffer = NULL;
 }

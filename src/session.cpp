@@ -7,26 +7,26 @@
 #include "common.h"
 #include "classd.h"
 /*--------------------------------------------------------------------------*/
-SessionObject::SessionObject(const char *aHashname,
-	u_int8_t aNetProto,
-	u_int32_t aClientAddr,
-	u_int16_t aClientPort,
-	u_int32_t aServerAddr,
-	u_int16_t aServerPort) : HashObject(aNetProto,aHashname)
+SessionObject::SessionObject(u_int64_t aSession,
+	u_int8_t aProtocol,
+	navl_host_t aClient,
+	navl_host_t aServer) : HashObject(aSession,aProtocol)
 {
 application = NULL;
 protochain = NULL;
 detail = NULL;
 
+vinestat = NULL;
 confidence = 0;
 state = 0;
 
-upcount = 0;
+memcpy(&clientinfo,&aClient,sizeof(clientinfo));
+memcpy(&serverinfo,&aServer,sizeof(serverinfo));
 
-clientaddr = aClientAddr;
-clientport = aClientPort;
-serveraddr = aServerAddr;
-serverport = aServerPort;
+// set the initial state that will be returned to clients while waiting
+// for the classify thread to process the initial chunk of data
+if (aProtocol == IPPROTO_TCP) UpdateObject("TCP","/TCP",0,NAVL_STATE_INSPECTING);
+if (aProtocol == IPPROTO_UDP) UpdateObject("UDP","/UDP",0,NAVL_STATE_INSPECTING);
 }
 /*--------------------------------------------------------------------------*/
 SessionObject::~SessionObject(void)
@@ -51,8 +51,6 @@ strcpy(protochain,aProtochain);
 
 confidence = aConfidence;
 state = aState;
-
-upcount++;
 }
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateDetail(const char *aDetail)
@@ -78,7 +76,9 @@ const char		*local;
 
 if (detail == NULL) local = "";
 else local = detail;
-snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetHashname(),confidence,state,application,protochain,local);
+
+snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetNetString(),state,confidence,application,protochain,local);
+
 return(target);
 }
 /*--------------------------------------------------------------------------*/

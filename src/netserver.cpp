@@ -124,6 +124,7 @@ pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 // now we allow only the PROF signal
 sigemptyset(&sigset);
 sigaddset(&sigset,SIGPROF);
+sigaddset(&sigset,SIGALRM);
 pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 
 // wait for the control semaphore so we don't start

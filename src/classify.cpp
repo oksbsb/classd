@@ -9,10 +9,6 @@
 
 #define INVALID_VALUE 1234567890
 /*--------------------------------------------------------------------------*/
-// vars for the protocol and application id values we want
-static int l_proto_tcp = 0;
-static int l_proto_udp = 0;
-
 // local variables
 static navl_handle_t l_navl_handle = NULL;
 static int l_navl_logfile = 0;
@@ -24,6 +20,7 @@ int l_attr_tls_host = INVALID_VALUE;
 void* classify_thread(void *arg)
 {
 MessageWagon	*wagon;
+SessionObject	*session;
 sigset_t		sigset;
 time_t			current;
 int				ret;
@@ -41,6 +38,7 @@ pthread_sigmask(SIG_BLOCK,&sigset,NULL);
 // now we allow only the PROF signal
 sigemptyset(&sigset);
 sigaddset(&sigset,SIGPROF);
+sigaddset(&sigset,SIGALRM);
 pthread_sigmask(SIG_UNBLOCK,&sigset,NULL);
 
 // call our vineyard startup function
@@ -56,6 +54,7 @@ sem_post(&g_classify_sem);
 	g_shutdown = 1;
 	}
 
+	// sit in this loop processing messages from the queue
 	while (g_shutdown == 0)
 	{
 	wagon = g_messagequeue->GrabMessage();
@@ -65,29 +64,102 @@ sem_post(&g_classify_sem);
 		{
 		case MSG_SHUTDOWN:
 			g_shutdown = 1;
-			delete(wagon);
 			break;
 
-		case MSG_PACKET:
-			current = time(NULL);
+		case MSG_CREATE:
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CREATE %llu\n",wagon->index);
 
-			// if the packet is stale we just throw it away
+			// session object should have been created by the netclient thread
+			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
+
+				// missing session means something has gone haywire
+				if (session == NULL)
+				{
+				sysmessage(LOG_WARNING,"MSG_CREATE: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				break;
+				}
+
+			// create the vineyard connection state object
+			ret = navl_conn_create(l_navl_handle,&session->clientinfo,&session->serverinfo,session->GetNetProto(),&session->vinestat);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create()\n",ret);
+			break;
+
+		case MSG_REMOVE:
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION REMOVE %llu\n",wagon->index);
+
+			// find the session object in the hash table
+			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
+
+				// missing session means something has gone haywire
+				if (session == NULL)
+				{
+				sysmessage(LOG_WARNING,"MSG_REMOVE: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				break;
+				}
+
+			// destroy the vineyard connection state object
+			ret = navl_conn_destroy(l_navl_handle,session->vinestat);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy()\n",ret);
+
+			// delete the session object from the hash table
+			g_sessiontable->DeleteObject(session);
+			break;
+
+		case MSG_CLIENT:
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %llu\n",wagon->index);
+
+			// if data packets are stale we throw them away in hopes of catching up
+			current = time(NULL);
 			if (current > (wagon->timestamp + cfg_packet_timeout)) pkt_timedrop++;
 
-			// otherwise we send it to vineyard for classification
-			else process_packet(wagon->buffer,wagon->length);
+			// find the session object in the hash table
+			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
 
-			delete(wagon);
+				// missing session means something has gone haywire
+				if (session == NULL)
+				{
+				sysmessage(LOG_WARNING,"MSG_CLIENT: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				break;
+				}
+
+			// send the traffic to vineyard for classification
+			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,0,navl_callback,session);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify()\n",ret);
 			break;
+
+		case MSG_SERVER:
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %llu\n",wagon->index);
+
+			// if data packets are stale we throw them away in hopes of catching up
+			current = time(NULL);
+			if (current > (wagon->timestamp + cfg_packet_timeout)) pkt_timedrop++;
+
+			// find the session object in the hash table
+			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
+
+				// missing session means something has gone haywire
+				if (session == NULL)
+				{
+				sysmessage(LOG_WARNING,"MSG_SERVER: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				break;
+				}
+
+			// send the traffic to vineyard for classification
+			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,1,navl_callback,session);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify()\n",ret);
+			break;
+
 
 		case MSG_DEBUG:
 			vineyard_debug((char *)wagon->buffer);
-			delete(wagon);
 			break;
 
 		default:
 			sysmessage(LOG_WARNING,"Unknown thread message received = %c\n",wagon->command);
 		}
+
+	// always delete the wagon in which the message arrived
+	delete(wagon);
 	}
 
 // call our vineyard shutdown function
@@ -97,221 +169,18 @@ sysmessage(LOG_INFO,"The classify thread has terminated\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
-void process_packet(unsigned char *rawpkt,int rawlen)
-{
-SessionObject			*session;
-TrackerObject			*tracker;
-u_int32_t				saddr,daddr;
-u_int16_t				sport,dport;
-struct xphdr			*xphead;
-struct iphdr			*iphead;
-const char				*pname;
-char					namestr[256];
-char					sname[32];
-char					dname[32];
-char					forward[64];
-char					reverse[64];
-char					worker[64];
-
-// use the iphdr structure for parsing
-iphead = (iphdr *)rawpkt;
-
-// setup a generic header for source and dest ports
-xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
-
-if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
-if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
-
-// extract the client and server addresses
-inet_ntop(AF_INET,&iphead->saddr,sname,sizeof(sname));
-inet_ntop(AF_INET,&iphead->daddr,dname,sizeof(dname));
-sport = ntohs(xphead->sport);
-dport = ntohs(xphead->dport);
-
-// search the hash table for the normal entry
-sprintf(forward,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION NORM FWD %s\n",forward);
-session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(forward));
-
-	// pass the packet to the vineyard library
-	if (session != NULL)
-	{
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-	return;
-	}
-
-// not found so reverse source and destination
-sprintf(reverse,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION NORM REV %s\n",reverse);
-session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(reverse));
-
-	// pass the packet to the vineyard library
-	if (session != NULL)
-	{
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND NORM REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-	if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-	if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-	return;
-	}
-
-// nothing found so check the forward in the conntrack table
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD %s\n",forward);
-tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(forward));
-
-	if (tracker != NULL)
-	{
-	// make sure we reset the timeout so active objects don't get purged
-	tracker->ResetTimeout();
-
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-	saddr = tracker->GetSaddr();
-	daddr = tracker->GetDaddr();
-	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
-	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
-	sport = ntohs(tracker->GetSport());
-	dport = ntohs(tracker->GetDport());
-
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD FWD %s\n",worker);
-	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
-
-		// found so update the ipheader and forward to vineyard
-		if (session != NULL)
-		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD FWD %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = tracker->GetDaddr();
-		xphead->sport = tracker->GetDport();
-		iphead->daddr = tracker->GetSaddr();
-		xphead->dport = tracker->GetSport();
-		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-		return;
-		}
-
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK FWD REV %s\n",worker);
-	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
-
-		// found so update the ipheader and forward to vineyard
-		if (session != NULL)
-		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK FWD REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = tracker->GetSaddr();
-		xphead->sport = tracker->GetSport();
-		iphead->daddr = tracker->GetDaddr();
-		xphead->dport = tracker->GetDport();
-		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-		return;
-		}
-	}
-
-// nothing found so check the reverse in the conntrack table
-LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV %s\n",reverse);
-tracker = dynamic_cast<TrackerObject*>(g_trackertable->SearchObject(reverse));
-
-	if (tracker != NULL)
-	{
-	// make sure we reset the timeout so active objects don't get purged
-	tracker->ResetTimeout();
-
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV %s\n",tracker->GetObjectString(namestr,sizeof(namestr)));
-	saddr = tracker->GetSaddr();
-	daddr = tracker->GetDaddr();
-	inet_ntop(AF_INET,&saddr,sname,sizeof(sname));
-	inet_ntop(AF_INET,&daddr,dname,sizeof(dname));
-	sport = ntohs(tracker->GetSport());
-	dport = ntohs(tracker->GetDport());
-
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,sname,sport,dname,dport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV FWD %s\n",worker);
-	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
-
-		// found so update the ipheader and forward to vineyard
-		if (session != NULL)
-		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV FWD %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = tracker->GetDaddr();
-		xphead->sport = tracker->GetDport();
-		iphead->daddr = tracker->GetSaddr();
-		xphead->dport = tracker->GetSport();
-		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-		return;
-		}
-
-	sprintf(worker,"%s-%s:%u-%s:%u",pname,dname,dport,sname,sport);
-	LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION TRAK REV REV %s\n",worker);
-	session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(worker));
-
-		// found so update the ipheader and forward to vineyard
-		if (session != NULL)
-		{
-		LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"FOUND TRAK REV REV %s\n",session->GetObjectString(namestr,sizeof(namestr)));
-		iphead->saddr = tracker->GetSaddr();
-		xphead->sport = tracker->GetSport();
-		iphead->daddr = tracker->GetDaddr();
-		xphead->dport = tracker->GetDport();
-		if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-		if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-		return;
-		}
-	}
-
-// create a new session object and store in session table
-session = new SessionObject(forward,iphead->protocol,iphead->saddr,xphead->sport,iphead->daddr,xphead->dport);
-g_sessiontable->InsertObject(session);
-LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY INSERT %s\n",forward);
-
-if (g_debug & CAT_PACKET) log_packet(rawpkt,rawlen);
-if (g_bypass == 0) navl_classify(l_navl_handle,NAVL_ENCAP_IP,rawpkt,rawlen,NULL,0,navl_callback,session);
-}
-/*--------------------------------------------------------------------------*/
-void log_packet(unsigned char *rawpkt,int rawlen)
-{
-struct xphdr	*xphead;
-struct iphdr	*iphead;
-const char		*pname;
-char			src_addr[32],dst_addr[32];
-u_int16_t		src_port,dst_port;
-
-// use the iphdr structure for parsing
-iphead = (iphdr *)rawpkt;
-
-// setup a generic header for source and dest ports
-xphead = (struct xphdr *)&rawpkt[iphead->ihl << 2];
-
-if (iphead->protocol == IPPROTO_TCP) pname = "TCP";
-if (iphead->protocol == IPPROTO_UDP) pname = "UDP";
-
-src_port = ntohs(xphead->sport);
-dst_port = ntohs(xphead->dport);
-
-inet_ntop(AF_INET,&iphead->saddr,src_addr,sizeof(src_addr));
-inet_ntop(AF_INET,&iphead->daddr,dst_addr,sizeof(dst_addr));
-
-LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (%d) = %s-%s:%u-%s:%u\n",rawlen,pname,src_addr,src_port,dst_addr,dst_port);
-}
-/*--------------------------------------------------------------------------*/
 int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_t conn,void *arg,int error)
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
 char				protochain[256];
 char				namestr[256];
-int					confidence,ipproto;
 int					appid,value,previous;
-int					idx;
+int					confidence,idx;
 
-	// if callback and object state are both classified no need to process
-	// but we will reset the timeout so it isn't prematurely purged
-	if ((state == NAVL_STATE_CLASSIFIED) && (session->GetState() == NAVL_STATE_CLASSIFIED))
-	{
-	session->ResetTimeout();
-	return(0);
-	}
+// if the session object passed is null we can't update
+// this should never happen but we check just in case
+if (session == NULL) return(0);
 
 	// keep track of errors returned by vineyard
 	if (error != 0) switch (error)
@@ -326,7 +195,6 @@ int					idx;
 // clear local variables that we fill in while building the protochain
 protochain[0] = 0;
 confidence = 0;
-ipproto = 0;
 idx = 0;
 
 // get the application and confidence
@@ -352,32 +220,15 @@ previous = INVALID_VALUE;
 
 	previous = value;
 
-	if (value == l_proto_tcp) ipproto = IPPROTO_TCP;
-	if (value == l_proto_udp) ipproto = IPPROTO_UDP;
-
 	// append the protocol name to the chain
 	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",g_protostats[value]->protocol_name);
 	g_protostats[value]->packet_count++;
 	}
 
-// only TCP or UDP packets will set this flag allowing
-// us to ignore all other unknown protocol values
-if (ipproto == 0) return(0);
-
-// if the session object passed is null we can't update
-// this should never happen but we check just in case
-if (session == NULL) return(0);
-
 // update the session object with the new information
 session->UpdateObject(g_protostats[appid]->protocol_name,protochain,confidence,state);
-LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 
-	// clean up terminated connections
-	if (state == NAVL_STATE_TERMINATED)
-	{
-	LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY EXPIRE %s\n",session->GetHashname());
-	session->ScheduleExpiration();
-	}
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 
 // continue tracking the flow
 return(0);
@@ -395,7 +246,7 @@ if (session == NULL) return;
 
 // we can't initialize our l_attr_xxx values during startup because the values
 // returned by vineyard are different for each thread so to work around this
-// we set them as invalid during startup and init them first time we are called
+// we set them as invalid during startup and init the first time we are called
 if (l_attr_facebook_app == INVALID_VALUE) l_attr_facebook_app = navl_attr_key_get(handle,"facebook.app");
 if (l_attr_tls_host == INVALID_VALUE) l_attr_tls_host = navl_attr_key_get(handle,"tls.host");
 
@@ -420,8 +271,9 @@ if (l_attr_tls_host == INVALID_VALUE) l_attr_tls_host = navl_attr_key_get(handle
 	}
 
 // update the session object with the data received
-LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY DETAIL %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 session->UpdateDetail(detail);
+
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY DETAIL %s\n",session->GetObjectString(namestr,sizeof(namestr)));
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
@@ -470,16 +322,6 @@ ret = navl_init(l_navl_handle);
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from navl_init()\n",ret);
-	return(1);
-	}
-
-// grab the index values for protocols we care about
-if ((l_proto_tcp = navl_proto_find_index(l_navl_handle,"TCP")) == -1) problem|=0x01;
-if ((l_proto_udp = navl_proto_find_index(l_navl_handle,"UDP")) == -1) problem|=0x02;
-
-	if (problem != 0)
-	{
-	sysmessage(LOG_ERR,"Error 0x%02X collecting protocol indexes\n",problem);
 	return(1);
 	}
 

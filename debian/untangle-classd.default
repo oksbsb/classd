@@ -31,14 +31,8 @@
 ## number of TCP and UDP sessions expected to be active at any given time
 #CLASSD_HASH_BUCKETS=99991
 
-## Maximum connection count value passed in the call to navl_open
-#CLASSD_MAX_FLOWS=32768
-
 ## Flag to enable IP fragment processing in the navl library
 #CLASSD_IP_DEFRAG=1
-
-## Sets the SO_RCVBUF size for the filter queue socket
-#CLASSD_SOCK_BUFFER=1048576
 
 ## Sets the timeout for TCP sessions
 #CLASSD_TCP_TIMEOUT=60
@@ -50,28 +44,9 @@
 ## before giving up.  Can be 1 thru 99 or 0 for unlimited
 #CLASSD_HTTP_LIMIT=0
 
-## Sets the purge delay for closed sessions
-#CLASSD_PURGE_DELAY=30
-
 ## Sets the port where classd listens for connections
 ## from classification clients
 #CLASSD_CLIENT_PORT=8123
-
-## Network filter queue the daemon should use
-#CLASSD_QUEUE_NUM=1967
-
-## Sets the value passed to nfq_set_queue_maxlen
-#CLASSD_QUEUE_MAXLEN=10240
-
-## Sets the size of the network packet buffer.  I would guess
-## this needs be large enough for the highest MTU which could
-## be greater than 1500 on a gigabit link with jumbo frames
-#CLASSD_QUEUE_BUFFER=32768
-
-## Enable to use a seperate thread and message queue to handle
-## classification of network packets.  Disable to have the
-## classify function called directly from the nfqueue handler.
-#CLASSD_PACKET_THREAD=1
 
 ## Maximum number of seconds a packet can wait in our classify
 ## queue before we consider it stale and throw it away

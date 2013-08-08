@@ -33,21 +33,14 @@ setrlimit(RLIMIT_CORE,&core);
 
 	for(x = 1;x < argc;x++)
 	{
-	if (strncasecmp(argv[x],"-B",2) == 0) g_bypass++;
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
-	if (strncasecmp(argv[x],"-IT",3) == 0) g_skiptcp++;
-	if (strncasecmp(argv[x],"-IU",3) == 0) g_skipudp++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
 		{
 		g_debug = atoi(&argv[x][2]);
 		if (g_debug == 0) g_debug = 0xFFFF;
 		}
-
-	// check for command line overrides for config file options
-	if (strncasecmp(argv[x],"-M0",3) == 0) cfg_packet_thread = 0;
-	if (strncasecmp(argv[x],"-M1",3) == 0) cfg_packet_thread = 1;
 	}
 
 // change directory to path for core dump files
@@ -101,52 +94,12 @@ getitimer(ITIMER_PROF,&g_itimer);
 sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd %d-Bit Version %s Build %s\n",(int)sizeof(void*)*8,VERSION,BUILDID);
 
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
-if (g_bypass != 0) sysmessage(LOG_NOTICE,"Classification bypass enabled via command line\n");
-
-if (cfg_packet_thread == 0) sysmessage(LOG_NOTICE,"Traffic processing message queue is disabled\n");
-else sysmessage(LOG_NOTICE,"Traffic processing message queue is active\n");
-
-if (g_skiptcp != 0) sysmessage(LOG_NOTICE,"Ignoring all TCP traffic\n");
-if (g_skipudp != 0) sysmessage(LOG_NOTICE,"Ignoring all UDP traffic\n");
 
 // create the main message queue
 g_messagequeue = new MessageQueue();
 
-// create our session and tracker hash tables
+// create our session table
 g_sessiontable = new HashTable(cfg_hash_buckets);
-g_trackertable = new HashTable(cfg_hash_buckets);
-
-// start the netqueue filter handler thread
-sem_init(&g_netfilter_sem,0,0);
-pthread_attr_init(&attr);
-pthread_attr_setstacksize(&attr,g_stacksize);
-ret = pthread_create(&g_netfilter_tid,&attr,netfilter_thread,NULL);
-pthread_attr_destroy(&attr);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
-	g_shutdown = 1;
-	}
-
-// wait for the thread to signal init complete
-sem_wait(&g_netfilter_sem);
-
-// start the conntrack handler thread
-sem_init(&g_conntrack_sem,0,0);
-pthread_attr_init(&attr);
-pthread_attr_setstacksize(&attr,g_stacksize);
-ret = pthread_create(&g_conntrack_tid,&attr,conntrack_thread,NULL);
-pthread_attr_destroy(&attr);
-
-	if (ret != 0)
-	{
-	sysmessage(LOG_ERR,"Error %d returned from pthread_create(netfilter)\n",ret);
-	g_shutdown = 1;
-	}
-
-// wait for the thread to signal init complete
-sem_wait(&g_conntrack_sem);
 
 // start the vineyard classification thread
 sem_init(&g_classify_sem,0,0);
@@ -196,12 +149,8 @@ currtime = lasttime = time(NULL);
 		if (currtime > (lasttime + 60))
 		{
 		lasttime = currtime;
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"%s\n","Beginning session and tracker table cleanup cycle");
 		ret = g_sessiontable->PurgeStaleObjects(currtime);
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from session table\n",ret);
-		ret = g_trackertable->PurgeStaleObjects(currtime);
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from tracker table\n",ret);
-
 		periodic_checkup();
 		}
 
@@ -218,28 +167,20 @@ g_shutdown = 1;
 // post a shutdown message to the main message queue
 g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 
-// tell the conntrack thread we're shutting down
-pthread_kill(g_conntrack_tid,SIGUSR1);
-
 // the five second alarm gives all threads time to shut down cleanly
 // if any get stuck the abort() in the signal handler should do the trick
 alarm(5);
 pthread_join(g_classify_tid,NULL);
-pthread_join(g_conntrack_tid,NULL);
-pthread_join(g_netfilter_tid,NULL);
 alarm(0);
 
 // clean up the thread semaphores
 sem_destroy(&g_classify_sem);
-sem_destroy(&g_conntrack_sem);
-sem_destroy(&g_netfilter_sem);
 
 // cleanup the network server
 delete(g_netserver);
 
 // cleanup all the global objects we created
 delete(g_sessiontable);
-delete(g_trackertable);
 delete(g_messagequeue);
 
 sysmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);
@@ -468,11 +409,7 @@ char *pad(char *target,u_int64_t value,int width)
 char	source[256];
 int		l,x,y;
 
-#if __WORDSIZE == 64
-sprintf(source,"%lu",value);
-#else
-sprintf(source,"%llu",value);
-#endif
+sprintf(source,"%"PRI64u,value);
 
 l = strlen(source);
 
@@ -549,17 +486,11 @@ cfg_hash_buckets = atoi(work);
 grab_config_item(filedata,"CLASSD_MEMORY_LIMIT",work,sizeof(work),"262144");
 cfg_mem_limit = atoi(work);
 
-grab_config_item(filedata,"CLASSD_MAX_FLOWS",work,sizeof(work),"32768");
-cfg_navl_flows = atoi(work);
-
 grab_config_item(filedata,"CLASSD_IP_DEFRAG",work,sizeof(work),"1");
 cfg_navl_defrag = atoi(work);
 
 grab_config_item(filedata,"CLASSD_LIBRARY_DEBUG",work,sizeof(work),"0");
 cfg_navl_debug = atoi(work);
-
-grab_config_item(filedata,"CLASSD_SOCKET_BUFFER",work,sizeof(work),"1048576");
-cfg_sock_buffer = atoi(work);
 
 grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"60");
 cfg_tcp_timeout = atoi(work);
@@ -570,29 +501,14 @@ cfg_udp_timeout = atoi(work);
 grab_config_item(filedata,"CLASSD_HTTP_LIMIT",work,sizeof(work),"0");
 cfg_http_limit = atoi(work);
 
-grab_config_item(filedata,"CLASSD_PURGE_DELAY",work,sizeof(work),"30");
-cfg_purge_delay = atoi(work);
-
 grab_config_item(filedata,"CLASSD_CLIENT_PORT",work,sizeof(work),"8123");
 cfg_client_port = atoi(work);
-
-grab_config_item(filedata,"CLASSD_QUEUE_NUM",work,sizeof(work),"1967");
-cfg_net_queue = atoi(work);
-
-grab_config_item(filedata,"CLASSD_QUEUE_MAXLEN",work,sizeof(work),"10240");
-cfg_net_maxlen = atoi(work);
-
-grab_config_item(filedata,"CLASSD_QUEUE_BUFFER",work,sizeof(work),"32768");
-cfg_net_buffer = atoi(work);
 
 grab_config_item(filedata,"CLASSD_PACKET_TIMEOUT",work,sizeof(work),"4");
 cfg_packet_timeout = atoi(work);
 
 grab_config_item(filedata,"CLASSD_PACKET_MAXIMUM",work,sizeof(work),"1000000");
 cfg_packet_maximum = atoi(work);
-
-grab_config_item(filedata,"CLASSD_PACKET_THREAD",work,sizeof(work),"1");
-cfg_packet_thread = atoi(work);
 
 for(x = 0;x < total;x++) free(filedata[x]);
 free(filedata);

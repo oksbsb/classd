@@ -35,9 +35,6 @@ reap_child()
         kill -$1 ${CLASSD_PID}
         wait ${CLASSD_PID}
         echo "[`date`] ClassD Stopped    (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
-
-        # remove iptables rules
-	/usr/share/untangle-classd/bin/update_rules
     fi
 
     exit 0
@@ -48,14 +45,6 @@ start_classd()
     $CLASSD_BIN -f $CLASSD_FLAGS &
     CLASSD_PID=$!
     echo "[`date`] Started ClassD    (monitor: $$) (classd: $CLASSD_PID)" | logger -t ${CLASSD_LOG}
-
-    # give classd time to open the queue so the update_rules succeeds
-    # without this update_rules doesn't see the open queue and refuses to add the rules
-    # XXX
-    sleep 1
-
-    # insert iptables rules
-    /usr/share/untangle-classd/bin/update_rules
 }
 
 trap reap_child_easy INT TERM USR1 USR2 QUIT
