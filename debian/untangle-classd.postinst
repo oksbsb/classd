@@ -25,4 +25,7 @@ fi
 # start the daemon
 /etc/init.d/untangle-classd start
 
+# remove old classd iptables file (obsolete)
+rm -f /etc/untangle-netd/iptables-rules.d/825-classd
+
 exit 0
