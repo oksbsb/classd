@@ -149,7 +149,6 @@ sem_post(&g_classify_sem);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify()\n",ret);
 			break;
 
-
 		case MSG_DEBUG:
 			vineyard_debug((char *)wagon->buffer);
 			break;

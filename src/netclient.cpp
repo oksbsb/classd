@@ -224,7 +224,6 @@ int		found = 0;
 	found++;
 	}
 
-
 	if (strcasecmp(querybuff,"-UPDATE") == 0)
 	{
 	sysmessage(LOG_NOTICE,"Update debug logging has been disabled\n");

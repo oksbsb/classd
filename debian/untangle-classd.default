@@ -34,11 +34,13 @@
 ## Flag to enable IP fragment processing in the navl library
 #CLASSD_IP_DEFRAG=1
 
-## Sets the timeout for TCP sessions
-#CLASSD_TCP_TIMEOUT=60
+## Sets the timeout for TCP sessions.  The default 2x value keeps us from
+## interfering but still doing cleanup if sessions get lost somehow.
+#CLASSD_TCP_TIMEOUT=7200
 
-## Sets the timeout for UDP sessions
-#CLASSD_UDP_TIMEOUT=60
+## Sets the timeout for UDP sessions.  The default 5x value keeps us from
+## interfering but still doing cleanup if sessions get lost somehow.
+#CLASSD_UDP_TIMEOUT=600
 
 ## Sets the number of HTTP request/response pairs to analyze
 ## before giving up.  Can be 1 thru 99 or 0 for unlimited

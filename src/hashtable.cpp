@@ -167,7 +167,7 @@ return(NULL);
 /*--------------------------------------------------------------------------*/
 int HashTable::PurgeStaleObjects(time_t aStamp)
 {
-HashObject	*prev,*curr,*next;
+HashObject	*work;
 int			removed;
 int			kill;
 int			x;
@@ -179,48 +179,25 @@ removed = 0;
 	// lock the bucket
 	pthread_mutex_lock(&control[x]);
 
-		// if bucket is empty just unlock and continue
-		if (table[x] == NULL)
+		// check every object in each active table
+		if (table[x] != NULL)
 		{
-		pthread_mutex_unlock(&control[x]);
-		continue;
-		}
-
-	// start with first item and a clear prev pointer
-	curr = table[x];
-	prev = NULL;
-
-		while (curr != NULL)
-		{
-		kill = 0;
-
-		// look for stale TCP objects
-		if ((curr->netprotocol == IPPROTO_TCP) && (aStamp > curr->timeout)) kill++;
-
-		// look for stale UDP objects
-		if ((curr->netprotocol == IPPROTO_UDP) && (aStamp > curr->timeout)) kill++;
-
-			// if not stale adjust working pointers and continue
-			if (kill == 0)
+			for(work = table[x];work != NULL;work = work->next)
 			{
-			prev = curr;
-			curr = curr->next;
-			continue;
+			kill = 0;
+
+			// look for stale TCP objects
+			if ((work->netprotocol == IPPROTO_TCP) && (aStamp > work->timeout)) kill++;
+
+			// look for stale UDP objects
+			if ((work->netprotocol == IPPROTO_UDP) && (aStamp > work->timeout)) kill++;
+
+			if (kill == 0) continue;
+
+			// if stale post a remove message to the classify thread
+			g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,work->netsession));
+			removed++;
 			}
-
-		// if item being deleted is first remove from beginning of list
-		if (curr == table[x]) table[x] = curr->next;
-
-		// otherwise pull out of the middle of the list
-		else if (prev != NULL) prev->next = curr->next;
-
-		// save pointer to next and delete
-		next = curr->next;
-		delete(curr);
-		removed++;
-
-		// adjust current to next in bucket
-		curr = next;
 		}
 
 	// unlock the bucket
@@ -254,7 +231,7 @@ aBytes+=(buckets * sizeof(pthread_mutex_t));
 	// lock the bucket
 	pthread_mutex_lock(&control[x]);
 
-		// count an add the size of every object
+		// count and add the size of every object in active tables
 		if (table[x] != NULL)
 		{
 			for(work = table[x];work != NULL;work = work->next)

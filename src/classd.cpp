@@ -199,7 +199,6 @@ void sighandler(int sigval)
 	switch(sigval)
 	{
 	case SIGALRM:
-		signal(sigval,sighandler);
 		abort();
 		break;
 
@@ -492,10 +491,10 @@ cfg_navl_defrag = atoi(work);
 grab_config_item(filedata,"CLASSD_LIBRARY_DEBUG",work,sizeof(work),"0");
 cfg_navl_debug = atoi(work);
 
-grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"60");
+grab_config_item(filedata,"CLASSD_TCP_TIMEOUT",work,sizeof(work),"7200");
 cfg_tcp_timeout = atoi(work);
 
-grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"60");
+grab_config_item(filedata,"CLASSD_UDP_TIMEOUT",work,sizeof(work),"600");
 cfg_udp_timeout = atoi(work);
 
 grab_config_item(filedata,"CLASSD_HTTP_LIMIT",work,sizeof(work),"0");
