@@ -141,8 +141,8 @@ if (strcasecmp(querybuff,"QUIT") == 0) 		{ return(0); }
 hashcode = 0;
 
 // client and server data will be passed to the classify message queue
-if (strncasecmp(querybuff,"CLIENT:",7) == 0) hashcode = HandleClient();
-if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleServer();
+if (strncasecmp(querybuff,"CLIENT:",7) == 0) hashcode = HandleChunk(MSG_CLIENT);
+if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleChunk(MSG_SERVER);
 
 // if we don't have a hashcode yet then this is probably a console query
 if (hashcode == 0) hashcode = ExtractNetworkSession(querybuff);
@@ -354,11 +354,12 @@ g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
 replyoff = sprintf(replybuff,"REMOVED: %"PRI64u"\r\n",hashcode);
 }
 /*--------------------------------------------------------------------------*/
-u_int64_t NetworkClient::HandleClient(void)
+u_int64_t NetworkClient::HandleChunk(u_int8_t argMessage)
 {
 u_int64_t	hashcode;
 char		*aa,*bb;
 long		length,ret;
+long		have,want;
 
 aa = strchr(querybuff,':');		// points to session id
 if (aa == NULL) return(0);
@@ -371,61 +372,54 @@ if (bb == NULL) return(0);
 hashcode = ExtractNetworkSession(aa);
 length = strtol(bb,NULL,10);
 
-// read data from the client into the reply buffer since it is larger
-ret = recv(netsock,replybuff,length,0);
+// let the client know we are ready for the block of data
+replyoff = sprintf(replybuff,"READY: %"PRI64u"\r\n",hashcode);
+TransmitReply();
 
-	// TODO - maybe we need to try multiple times
-	if (ret != length)
+// prepare to receive the chunk of data
+want = length;
+have = 0;
+replyoff = 0;
+
+	// we read the chunk data into the reply buffer since it is larger
+	for(;;)
 	{
-	sysmessage(LOG_WARNING,"Only received %d of %d client bytes from %s\n",ret,length,netname);
+	want = (length - have);
+	ret = recv(netsock,&replybuff[replyoff],want,0);
+
+		if (ret == 0)
+		{
+		sysmessage(LOG_WARNING,"Unexpected netclient disconnect reading from %s\n",netname);
+		return(hashcode);
+		}
+
+		if (ret < 0)
+		{
+		sysmessage(LOG_WARNING,"Error %d reading from netclient %s\n",ret,netname);
+		return(hashcode);
+		}
+
+	// if we have the full chunk of data we can return now
+	have = (have + ret);
+	if (have == length) break;
+
+	sysmessage(LOG_NOTICE,"Only received %d of %d chunk bytes from %s\n",ret,length,netname);
 	}
 
 // push the data into the classify queue
-g_messagequeue->PushMessage(new MessageWagon(MSG_CLIENT,hashcode,replybuff,ret));
+g_messagequeue->PushMessage(new MessageWagon(argMessage,hashcode,replybuff,ret));
 
 return(hashcode);
 }
 /*--------------------------------------------------------------------------*/
-u_int64_t NetworkClient::HandleServer(void)
-{
-u_int64_t			hashcode;
-char				*aa,*bb;
-int					length,ret;
-
-aa = strchr(querybuff,':');		// points to session id
-if (aa == NULL) return(0);
-*aa++=0;
-
-bb = strchr(aa,':');			// points to data length
-if (bb == NULL) return(0);
-*bb++=0;
-
-hashcode = ExtractNetworkSession(aa);
-length = strtol(bb,NULL,10);
-
-// read data from the client into the reply buffer since it is larger
-ret = recv(netsock,replybuff,length,0);
-
-	// TODO - maybe we need to try multiple times
-	if (ret != length)
-	{
-	sysmessage(LOG_WARNING,"Only received %d of %d server bytes from %s\n",ret,length,netname);
-	}
-
-// push the data into the classify queue
-g_messagequeue->PushMessage(new MessageWagon(MSG_SERVER,hashcode,replybuff,ret));
-
-return(hashcode);
-}
-/*--------------------------------------------------------------------------*/
-u_int64_t NetworkClient::ExtractNetworkSession(const char *buffer)
+u_int64_t NetworkClient::ExtractNetworkSession(const char *argBuffer)
 {
 u_int64_t		hashcode;
 
 #if __WORDSIZE == 64
-hashcode = strtoul(buffer,NULL,10);
+hashcode = strtoul(argBuffer,NULL,10);
 #else
-hashcode = strtoull(buffer,NULL,10);
+hashcode = strtoull(argBuffer,NULL,10);
 #endif
 
 return(hashcode);

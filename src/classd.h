@@ -104,9 +104,8 @@ private:
 	void HandleCreate(void);
 	void HandleRemove(void);
 
-	u_int64_t HandleClient(void);
-	u_int64_t HandleServer(void);
-	u_int64_t ExtractNetworkSession(const char *buffer);
+	u_int64_t HandleChunk(u_int8_t argMessage);
+	u_int64_t ExtractNetworkSession(const char *argBuffer);
 
 	int ProcessRequest(void);
 	int TransmitReply(void);
