@@ -323,12 +323,12 @@ ret = navl_init(l_navl_handle);
 	return(1);
 	}
 
-if ((navl_attr_callback_set(l_navl_handle,"facebook.app",attr_callback) == -1)) problem|=0x01;
-if ((navl_attr_callback_set(l_navl_handle,"tls.host",attr_callback) == -1)) problem|=0x02;
+if ((navl_attr_callback_set(l_navl_handle,"facebook.app",attr_callback) != 0)) problem|=0x01;
+if ((navl_attr_callback_set(l_navl_handle,"tls.hostname",attr_callback) != 0)) problem|=0x02;
 
 	if (problem != 0)
 	{
-	sysmessage(LOG_ERR,"Error 0x%02X enabling metadata callbacks\n");
+	sysmessage(LOG_ERR,"Error 0x%02X enabling metadata callbacks\n",problem);
 	return(1);
 	}
 

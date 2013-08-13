@@ -7,6 +7,22 @@ extern "C" {
 
 #include <stdint.h>
 
+
+#ifdef _WINDOWS
+#ifdef NAVL_LIBRARY
+#define NAVL_API __declspec(dllexport)
+#else
+#define NAVL_API __declspec(dllimport)
+#endif
+#else
+#ifdef NAVL_LIBRARY
+#define NAVL_API __attribute__ ((visibility("default")))
+#else
+#define NAVL_API
+#endif
+#endif
+
+
 /*******************************************************************************
  * Types and constants
  ******************************************************************************/
@@ -77,7 +93,7 @@ typedef uint32_t navl_conn_flags_t;
  * Opens a new navl instance and registers the available classification plugins.
  * On success, a handle for the instance is returned. On error, -1 is returned.
  */
-navl_handle_t navl_open(const char *plugins);
+NAVL_API navl_handle_t navl_open(const char *plugins);
 
 /*
  * navl_init()
@@ -85,7 +101,7 @@ navl_handle_t navl_open(const char *plugins);
  * Initializes a thread for the handle.
  * On success, 0 is returned. On error, -1 is returned.
  */
-int navl_init(navl_handle_t handle);
+NAVL_API int navl_init(navl_handle_t handle);
 
 /*
  * navl_fini()
@@ -93,7 +109,7 @@ int navl_init(navl_handle_t handle);
  * Finalize a thread for the handle.
  * On success, 0 is returned. On error, -1 is returned.
  */
-int navl_fini(navl_handle_t handle);
+NAVL_API int navl_fini(navl_handle_t handle);
 
 /*
  * navl_close()
@@ -101,7 +117,7 @@ int navl_fini(navl_handle_t handle);
  * Closes the navl instance referenced by @handle.
  * On success, 0 is returned. On error, -1 is returned. 
  */
-int navl_close(navl_handle_t handle);
+NAVL_API int navl_close(navl_handle_t handle);
 
 
 /*******************************************************************************
@@ -115,7 +131,7 @@ int navl_close(navl_handle_t handle);
  * On success, 0 is returned and the best classification result is available in
  * @index. On error, -1 is returned.
  */
-int navl_classify_simple(navl_handle_t handle, const void *data, unsigned short len, int *index);
+NAVL_API int navl_classify_simple(navl_handle_t handle, const void *data, unsigned short len, int *index);
 
 /* 
  * navl_classify()
@@ -134,7 +150,7 @@ int navl_classify_simple(navl_handle_t handle, const void *data, unsigned short 
 typedef int (*navl_classify_callback_t)(navl_handle_t handle, navl_result_t result, navl_state_t state
 	, navl_conn_t conn, void *arg, int error);
 
-int navl_classify(navl_handle_t handle, navl_encap_t encap, const void *data, unsigned short len
+NAVL_API int navl_classify(navl_handle_t handle, navl_encap_t encap, const void *data, unsigned short len
 	, navl_conn_t conn, int direction, navl_classify_callback_t, void *arg);
 
 
@@ -154,7 +170,7 @@ int navl_classify(navl_handle_t handle, navl_encap_t encap, const void *data, un
  * is not tracking the connection and any result data applies only to the current
  * packet under inspection.
  */
-navl_conn_id_t navl_conn_id_get(navl_handle_t handle, navl_conn_t conn);
+NAVL_API navl_conn_id_t navl_conn_id_get(navl_handle_t handle, navl_conn_t conn);
 
 /*
  * navl_endpoint_get()
@@ -165,7 +181,7 @@ navl_conn_id_t navl_conn_id_get(navl_handle_t handle, navl_conn_t conn);
  * On success, 0 is returned and @src and @dst are filled in accordingly. 
  * On error, -1 is returned.
  */
-int navl_endpoint_get(navl_handle_t handle, navl_conn_t conn, navl_host_t *src, navl_host_t *dst);
+NAVL_API int navl_endpoint_get(navl_handle_t handle, navl_conn_t conn, navl_host_t *src, navl_host_t *dst);
 
 /*
  * Callback signature for navl_futureflow_callback_set()
@@ -186,7 +202,7 @@ typedef void (*navl_futureflow_callback_t)(navl_handle_t, navl_host_t *src, navl
  *
  * On sucess, 0 is returned. On error, -1 is returned.
  */
-int navl_futureflow_callback_set(navl_handle_t, navl_futureflow_callback_t);
+NAVL_API int navl_futureflow_callback_set(navl_handle_t, navl_futureflow_callback_t);
 
 /*
  * navl_app_get()
@@ -194,70 +210,70 @@ int navl_futureflow_callback_set(navl_handle_t, navl_futureflow_callback_t);
  * On success, returns the application protocol index for the result and sets a
  * confidence value in @confidence. On error, -1 is returned.
  */
-int navl_app_get(navl_handle_t handle, navl_result_t result, int *confidence);
+NAVL_API int navl_app_get(navl_handle_t handle, navl_result_t result, int *confidence);
 
 /*
  * navl_proto_first()
  *
  * Returns the first iterator in the result.
  */
-navl_iterator_t navl_proto_first(navl_handle_t handle, navl_result_t result);
+NAVL_API navl_iterator_t navl_proto_first(navl_handle_t handle, navl_result_t result);
 
 /* 
  * navl_proto_valid()
  *
  * Returns 1 if the iterator is valid.
  */
-int navl_proto_valid(navl_handle_t handle, navl_iterator_t it);
+NAVL_API int navl_proto_valid(navl_handle_t handle, navl_iterator_t it);
 
 /*
  * navl_proto_next()
  *
  * Returns the next iterator.
  */
-navl_iterator_t navl_proto_next(navl_handle_t handle, navl_iterator_t it);
+NAVL_API navl_iterator_t navl_proto_next(navl_handle_t handle, navl_iterator_t it);
 
 /*
  * navl_proto_prev()
  *
  * Returns the prev iterator.
  */
-navl_iterator_t navl_proto_prev(navl_handle_t handle, navl_iterator_t it);
+NAVL_API navl_iterator_t navl_proto_prev(navl_handle_t handle, navl_iterator_t it);
 
 /*
  * navl_proto_top()
  *
  * Returns an iterator pointing to the top most protocol.
  */
-navl_iterator_t navl_proto_top(navl_handle_t handle, navl_result_t result);
+NAVL_API navl_iterator_t navl_proto_top(navl_handle_t handle, navl_result_t result);
 
 /*
  * navl_proto_find()
  *
  * Returns an iterator pointing to the protocol @index.
  */
-navl_iterator_t navl_proto_find(navl_handle_t handle, navl_result_t result, int index);
+NAVL_API navl_iterator_t navl_proto_find(navl_handle_t handle, navl_result_t result, int index);
 
 /*
  * navl_proto_get_index()
  *
  * Extracts the protocol from the iterator.
  */
-int navl_proto_get_index(navl_handle_t handle, navl_iterator_t it);
+NAVL_API int navl_proto_get_index(navl_handle_t handle, navl_iterator_t it);
 
 /*
  * navl_proto_find_index()
  *
  * Extracts the protocol from the short name.
  */
-int navl_proto_find_index(navl_handle_t handle, const char *name);
+NAVL_API int navl_proto_find_index(navl_handle_t handle, const char *name);
 
 /*
  * navl_proto_get_name()
  *
  * Returns a pointer to the proto name/
  */
-const char *navl_proto_get_name(navl_handle_t handle, int index, char *buf, unsigned int size);
+NAVL_API const char *navl_proto_get_name(navl_handle_t handle, int index, char *buf, unsigned int size);
 
 
 /*******************************************************************************
@@ -271,7 +287,7 @@ const char *navl_proto_get_name(navl_handle_t handle, int index, char *buf, unsi
  *
  * On success, return 0. On error, returns -1.
  */
-int navl_conn_status_flags_get(navl_handle_t handle, navl_conn_t conn, navl_conn_flags_t *flags);
+NAVL_API int navl_conn_status_flags_get(navl_handle_t handle, navl_conn_t conn, navl_conn_flags_t *flags);
 
 /*
  * navl_conn_policy_flags_disable()
@@ -280,7 +296,7 @@ int navl_conn_status_flags_get(navl_handle_t handle, navl_conn_t conn, navl_conn
  *
  * On success, return 0, On error, return -1.
  */
-int navl_conn_policy_flags_disable(navl_handle_t handle, navl_conn_t conn, navl_conn_flags_t flags);
+NAVL_API int navl_conn_policy_flags_disable(navl_handle_t handle, navl_conn_t conn, navl_conn_flags_t flags);
 
 
 /*******************************************************************************
@@ -301,7 +317,7 @@ int navl_conn_policy_flags_disable(navl_handle_t handle, navl_conn_t conn, navl_
  * with a call to navl_conn_destroy(). This ensure navl can release all associated 
  * resources.
  */
-int navl_conn_create(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, navl_conn_t *conn);
+NAVL_API int navl_conn_create(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, navl_conn_t *conn);
 
 /*
  * navl_conn_destroy()
@@ -310,7 +326,7 @@ int navl_conn_create(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhos
  *
  * On success, 0 is returned. On error, -1 is returned. 
  */
-int navl_conn_destroy(navl_handle_t handle, navl_conn_t conn);
+NAVL_API int navl_conn_destroy(navl_handle_t handle, navl_conn_t conn);
 
 /*******************************************************************************
  * Protocol/Index Management
@@ -321,7 +337,7 @@ int navl_conn_destroy(navl_handle_t handle, navl_conn_t conn);
  *
  * Returns the max protocol index.
  */
-int navl_proto_max_index(navl_handle_t handle);
+NAVL_API int navl_proto_max_index(navl_handle_t handle);
 
 /*
  * navl_proto_set_index()
@@ -330,7 +346,7 @@ int navl_proto_max_index(navl_handle_t handle);
  *
  * On success, returns 0. On error, returns -1.
  */
-int navl_proto_set_index(navl_handle_t handle, const char *name, int index);
+NAVL_API int navl_proto_set_index(navl_handle_t handle, const char *name, int index);
 
 
 /*******************************************************************************
@@ -346,14 +362,14 @@ typedef void (*navl_attr_callback_t)(navl_handle_t, navl_conn_t conn, int attr_t
  *
  * Returns 0 on success or -1 if the attribute was not found.
  */
-int navl_attr_callback_set(navl_handle_t handle, const char *attr, navl_attr_callback_t callback);
+NAVL_API int navl_attr_callback_set(navl_handle_t handle, const char *attr, navl_attr_callback_t callback);
 
 /*
  * navl_attr_key_get()
  *
  * Returns the attribute key on success or -1 on if the attribute was not found. 
  */
-int navl_attr_key_get(navl_handle_t handle, const char *attr);
+NAVL_API int navl_attr_key_get(navl_handle_t handle, const char *attr);
 
 
 /*******************************************************************************
@@ -367,7 +383,7 @@ int navl_attr_key_get(navl_handle_t handle, const char *attr);
  *
  * On success, returns 0. On error, returns -1.
  */
-int navl_config_set(navl_handle_t handle, const char *key, const char *val);
+NAVL_API int navl_config_set(navl_handle_t handle, const char *key, const char *val);
 
 /*
  * navl_config_get()
@@ -376,7 +392,7 @@ int navl_config_set(navl_handle_t handle, const char *key, const char *val);
  *
  * On success, returns 0. On error, returns -1.
  */
-int navl_config_get(navl_handle_t handle, const char *key, char *val, int size);
+NAVL_API int navl_config_get(navl_handle_t handle, const char *key, char *val, int size);
 
 /*
  * navl_config_dump()
@@ -387,7 +403,7 @@ int navl_config_get(navl_handle_t handle, const char *key, char *val, int size);
  * Note in order to use this you must bind navl_diag_printf to a valid callback
  * function.
  */
-int navl_config_dump(navl_handle_t handle);
+NAVL_API int navl_config_dump(navl_handle_t handle);
 
 
 /*******************************************************************************
@@ -404,14 +420,14 @@ int navl_config_dump(navl_handle_t handle);
  *
  * 1 = manual, navl will use the time from the value set by navl_clock_set().
  */
-void navl_clock_set_mode(navl_handle_t handle, int value);
+NAVL_API void navl_clock_set_mode(navl_handle_t handle, int value);
 
 /*
  * navl_clock_set()
  *
  * Manually set the wallclock time.
  */
-void navl_clock_set(navl_handle_t handle, int64_t msecs);
+NAVL_API void navl_clock_set(navl_handle_t handle, int64_t msecs);
 
 
 /*******************************************************************************
@@ -429,7 +445,7 @@ void navl_clock_set(navl_handle_t handle, int64_t msecs);
  * Note: 
  * If the requested @index is already in use, this will return an error.
  */
-int navl_proto_add(navl_handle_t handle, const char *protoname, int index);
+NAVL_API int navl_proto_add(navl_handle_t handle, const char *protoname, int index);
 
 /*
  * navl_proto_remove()
@@ -438,7 +454,7 @@ int navl_proto_add(navl_handle_t handle, const char *protoname, int index);
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_proto_remove(navl_handle_t handle, const char *protoname);
+NAVL_API int navl_proto_remove(navl_handle_t handle, const char *protoname);
 
 /*
  * navl_rule_add()
@@ -447,7 +463,7 @@ int navl_proto_remove(navl_handle_t handle, const char *protoname);
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_rule_add(navl_handle_t handle, int index, const char *module, const char *rule);
+NAVL_API int navl_rule_add(navl_handle_t handle, int index, const char *module, const char *rule);
 
 /*
  * navl_rule_remove()
@@ -456,7 +472,7 @@ int navl_rule_add(navl_handle_t handle, int index, const char *module, const cha
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_rule_remove(navl_handle_t handle, int index, const char *module, const char *rule);
+NAVL_API int navl_rule_remove(navl_handle_t handle, int index, const char *module, const char *rule);
 
 
 /*******************************************************************************
@@ -468,7 +484,7 @@ int navl_rule_remove(navl_handle_t handle, int index, const char *module, const 
  *
  * Returns the current value of the thread/instance-specific error.
  */
-int navl_error_get(navl_handle_t handle);
+NAVL_API int navl_error_get(navl_handle_t handle);
 
 /*
  * navl_idle()
@@ -477,7 +493,7 @@ int navl_error_get(navl_handle_t handle);
  * least once per second if thread is not calling navl_classify().
  *
  */
-void navl_idle(navl_handle_t handle);
+NAVL_API void navl_idle(navl_handle_t handle);
 
 /*
  * navl_handle_get()
@@ -487,7 +503,7 @@ void navl_idle(navl_handle_t handle);
  *
  * Returns 0 on a thread for which navl_init has not been called.
  */
-navl_handle_t navl_handle_get(void);
+NAVL_API navl_handle_t navl_handle_get(void);
 
 /*
  * navl_diag()
@@ -496,7 +512,7 @@ navl_handle_t navl_handle_get(void);
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_diag(navl_handle_t handle, const char *module, const char *args);
+NAVL_API int navl_diag(navl_handle_t handle, const char *module, const char *args);
 
 /*
  * navl_memory_tag_get()
@@ -505,14 +521,14 @@ int navl_diag(navl_handle_t handle, const char *module, const char *args);
  * bits contains a context (ctx) index/tag and the upper 16 bit contain an
  * object (obj) index/tag.
  */ 
-int navl_memory_tag_get(navl_handle_t);
+NAVL_API int navl_memory_tag_get(navl_handle_t);
 
 /*
  * navl_memory_ctx_num()
  *
  * Returns the number of memory context identifiers.
  */
-int navl_memory_ctx_num(navl_handle_t);
+NAVL_API int navl_memory_ctx_num(navl_handle_t);
 
 /*
  * navl_memory_ctx_name()
@@ -522,14 +538,14 @@ int navl_memory_ctx_num(navl_handle_t);
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_memory_ctx_name(navl_handle_t, int, char *, int);
+NAVL_API int navl_memory_ctx_name(navl_handle_t, int, char *, int);
 
 /*
  * navl_memory_obj_num()
  *
  * Returns the number of memory object identifiers.
  */
-int navl_memory_obj_num(navl_handle_t);
+NAVL_API int navl_memory_obj_num(navl_handle_t);
 
 /*
  * navl_memory_obj_name()
@@ -539,7 +555,7 @@ int navl_memory_obj_num(navl_handle_t);
  *
  * On success, 0 is returned. On error, returns -1.
  */
-int navl_memory_obj_name(navl_handle_t, int, char *, int);
+NAVL_API int navl_memory_obj_name(navl_handle_t, int, char *, int);
 
 
 /*******************************************************************************
@@ -586,62 +602,62 @@ struct navl_tm
 };
 
 /* memory allocation */
-extern void *(*navl_malloc_local)(size_t size);
-extern void (*navl_free_local)(void *ptr);
-extern void *(*navl_malloc_shared)(size_t size);
-extern void (*navl_free_shared)(void *ptr);
+NAVL_API extern void *(*navl_malloc_local)(size_t size);
+NAVL_API extern void (*navl_free_local)(void *ptr);
+NAVL_API extern void *(*navl_malloc_shared)(size_t size);
+NAVL_API extern void (*navl_free_shared)(void *ptr);
 
 /* ctype */
-extern int (*navl_islower)(int c);
-extern int (*navl_isupper)(int c);
-extern int (*navl_tolower)(int c);
-extern int (*navl_toupper)(int c);
-extern int (*navl_isalnum)(int c);
-extern int (*navl_isspace)(int c);
-extern int (*navl_isdigit)(int c);
+NAVL_API extern int (*navl_islower)(int c);
+NAVL_API extern int (*navl_isupper)(int c);
+NAVL_API extern int (*navl_tolower)(int c);
+NAVL_API extern int (*navl_toupper)(int c);
+NAVL_API extern int (*navl_isalnum)(int c);
+NAVL_API extern int (*navl_isspace)(int c);
+NAVL_API extern int (*navl_isdigit)(int c);
 
 /* string functions */
-extern int (*navl_atoi)(const char *nptr);
-extern void *(*navl_memcpy)(void *dest, const void *src, size_t n);
-extern int (*navl_memcmp)(const void *s1, const void *s2, size_t n);
-extern void *(*navl_memset)(void *s, int c, size_t n);
-extern int (*navl_strcasecmp)(const char *s1, const char *s2);
-extern const char *(*navl_strchr)(const char *s, int c);
-extern const char *(*navl_strrchr)(const char *s, int c);
-extern int (*navl_strcmp)(const char *s1, const char *s2);
-extern int (*navl_strncmp)(const char *s1, const char *s2, size_t n);
-extern char *(*navl_strcpy)(char *dest, const char *src);
-extern char *(*navl_strncpy)(char *dest, const char *src, size_t n);
-extern char *(*navl_strerror)(int errnum);
-extern size_t (*navl_strftime)(char *s, size_t max, const char *format, const struct navl_tm *tm);
-extern size_t (*navl_strlen)(const char *s);
-extern const char *(*navl_strpbrk)(const char *s, const char *accept);
-extern const char *(*navl_strstr)(const char *haystack, const char *needle);
-extern long int (*navl_strtol)(const char *nptr, char **endptr, int base);
+NAVL_API extern int (*navl_atoi)(const char *nptr);
+NAVL_API extern void *(*navl_memcpy)(void *dest, const void *src, size_t n);
+NAVL_API extern int (*navl_memcmp)(const void *s1, const void *s2, size_t n);
+NAVL_API extern void *(*navl_memset)(void *s, int c, size_t n);
+NAVL_API extern int (*navl_strcasecmp)(const char *s1, const char *s2);
+NAVL_API extern const char *(*navl_strchr)(const char *s, int c);
+NAVL_API extern const char *(*navl_strrchr)(const char *s, int c);
+NAVL_API extern int (*navl_strcmp)(const char *s1, const char *s2);
+NAVL_API extern int (*navl_strncmp)(const char *s1, const char *s2, size_t n);
+NAVL_API extern char *(*navl_strcpy)(char *dest, const char *src);
+NAVL_API extern char *(*navl_strncpy)(char *dest, const char *src, size_t n);
+NAVL_API extern char *(*navl_strerror)(int errnum);
+NAVL_API extern size_t (*navl_strftime)(char *s, size_t max, const char *format, const struct navl_tm *tm);
+NAVL_API extern size_t (*navl_strlen)(const char *s);
+NAVL_API extern const char *(*navl_strpbrk)(const char *s, const char *accept);
+NAVL_API extern const char *(*navl_strstr)(const char *haystack, const char *needle);
+NAVL_API extern long int (*navl_strtol)(const char *nptr, char **endptr, int base);
 
 /* input/output */
-extern int (*navl_printf)(const char *format, ...);
-extern int (*navl_sprintf)(char *str, const char *format, ...);
-extern int (*navl_snprintf)(char *str, size_t size, const char *format, ...);
-extern int (*navl_sscanf)(const char *str, const char *format, ...);
-extern int (*navl_putchar)(int c);
-extern int (*navl_puts)(const char *s);
-extern int (*navl_diag_printf)(const char *format, ...);
+NAVL_API extern int (*navl_printf)(const char *format, ...);
+NAVL_API extern int (*navl_sprintf)(char *str, const char *format, ...);
+NAVL_API extern int (*navl_snprintf)(char *str, size_t size, const char *format, ...);
+NAVL_API extern int (*navl_sscanf)(const char *str, const char *format, ...);
+NAVL_API extern int (*navl_putchar)(int c);
+NAVL_API extern int (*navl_puts)(const char *s);
+NAVL_API extern int (*navl_diag_printf)(const char *format, ...);
 
 /* time */
-extern int (*navl_gettimeofday)(struct navl_timeval *tv, void *tz);
-extern navl_time_t (*navl_mktime)(struct navl_tm *tm);
+NAVL_API extern int (*navl_gettimeofday)(struct navl_timeval *tv, void *tz);
+NAVL_API extern navl_time_t (*navl_mktime)(struct navl_tm *tm);
 
 /* math */
-extern double (*navl_log)(double x);
-extern double (*navl_fabs)(double x);
+NAVL_API extern double (*navl_log)(double x);
+NAVL_API extern double (*navl_fabs)(double x);
 
 /* system */
-extern void (*navl_abort)(void);
-extern unsigned long (*navl_get_thread_id)(void);
+NAVL_API extern void (*navl_abort)(void);
+NAVL_API extern unsigned long (*navl_get_thread_id)(void);
 
 /* navl specific */
-extern int (*navl_log_message)(const char *level, const char *func, const char *format, ... );
+NAVL_API extern int (*navl_log_message)(const char *level, const char *func, const char *format, ... );
 
 #endif /* NAVL_LIBRARY */
 
