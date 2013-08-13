@@ -67,7 +67,7 @@ sem_post(&g_classify_sem);
 			break;
 
 		case MSG_CREATE:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CREATE %llu\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CREATE %"PRI64u"\n",wagon->index);
 
 			// session object should have been created by the netclient thread
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -81,11 +81,11 @@ sem_post(&g_classify_sem);
 
 			// create the vineyard connection state object
 			ret = navl_conn_create(l_navl_handle,&session->clientinfo,&session->serverinfo,session->GetNetProto(),&session->vinestat);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create()\n",ret);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create(%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_REMOVE:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION REMOVE %llu\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION REMOVE %"PRI64u"\n",wagon->index);
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -99,14 +99,14 @@ sem_post(&g_classify_sem);
 
 			// destroy the vineyard connection state object
 			ret = navl_conn_destroy(l_navl_handle,session->vinestat);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy()\n",ret);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy(%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
 
 			// delete the session object from the hash table
 			g_sessiontable->DeleteObject(session);
 			break;
 
 		case MSG_CLIENT:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %llu\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %"PRI64u"\n",wagon->index);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -124,11 +124,11 @@ sem_post(&g_classify_sem);
 
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,0,navl_callback,session);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify()\n",ret);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(CLIENT:%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_SERVER:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %llu\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %"PRI64u"\n",wagon->index);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -146,7 +146,7 @@ sem_post(&g_classify_sem);
 
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,1,navl_callback,session);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify()\n",ret);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_DEBUG:
@@ -198,7 +198,6 @@ idx = 0;
 
 // get the application and confidence
 appid = navl_app_get(handle,result,&confidence);
-
 previous = INVALID_VALUE;
 
 	// build the protochain grabbing extra info for certain protocols

@@ -245,8 +245,8 @@ private:
 
 	int GetObjectSize(void);
 
-	short					confidence;
 	short					state;
+	short					confidence;
 	char					*application;
 	char					*protochain;
 	char					*detail;

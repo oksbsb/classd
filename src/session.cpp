@@ -12,13 +12,13 @@ SessionObject::SessionObject(u_int64_t aSession,
 	navl_host_t aClient,
 	navl_host_t aServer) : HashObject(aSession,aProtocol)
 {
+state = 0;
+confidence = 0;
 application = NULL;
 protochain = NULL;
 detail = NULL;
 
 vinestat = NULL;
-confidence = 0;
-state = 0;
 
 memcpy(&clientinfo,&aClient,sizeof(clientinfo));
 memcpy(&serverinfo,&aServer,sizeof(serverinfo));
