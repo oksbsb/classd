@@ -17,7 +17,7 @@ next = NULL;
 if (netprotocol == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
 if (netprotocol == IPPROTO_UDP) timeout+=cfg_udp_timeout;
 
-snprintf(netstring,sizeof(netstring),"%"PRI64u,netsession);
+snprintf(netstring,sizeof(netstring),"%"PRIu64,netsession);
 }
 /*--------------------------------------------------------------------------*/
 HashObject::~HashObject(void)

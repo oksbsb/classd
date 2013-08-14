@@ -86,7 +86,7 @@ if ((crloc == NULL) && (lfloc == NULL)) return(1);
 if (crloc != NULL) crloc[0] = 0;
 if (lfloc != NULL) lfloc[0] = 0;
 
-LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT COMMAND: %s --> %s\n",netname,querybuff);
+LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT COMMAND: %s = %s\n",netname,querybuff);
 
 // handle the request
 ret = ProcessRequest();
@@ -113,7 +113,8 @@ u_int64_t			hashcode;
 // first check for all our special queries
 if (strcasecmp(querybuff,"CONFIG") == 0)	{ BuildConfiguration(); return(1); }
 if (strcasecmp(querybuff,"DEBUG") == 0)		{ BuildDebugInfo(); return(1); }
-if (strcasecmp(querybuff,"PROTO") == 0)		{ BuildProtoList(); return(1); }
+if (strcasecmp(querybuff,"PROTO") == 0)		{ BuildProtoList(1); return(1); }
+if (strcasecmp(querybuff,"USED") == 0)		{ BuildProtoList(0); return(1); }
 if (strcasecmp(querybuff,"HELP") == 0)		{ BuildHelpPage(); return(1); }
 if (strcasecmp(querybuff,"DUMP") == 0)		{ DumpEverything(); return(1); }
 if (strcasecmp(querybuff,"EXIT") == 0)		{ return(0); }
@@ -287,27 +288,51 @@ u_int8_t			protocol;
 // first we extract the connection details from the message
 
 aa = strchr(querybuff,':');		// points to session id
-if (aa == NULL) return;
+	if (aa == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing session in CREATE command\n");
+	return;
+	}
 *aa++=0;
 
 bb = strchr(aa,':');			// points to protocol
-if (bb == NULL) return;
+	if (bb == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing protocol in CREATE command\n");
+	return;
+	}
 *bb++=0;
 
 cc = strchr(bb,':');			// points to client address
-if (cc == NULL) return;
+	if (cc == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing client_address in CREATE command\n");
+	return;
+	}
 *cc++=0;
 
 dd = strchr(cc,':');			// points to client port
-if (dd == NULL) return;
+	if (dd == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing client_port in CREATE command\n");
+	return;
+	}
 *dd++=0;
 
 ee = strchr(dd,':');			// points to server address
-if (ee == NULL) return;
+	if (ee == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing server_address in CREATE command\n");
+	return;
+	}
 *ee++=0;
 
 ff = strchr(ee,':');			// points to server port
-if (ff == NULL) return;
+	if (ff == NULL)
+	{
+	sysmessage(LOG_WARNING,"Missing server_port in CREATE command\n");
+	return;
+	}
 *ff++=0;
 
 // get the session id value and set the protocol
@@ -316,25 +341,35 @@ protocol = 0;
 if (strcmp(bb,"TCP") == 0) protocol = IPPROTO_TCP;
 if (strcmp(bb,"UDP") == 0) protocol = IPPROTO_UDP;
 
+	if (protocol == 0)
+	{
+	sysmessage(LOG_WARNING,"Invalid protocol in CREATE command\n");
+	return;
+	}
+
+// clean the client and server host objects
+memset(&client,0,sizeof(client));
+memset(&server,0,sizeof(server));
+
 // fill the client structure
 client.family = NAVL_AF_INET;
 inet_aton(cc,(in_addr *)&client.in4_addr);
-client.port = strtol(dd,NULL,10);
+client.port = htons(strtol(dd,NULL,10));
 
 // fill the server structure
 server.family = NAVL_AF_INET;
 inet_aton(ee,(in_addr *)&server.in4_addr);
-server.port = strtol(ff,NULL,10);
+server.port = htons(strtol(ff,NULL,10));
 
 // insert the new session object in the hashtable
-session = new SessionObject(hashcode,protocol,client,server);
+session = new SessionObject(hashcode,protocol,&client,&server);
 g_sessiontable->InsertObject(session);
 
 // post the create message to the classify thread
 g_messagequeue->PushMessage(new MessageWagon(MSG_CREATE,hashcode));
 
 // have to return something even though the node currently does not use it
-replyoff = sprintf(replybuff,"CREATED: %"PRI64u"\r\n",hashcode);
+replyoff = sprintf(replybuff,"CREATED: %" PRIu64 "\r\n",hashcode);
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::HandleRemove(void)
@@ -351,7 +386,7 @@ hashcode = ExtractNetworkSession(aa);
 g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
 
 // have to return something even though the node currently does not use it
-replyoff = sprintf(replybuff,"REMOVED: %"PRI64u"\r\n",hashcode);
+replyoff = sprintf(replybuff,"REMOVED: %" PRIu64 "\r\n",hashcode);
 }
 /*--------------------------------------------------------------------------*/
 u_int64_t NetworkClient::HandleChunk(u_int8_t argMessage)
@@ -373,7 +408,7 @@ hashcode = ExtractNetworkSession(aa);
 length = strtol(bb,NULL,10);
 
 // let the client know we are ready for the block of data
-replyoff = sprintf(replybuff,"READY: %"PRI64u"\r\n",hashcode);
+replyoff = sprintf(replybuff,"READY: %" PRIu64 "\r\n",hashcode);
 TransmitReply();
 
 // prepare to receive the chunk of data
@@ -507,7 +542,7 @@ replyoff+=sprintf(&replybuff[replyoff],"  Vineyard Duplicate Iterator ..... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
-void NetworkClient::BuildProtoList(void)
+void NetworkClient::BuildProtoList(int complete)
 {
 char	temp[64];
 int		x;
@@ -516,6 +551,7 @@ replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST =====\r\n");
 
 	for(x = 0;x < g_protocount;x++)
 	{
+	if ((complete == 0) && (g_protostats[x]->packet_count == 0)) continue;
 	replyoff+=sprintf(&replybuff[replyoff],"%-10s %s\r\n",g_protostats[x]->protocol_name,pad(temp,g_protostats[x]->packet_count));
 	}
 }
@@ -554,7 +590,8 @@ replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"CONFIG = display all daemon configuration values\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUG = display daemon debug information\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"PROTO = display list of recognized protocols\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"PROTO = display list of all known protocols\r\n");
+replyoff+=sprintf(&replybuff[replyoff],"USED = display list of detected protocols\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+LOGIC | -LOGIC = enable/disable logic debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+CLIENT | -CLIENT = enable/disable netclient request logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+UPDATE | -UPDATE = enable/disable classify status logging\r\n");

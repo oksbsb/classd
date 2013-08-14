@@ -18,15 +18,6 @@
 // simply return.  It does require that you always use a format string
 
 #define LOGMESSAGE(cat,pri,fmt,...) if (g_debug & cat) logmessage(cat,pri,fmt,__VA_ARGS__)
-
-#if __WORDSIZE == 64
-#define PRI64d "ld"
-#define PRI64u "lu"
-#else
-#define PRI64d "lld"
-#define PRI64u "llu"
-#endif
-
 /*--------------------------------------------------------------------------*/
 const unsigned int CAT_LOGIC	= 0x0001;
 const unsigned int CAT_CLIENT	= 0x0002;
@@ -97,7 +88,7 @@ private:
 
 	void BuildConfiguration(void);
 	void BuildDebugInfo(void);
-	void BuildProtoList(void);
+	void BuildProtoList(int complete);
 	void BuildHelpPage(void);
 	void DumpEverything(void);
 	void AdjustLogCategory(void);
@@ -195,7 +186,7 @@ public:
 
 	inline const char *GetNetString(void) { return(netstring); }
 	inline u_int64_t GetNetSession(void) { return(netsession); }
-	inline u_int16_t GetNetProto(void) { return(netprotocol); }
+	inline u_int16_t GetNetProtocol(void) { return(netprotocol); }
 
 	virtual char *GetObjectString(char *target,int maxlen) = 0;
 
@@ -218,8 +209,8 @@ public:
 
 	SessionObject(u_int64_t aSession,
 		u_int8_t aProtocol,
-		navl_host_t aClient,
-		navl_host_t aServer);
+		navl_host_t *aClient,
+		navl_host_t *aServer);
 
 	virtual ~SessionObject(void);
 
@@ -281,8 +272,9 @@ void attr_callback(navl_handle_t handle,navl_conn_t conn,int attr_type,int attr_
 int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_t conn,void *arg,int error);
 void vineyard_shutdown(void);
 void vineyard_debug(const char *dumpfile);
-int vineyard_startup(void);
 void navl_bind_externals(void);
+void log_packet(SessionObject *session,int direction,void *rawdata,int rawsize);
+int vineyard_startup(void);
 int vineyard_config(const char *key,int value);
 int	vineyard_logger(const char *level,const char *func,const char *format,...);
 int vineyard_printf(const char *format,...);

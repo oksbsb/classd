@@ -67,7 +67,7 @@ sem_post(&g_classify_sem);
 			break;
 
 		case MSG_CREATE:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CREATE %"PRI64u"\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CREATE %" PRIu64 "\n",wagon->index);
 
 			// session object should have been created by the netclient thread
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -75,17 +75,17 @@ sem_post(&g_classify_sem);
 				// missing session means something has gone haywire
 				if (session == NULL)
 				{
-				sysmessage(LOG_WARNING,"MSG_CREATE: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				sysmessage(LOG_WARNING,"MSG_CREATE: Unable to locate %" PRIu64 " in session table\n",wagon->index);
 				break;
 				}
 
 			// create the vineyard connection state object
-			ret = navl_conn_create(l_navl_handle,&session->clientinfo,&session->serverinfo,session->GetNetProto(),&session->vinestat);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create(%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
+			ret = navl_conn_create(l_navl_handle,&session->clientinfo,&session->serverinfo,session->GetNetProtocol(),&session->vinestat);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_REMOVE:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION REMOVE %"PRI64u"\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION REMOVE %" PRIu64 "\n",wagon->index);
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -93,20 +93,20 @@ sem_post(&g_classify_sem);
 				// missing session means something has gone haywire
 				if (session == NULL)
 				{
-				sysmessage(LOG_WARNING,"MSG_REMOVE: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				sysmessage(LOG_WARNING,"MSG_REMOVE: Unable to locate %" PRIu64 " in session table\n",wagon->index);
 				break;
 				}
 
 			// destroy the vineyard connection state object
 			ret = navl_conn_destroy(l_navl_handle,session->vinestat);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy(%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 
 			// delete the session object from the hash table
 			g_sessiontable->DeleteObject(session);
 			break;
 
 		case MSG_CLIENT:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %"PRI64u"\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %" PRIu64 "\n",wagon->index);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -118,17 +118,19 @@ sem_post(&g_classify_sem);
 				// missing session means something has gone haywire
 				if (session == NULL)
 				{
-				sysmessage(LOG_WARNING,"MSG_CLIENT: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				sysmessage(LOG_WARNING,"MSG_CLIENT: Unable to locate %" PRIu64 " in session table\n",wagon->index);
 				break;
 				}
+
+			log_packet(session,0,wagon->buffer,wagon->length);
 
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,0,navl_callback,session);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(CLIENT:%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(CLIENT:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_SERVER:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %"PRI64u"\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %" PRIu64 "\n",wagon->index);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -140,13 +142,15 @@ sem_post(&g_classify_sem);
 				// missing session means something has gone haywire
 				if (session == NULL)
 				{
-				sysmessage(LOG_WARNING,"MSG_SERVER: Unable to locate %"PRI64u" in session table\n",wagon->index);
+				sysmessage(LOG_WARNING,"MSG_SERVER: Unable to locate %" PRIu64 " in session table\n",wagon->index);
 				break;
 				}
 
+			log_packet(session,1,wagon->buffer,wagon->length);
+
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,1,navl_callback,session);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%"PRI64u")\n",navl_error_get(l_navl_handle),wagon->index);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
 		case MSG_DEBUG:
@@ -174,7 +178,7 @@ navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
 char				protochain[256];
 char				namestr[256];
-int					appid,value,previous;
+int					appid,value;
 int					confidence,idx;
 
 // if the session object passed is null we can't update
@@ -198,25 +202,11 @@ idx = 0;
 
 // get the application and confidence
 appid = navl_app_get(handle,result,&confidence);
-previous = INVALID_VALUE;
 
 	// build the protochain grabbing extra info for certain protocols
 	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
 	{
 	value = navl_proto_get_index(handle,it);
-
-		// in the NAVL 4.0 release it seems like the vineyard iterator gets
-		// confused and returns the same thing over and over so to work around
-		// this we bail if current proto value is the same as the last
-		// TODO - we really need a fix from Vineyard
-		if (value == previous)
-		{
-		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Duplicate protocol %d in callback iterator\n",value);
-		vineyard_duplicate++;
-		break;
-		}
-
-	previous = value;
 
 	// append the protocol name to the chain
 	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",g_protostats[value]->protocol_name);
@@ -455,6 +445,29 @@ va_end(args);
 write(l_navl_logfile,buffer,len);
 
 return(len);
+}
+/*--------------------------------------------------------------------------*/
+void log_packet(SessionObject *session,int direction,void *rawdata,int rawsize)
+{
+const char		*pname;
+const char		*work;
+char			clientaddr[32];
+char			serveraddr[32];
+
+// do nothing if packet logging is not enabled
+if ((g_debug & CAT_PACKET) == 0) return;
+
+if (session->GetNetProtocol() == IPPROTO_TCP) pname = "TCP";
+if (session->GetNetProtocol() == IPPROTO_UDP) pname = "UDP";
+
+work = inet_ntop(AF_INET,&session->clientinfo.in4_addr,clientaddr,sizeof(clientaddr));
+if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
+
+work = inet_ntop(AF_INET,&session->serverinfo.in4_addr,serveraddr,sizeof(serveraddr));
+if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
+
+if (direction == 0) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,clientaddr,session->clientinfo.port,serveraddr,session->serverinfo.port);
+if (direction == 1) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,serveraddr,session->serverinfo.port,clientaddr,session->clientinfo.port);
 }
 /*--------------------------------------------------------------------------*/
 

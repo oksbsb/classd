@@ -9,8 +9,8 @@
 /*--------------------------------------------------------------------------*/
 SessionObject::SessionObject(u_int64_t aSession,
 	u_int8_t aProtocol,
-	navl_host_t aClient,
-	navl_host_t aServer) : HashObject(aSession,aProtocol)
+	navl_host_t *aClient,
+	navl_host_t *aServer) : HashObject(aSession,aProtocol)
 {
 state = 0;
 confidence = 0;
@@ -20,8 +20,8 @@ detail = NULL;
 
 vinestat = NULL;
 
-memcpy(&clientinfo,&aClient,sizeof(clientinfo));
-memcpy(&serverinfo,&aServer,sizeof(serverinfo));
+memcpy(&clientinfo,aClient,sizeof(clientinfo));
+memcpy(&serverinfo,aServer,sizeof(serverinfo));
 
 // set the initial state that will be returned to clients while waiting
 // for the classify thread to process the initial chunk of data

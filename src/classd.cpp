@@ -408,7 +408,7 @@ char *pad(char *target,u_int64_t value,int width)
 char	source[256];
 int		l,x,y;
 
-sprintf(source,"%"PRI64u,value);
+sprintf(source,"%" PRIu64,value);
 
 l = strlen(source);
 
