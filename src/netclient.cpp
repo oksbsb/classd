@@ -148,13 +148,6 @@ if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleChunk(MSG_SERVER);
 // if we don't have a hashcode yet then this is probably a console query
 if (hashcode == 0) hashcode = ExtractNetworkSession(querybuff);
 
-	// if still zero we have no idea what is going on so just return
-	if (hashcode == 0)
-	{
-	replyoff = sprintf(replybuff,"%s","Invalid command or query\r\n\r\n");
-	return(1);
-	}
-
 local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 
 	// if we have a hit return the found result
@@ -515,9 +508,9 @@ replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
 replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,client_hitcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,client_misscount));
-replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Counter .......... %s\r\n",pad(temp,pkt_totalcount));
-replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Timeout .......... %s\r\n",pad(temp,pkt_timedrop));
-replyoff+=sprintf(&replybuff[replyoff],"  Network Packet Overrun .......... %s\r\n",pad(temp,pkt_sizedrop));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Counter ........... %s\r\n",pad(temp,msg_totalcount));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Timeout ........... %s\r\n",pad(temp,msg_timedrop));
+replyoff+=sprintf(&replybuff[replyoff],"  Message Queue Overrun ........... %s\r\n",pad(temp,msg_sizedrop));
 
 // get the details for the message queue
 g_messagequeue->GetQueueSize(count,bytes,hicnt,himem);

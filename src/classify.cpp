@@ -110,7 +110,7 @@ sem_post(&g_classify_sem);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
-			if (current > (wagon->timestamp + cfg_packet_timeout)) pkt_timedrop++;
+			if (current > (wagon->timestamp + cfg_packet_timeout)) msg_timedrop++;
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -134,7 +134,7 @@ sem_post(&g_classify_sem);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
-			if (current > (wagon->timestamp + cfg_packet_timeout)) pkt_timedrop++;
+			if (current > (wagon->timestamp + cfg_packet_timeout)) msg_timedrop++;
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));

@@ -54,7 +54,7 @@ pthread_mutex_lock(&ListLock);
 	{
 	// delete the message and increment the counter
 	delete(argMessage);
-	pkt_sizedrop++;
+	msg_sizedrop++;
 
 	// unlock our mutex
 	pthread_mutex_unlock(&ListLock);
@@ -84,7 +84,7 @@ curr_bytes+=argMessage->length;
 if (curr_bytes > high_bytes) high_bytes = curr_bytes;
 
 // increment the packet counter
-pkt_totalcount++;
+msg_totalcount++;
 
 // unlock our mutex
 pthread_mutex_unlock(&ListLock);
