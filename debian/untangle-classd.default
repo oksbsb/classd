@@ -73,11 +73,11 @@
 ## Set the detection threshold based on randomness of data
 ## measured in a flow being inspected by Skype.  Use a value
 ## between 0 and 100.  Lower values = more aggressive detection.
-#CLASSD_SKYPE_RANDOM_THRESH=95
+#CLASSD_SKYPE_RANDOM_THRESH=85
 
 ## Flag to determine if hosts in a transaction must have
 ## previous Skype history before doing behavioral sampling.
-#CLASSD_SKYPE_REQUIRE_HISTORY=1
+#CLASSD_SKYPE_REQUIRE_HISTORY=0
 
 ## Path to the classd binary
 #CLASSD_BIN=/usr/bin/classd

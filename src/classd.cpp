@@ -467,16 +467,16 @@ grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_
 grab_config_item(filedata,"CLASSD_FACEBOOK_SUBCLASS",work,sizeof(work),"1");
 cfg_facebook_subclass = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_PACKETTHRESH",work,sizeof(work),"4");
+grab_config_item(filedata,"CLASSD_SKYPE_PACKET_THRESH",work,sizeof(work),"4");
 cfg_skype_packet_thresh = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_RANDOMTHRESH",work,sizeof(work),"95");
+grab_config_item(filedata,"CLASSD_SKYPE_RANDOM_THRESH",work,sizeof(work),"85");
 cfg_skype_random_thresh = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_PROBETHRESH",work,sizeof(work),"2");
+grab_config_item(filedata,"CLASSD_SKYPE_PROBE_THRESH",work,sizeof(work),"2");
 cfg_skype_probe_thresh = atoi(work);
 
-grab_config_item(filedata,"CLASSD_SKYPE_REQUIREHIST",work,sizeof(work),"1");
+grab_config_item(filedata,"CLASSD_SKYPE_REQUIRE_HISTORY",work,sizeof(work),"0");
 cfg_skype_require_history = atoi(work);
 
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
