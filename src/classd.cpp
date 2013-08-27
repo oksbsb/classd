@@ -467,17 +467,23 @@ grab_config_item(filedata,"CLASSD_PLUGIN_PATH",cfg_navl_plugins,sizeof(cfg_navl_
 grab_config_item(filedata,"CLASSD_FACEBOOK_SUBCLASS",work,sizeof(work),"1");
 cfg_facebook_subclass = atoi(work);
 
+grab_config_item(filedata,"CLASSD_SKYPE_CONFIDENCE_THRESH",work,sizeof(work),"75");
+cfg_skype_confidence_thresh = atoi(work);
+
 grab_config_item(filedata,"CLASSD_SKYPE_PACKET_THRESH",work,sizeof(work),"4");
 cfg_skype_packet_thresh = atoi(work);
-
-grab_config_item(filedata,"CLASSD_SKYPE_RANDOM_THRESH",work,sizeof(work),"85");
-cfg_skype_random_thresh = atoi(work);
 
 grab_config_item(filedata,"CLASSD_SKYPE_PROBE_THRESH",work,sizeof(work),"2");
 cfg_skype_probe_thresh = atoi(work);
 
+grab_config_item(filedata,"CLASSD_SKYPE_RANDOM_THRESH",work,sizeof(work),"85");
+cfg_skype_random_thresh = atoi(work);
+
 grab_config_item(filedata,"CLASSD_SKYPE_REQUIRE_HISTORY",work,sizeof(work),"0");
 cfg_skype_require_history = atoi(work);
+
+grab_config_item(filedata,"CLASSD_SKYPE_SEQ_CACHE_TIME",work,sizeof(work),"30000");
+cfg_skype_seq_cache_time = atoi(work);
 
 grab_config_item(filedata,"CLASSD_HASH_BUCKETS",work,sizeof(work),"99991");
 cfg_hash_buckets = atoi(work);

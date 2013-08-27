@@ -569,10 +569,12 @@ replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_CLIENT_PORT ............. %d\r\
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_TIMEOUT .......... %d\r\n",cfg_packet_timeout);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_PACKET_MAXIMUM .......... %d\r\n",cfg_packet_maximum);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_FACEBOOK_SUBCLASS ....... %d\r\n",cfg_facebook_subclass);
-replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PROBE_THRESH ...... %d\r\n",cfg_skype_probe_thresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_CONFIDENCE_THRESH . %d\r\n",cfg_skype_confidence_thresh);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PACKET_THRESH ..... %d\r\n",cfg_skype_packet_thresh);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_PROBE_THRESH ...... %d\r\n",cfg_skype_probe_thresh);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_RANDOM_THRESH ..... %d\r\n",cfg_skype_random_thresh);
 replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_REQUIRE_HISTORY ... %d\r\n",cfg_skype_require_history);
+replyoff+=sprintf(&replybuff[replyoff],"  CLASSD_SKYPE_SEQ_CACHE_TIME .... %d\r\n",cfg_skype_seq_cache_time);
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }

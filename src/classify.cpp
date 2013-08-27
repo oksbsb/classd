@@ -284,25 +284,27 @@ l_navl_handle = navl_open(cfg_navl_plugins);
 	}
 
 // set the vineyard system loglevel parameter
-if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(1);
+if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(2);
 
 // set the number of of http request+response pairs to analyze before giving up
-if (vineyard_config("http.maxpersist",cfg_http_limit) != 0) return(1);
+if (vineyard_config("http.maxpersist",cfg_http_limit) != 0) return(3);
 
 // set the TCP session timeout
-if (vineyard_config("tcp.timeout",cfg_tcp_timeout) != 0) return(1);
+if (vineyard_config("tcp.timeout",cfg_tcp_timeout) != 0) return(4);
 
 // set the UDP session timeout
-if (vineyard_config("udp.timeout",cfg_udp_timeout) != 0) return(1);
+if (vineyard_config("udp.timeout",cfg_udp_timeout) != 0) return(5);
 
 // enable IP fragment processing
-if (vineyard_config("ip.defrag",cfg_navl_defrag) != 0) return(1);
+if (vineyard_config("ip.defrag",cfg_navl_defrag) != 0) return(6);
 
 // set all the low level skype parameters
-if (vineyard_config("skype.probe_thresh",cfg_skype_probe_thresh) != 0) return(1);
-if (vineyard_config("skype.packet_thresh",cfg_skype_packet_thresh) != 0) return(1);
-if (vineyard_config("skype.random_thresh",cfg_skype_random_thresh) != 0) return(1);
-if (vineyard_config("skype.require_history",cfg_skype_require_history) != 0) return(1);
+if (vineyard_config("skype.confidence_thresh",cfg_skype_confidence_thresh) != 0) return(7);
+if (vineyard_config("skype.packet_thresh",cfg_skype_packet_thresh) != 0) return(8);
+if (vineyard_config("skype.probe_thresh",cfg_skype_probe_thresh) != 0) return(9);
+if (vineyard_config("skype.random_thresh",cfg_skype_random_thresh) != 0) return(10);
+if (vineyard_config("skype.require_history",cfg_skype_require_history) != 0) return(11);
+if (vineyard_config("skype.seq_cache_time",cfg_skype_seq_cache_time) != 0) return(12);
 
 // initialize the vineyard handle for the active thread
 ret = navl_init(l_navl_handle);
@@ -310,7 +312,7 @@ ret = navl_init(l_navl_handle);
 	if (ret != 0)
 	{
 	sysmessage(LOG_ERR,"Error %d returned from navl_init()\n",ret);
-	return(1);
+	return(13);
 	}
 
 if ((navl_attr_callback_set(l_navl_handle,"facebook.app",attr_callback) != 0)) problem|=0x01;
@@ -319,7 +321,7 @@ if ((navl_attr_callback_set(l_navl_handle,"tls.hostname",attr_callback) != 0)) p
 	if (problem != 0)
 	{
 	sysmessage(LOG_ERR,"Error 0x%02X enabling metadata callbacks\n",problem);
-	return(1);
+	return(14);
 	}
 
 // get the total number of protocols from the vineyard library
@@ -328,7 +330,7 @@ ret = navl_proto_max_index(l_navl_handle);
 	if (ret == -1)
 	{
 	sysmessage(LOG_ERR,"Error calling navl_proto_max_index()\n");
-	return(1);
+	return(15);
 	}
 
 // create the array of protocol statistics

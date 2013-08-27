@@ -62,13 +62,16 @@
 ## Flag to enable facebook subclassification.
 #CLASSD_FACEBOOK_SUBCLASS=1
 
-## Number of Skype probes we must reeive before identifying
-## an address/port pair as Skype traffic
-#CLASSD_SKYPE_PROBE_THRESH=2
+## Skype confidence threshold
+#CLASSD_SKYPE_CONFIDENCE_THRESH=75
 
 ## Number of packets to sample before calculating Skype
 ## behavioral results.
 #CLASSD_SKYPE_PACKET_THRESH=4
+
+## Number of Skype probes we must reeive before identifying
+## an address/port pair as Skype traffic
+#CLASSD_SKYPE_PROBE_THRESH=2
 
 ## Set the detection threshold based on randomness of data
 ## measured in a flow being inspected by Skype.  Use a value
@@ -78,6 +81,9 @@
 ## Flag to determine if hosts in a transaction must have
 ## previous Skype history before doing behavioral sampling.
 #CLASSD_SKYPE_REQUIRE_HISTORY=0
+
+## Skype sequence cache time
+#CLASSD_SKYPE_SEQ_CACHE_TIME=30000
 
 ## Path to the classd binary
 #CLASSD_BIN=/usr/bin/classd
