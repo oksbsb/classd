@@ -9,6 +9,9 @@ mkdir -p `dirname ${LOG_FILE}`
 # spew something in the log file
 echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
 
+# remove old classd iptables file (obsolete)
+rm -f /etc/untangle-netd/iptables-rules.d/825-classd
+
 # if flag file doesn't exist classd wasn't running before so skip restart
 if [ ! -f ${FLAG_FILE} ]; then
     exit 0
@@ -24,8 +27,5 @@ fi
 
 # start the daemon
 /etc/init.d/untangle-classd start
-
-# remove old classd iptables file (obsolete)
-rm -f /etc/untangle-netd/iptables-rules.d/825-classd
 
 exit 0
