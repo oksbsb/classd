@@ -13,9 +13,13 @@
 static navl_handle_t l_navl_handle = NULL;
 static int l_navl_logfile = 0;
 
+// vars for the attribute names we track
+static const char *l_name_facebook_app = "facebook.app";
+static const char *l_name_tls_hostname = "tls.hostname";
+
 // vars to hold the detail attributes we track
 int l_attr_facebook_app = INVALID_VALUE;
-int l_attr_tls_host = INVALID_VALUE;
+int l_attr_tls_hostname = INVALID_VALUE;
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg)
 {
@@ -235,8 +239,8 @@ if (session == NULL) return;
 // we can't initialize our l_attr_xxx values during startup because the values
 // returned by vineyard are different for each thread so to work around this
 // we set them as invalid during startup and init the first time we are called
-if (l_attr_facebook_app == INVALID_VALUE) l_attr_facebook_app = navl_attr_key_get(handle,"facebook.app");
-if (l_attr_tls_host == INVALID_VALUE) l_attr_tls_host = navl_attr_key_get(handle,"tls.host");
+if (l_attr_facebook_app == INVALID_VALUE) l_attr_facebook_app = navl_attr_key_get(handle,l_name_facebook_app);
+if (l_attr_tls_hostname == INVALID_VALUE) l_attr_tls_hostname = navl_attr_key_get(handle,l_name_tls_hostname);
 
 	// check for the facebook application name
 	if (attr_type == l_attr_facebook_app)
@@ -246,7 +250,7 @@ if (l_attr_tls_host == INVALID_VALUE) l_attr_tls_host = navl_attr_key_get(handle
 	}
 
 	// check for the tls host name
-	else if (attr_type == l_attr_tls_host)
+	else if (attr_type == l_attr_tls_hostname)
 	{
 	memcpy(detail,attr_value,attr_length);
 	detail[attr_length] = 0;
@@ -315,8 +319,8 @@ ret = navl_init(l_navl_handle);
 	return(13);
 	}
 
-if ((navl_attr_callback_set(l_navl_handle,"facebook.app",attr_callback) != 0)) problem|=0x01;
-if ((navl_attr_callback_set(l_navl_handle,"tls.hostname",attr_callback) != 0)) problem|=0x02;
+if ((navl_attr_callback_set(l_navl_handle,l_name_facebook_app,attr_callback) != 0)) problem|=0x01;
+if ((navl_attr_callback_set(l_navl_handle,l_name_tls_hostname,attr_callback) != 0)) problem|=0x02;
 
 	if (problem != 0)
 	{
