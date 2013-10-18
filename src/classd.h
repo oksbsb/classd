@@ -82,6 +82,8 @@ protected:
 	char					replybuff[0x8000];
 	int						queryoff;
 	int						replyoff;
+	int						dataloc;
+	int						datalen;
 	int						netsock;
 
 private:

@@ -17,6 +17,8 @@ querybuff[0] = 0;
 replybuff[0] = 0;
 queryoff = 0;
 replyoff = 0;
+dataloc = 0;
+datalen = 0;
 next = NULL;
 
 // accept the inbound connection
@@ -81,6 +83,10 @@ lfloc = strchr(querybuff,'\n');
 // if we don't find any return one to keep session active
 if ((crloc == NULL) && (lfloc == NULL)) return(1);
 
+// set dataloc to the offset and datalen to the size of any data following LF
+dataloc = (lfloc - querybuff + 1);
+datalen = (queryoff - dataloc);
+
 // wipe any CR or LF characters so they aren't included
 // in the command string we received from the client
 if (crloc != NULL) crloc[0] = 0;
@@ -101,6 +107,8 @@ querybuff[0] = 0;
 replybuff[0] = 0;
 queryoff = 0;
 replyoff = 0;
+dataloc = 0;
+datalen = 0;
 
 return(1);
 }
@@ -166,7 +174,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 	replyoff+=sprintf(&replybuff[replyoff],"PROTOCHAIN: %s\r\n",local->GetProtochain());
 	replyoff+=sprintf(&replybuff[replyoff],"DETAIL: %s\r\n",local->GetDetail());
 	replyoff+=sprintf(&replybuff[replyoff],"CONFIDENCE: %d\r\n",local->GetConfidence());
-	replyoff+=sprintf(&replybuff[replyoff],"STATE: %d\r\n",local->GetState());
+	replyoff+=sprintf(&replybuff[replyoff],"STATE: %d\r\n\r\n",local->GetState());
 
 	client_hitcount++;
 	}
@@ -175,7 +183,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 	else
 	{
 	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
-	replyoff = sprintf(replybuff,"EMPTY: %s\r\n",querybuff);
+	replyoff = sprintf(replybuff,"EMPTY: %s\r\n\r\n",querybuff);
 	client_misscount++;
 	}
 
@@ -362,7 +370,7 @@ g_sessiontable->InsertObject(session);
 g_messagequeue->PushMessage(new MessageWagon(MSG_CREATE,hashcode));
 
 // have to return something even though the node currently does not use it
-replyoff = sprintf(replybuff,"CREATED: %" PRIu64 "\r\n",hashcode);
+replyoff = sprintf(replybuff,"CREATED: %" PRIu64 "\r\n\r\n",hashcode);
 }
 /*--------------------------------------------------------------------------*/
 void NetworkClient::HandleRemove(void)
@@ -379,7 +387,7 @@ hashcode = ExtractNetworkSession(aa);
 g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
 
 // have to return something even though the node currently does not use it
-replyoff = sprintf(replybuff,"REMOVED: %" PRIu64 "\r\n",hashcode);
+replyoff = sprintf(replybuff,"REMOVED: %" PRIu64 "\r\n\r\n",hashcode);
 }
 /*--------------------------------------------------------------------------*/
 u_int64_t NetworkClient::HandleChunk(u_int8_t argMessage)
@@ -387,7 +395,6 @@ u_int64_t NetworkClient::HandleChunk(u_int8_t argMessage)
 u_int64_t	hashcode;
 char		*aa,*bb;
 long		length,ret;
-long		have,want;
 
 aa = strchr(querybuff,':');		// points to session id
 if (aa == NULL) return(0);
@@ -400,20 +407,20 @@ if (bb == NULL) return(0);
 hashcode = ExtractNetworkSession(aa);
 length = strtol(bb,NULL,10);
 
-// let the client know we are ready for the block of data
-replyoff = sprintf(replybuff,"READY: %" PRIu64 "\r\n",hashcode);
-TransmitReply();
-
 // prepare to receive the chunk of data
-want = length;
-have = 0;
 replyoff = 0;
 
-	// we read the chunk data into the reply buffer since it is larger
-	for(;;)
+	// if there is chunk data in the query buffer we grab it first
+	if (datalen != 0)
 	{
-	want = (length - have);
-	ret = recv(netsock,&replybuff[replyoff],want,0);
+	memcpy(replybuff,&querybuff[dataloc],datalen);
+	replyoff = datalen;
+	}
+
+	// we read the chunk data into the reply buffer since it is larger
+	while (replyoff < length)
+	{
+	ret = recv(netsock,&replybuff[replyoff],length - replyoff,0);
 
 		if (ret == 0)
 		{
@@ -427,11 +434,8 @@ replyoff = 0;
 		return(hashcode);
 		}
 
-	// if we have the full chunk of data we can return now
-	have = (have + ret);
-	if (have == length) break;
-
-	sysmessage(LOG_NOTICE,"Only received %d of %d chunk bytes from %s\n",ret,length,netname);
+	// add the byte count we just received to the buffer offset
+	replyoff = (replyoff + ret);
 	}
 
 // push the data into the classify queue
