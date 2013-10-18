@@ -439,7 +439,7 @@ replyoff = 0;
 	}
 
 // push the data into the classify queue
-g_messagequeue->PushMessage(new MessageWagon(argMessage,hashcode,replybuff,ret));
+g_messagequeue->PushMessage(new MessageWagon(argMessage,hashcode,replybuff,replyoff));
 
 return(hashcode);
 }
