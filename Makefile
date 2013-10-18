@@ -8,7 +8,7 @@ DEBUG = -g3 -ggdb
 SPEED = -O2
 
 BUILDID := "$(shell date -u "+%G/%m/%d %H:%M:%S UTC")"
-VERSION := $(shell svn info | grep Revision | awk '{ print $2 }')
+VERSION := $(shell svn info | /usr/bin/gawk -F' ' '/Revision/ { print $$2 }')
 SYSTEM := $(shell uname)
 ARCH := $(shell uname -m)
 
