@@ -392,9 +392,11 @@ replyoff = sprintf(replybuff,"REMOVED: %" PRIu64 "\r\n\r\n",hashcode);
 /*--------------------------------------------------------------------------*/
 u_int64_t NetworkClient::HandleChunk(u_int8_t argMessage)
 {
-u_int64_t	hashcode;
-char		*aa,*bb;
-long		length,ret;
+struct timeval	tv;
+u_int64_t		hashcode;
+fd_set			tester;
+char			*aa,*bb;
+long			length,ret;
 
 aa = strchr(querybuff,':');		// points to session id
 if (aa == NULL) return(0);
@@ -420,6 +422,20 @@ replyoff = 0;
 	// we read the chunk data into the reply buffer since it is larger
 	while (replyoff < length)
 	{
+	if (g_shutdown != 0) break;
+
+	// clear our set and add the client socket
+	FD_ZERO(&tester);
+	FD_SET(netsock,&tester);
+
+	// wait for the socket to be ready for reading
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	ret = select(netsock+1,&tester,NULL,NULL,&tv);
+	if (ret < 1) continue;
+	if (FD_ISSET(netsock,&tester) == 0) continue;
+
+	// read from the socket
 	ret = recv(netsock,&replybuff[replyoff],length - replyoff,0);
 
 		if (ret == 0)
@@ -467,11 +483,13 @@ offset = 0;
 
 	while (offset != replyoff)
 	{
+	if (g_shutdown != 0) break;
+
 	// clear our set and add the client socket
 	FD_ZERO(&tester);
 	FD_SET(netsock,&tester);
 
-	// wait for the socket to be write ready
+	// wait for the socket to be ready for writing
 	tv.tv_sec = 1;
 	tv.tv_usec = 0;
 	ret = select(netsock+1,NULL,&tester,NULL,&tv);
