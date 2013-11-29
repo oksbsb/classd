@@ -1,5 +1,5 @@
 Source: untangle-classd
-Section: premium/admin
+Section: non-free/admin
 Priority: optional
 Maintainer: Michael Hotz <mahotz@untangle.com>
 Build-Depends: debhelper (>> 3.0.0), libc6 (>= 2.3.2), g++, make, fakeroot, libsysfs-dev, libnetfilter-conntrack-dev (>= 0.0.81) | untangle-libnetfilter-conntrack-dev (>= 0.0.81), untangle-libnetfilter-queue-dev (>= 0.0.15), libnfnetlink-dev (>= 0.0.30) | untangle-libnfnetlink-dev (>= 0.0.30)
