@@ -7,6 +7,8 @@
 #define DATALOC
 #include "common.h"
 #include "classd.h"
+#include <sys/stat.h>
+
 /*--------------------------------------------------------------------------*/
 const char *month[12] = { "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec" };
 const char *weekday[7] = { "Sun","Mon","Tue","Wed","Thu","Fri","Sat" };
