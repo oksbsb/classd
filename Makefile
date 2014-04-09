@@ -17,6 +17,8 @@ ifeq ($(SYSTEM),Linux)
   LIBFILES = -lpthread -ldl -lnavl
     ifeq ($(ARCH),x86_64)
       LIBPATH = -Lsrc/vineyard/lib64
+    else ifeq ($(ARCH),armv7l)
+      LIBPATH = -Lsrc/vineyard/libarm
     else
       LIBPATH = -Lsrc/vineyard/lib
   endif

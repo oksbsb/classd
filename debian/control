@@ -6,7 +6,7 @@ Build-Depends: debhelper (>> 3.0.0), libc6 (>= 2.3.2), g++, make, fakeroot, libs
 Standards-Version: 3.7.2
 
 Package: untangle-classd
-Architecture: i386 amd64
+Architecture: any
 Depends: ${shlibs:Depends}
 Description: The Untangle Traffic Classification Daemon
  A daemon that uses the Vineyard NAVL library to classify network traffic.

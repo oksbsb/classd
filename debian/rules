@@ -6,6 +6,9 @@ ARCH := $(shell uname -m)
 ifeq ($(ARCH),x86_64)
   LIBDIR := src/vineyard/lib64/
   PLUGDIR := src/vineyard/plugins64/
+else ifeq ($(ARCH),armv7l)
+  LIBDIR := src/vineyard/libarm/
+  PLUGDIR := src/vineyard/pluginsarm/
 else
   LIBDIR := src/vineyard/lib/
   PLUGDIR := src/vineyard/plugins/
