@@ -54,7 +54,7 @@ binary-arch: install
 	dh_testroot
 	dh_movefiles
 #	dh_installdebconf
-	dh_shlibdeps
+#	dh_shlibdeps
 	dh_installdocs -n
 	dh_installdirs
 #	dh_installexamples
