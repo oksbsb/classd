@@ -75,6 +75,12 @@ enum {
 	NAVL_CONN_F_TUNNELING  = (1 << 4)
 };
 
+typedef enum {
+	NAVL_NOTIFY_ALL = 0,     /* Notification for all events */
+	NAVL_NOTIFY_EDGE = 1     /* Additional notifications are suppressed until
+	                          * all outstanding events are handled */
+} navl_notification_level_t;
+
 typedef void *navl_iterator_t;
 typedef void *navl_result_t;
 typedef int navl_handle_t;
@@ -184,6 +190,18 @@ NAVL_API navl_conn_id_t navl_conn_id_get(navl_handle_t handle, navl_conn_t conn)
 NAVL_API int navl_endpoint_get(navl_handle_t handle, navl_conn_t conn, navl_host_t *src, navl_host_t *dst);
 
 /*
+ * navl_conn_endpoint_get()
+ *
+ * Provides the endpoint information for the connection. The results always reflect
+ * the direction with respect to the connection initiator.
+ *
+ * On success, 0 is returned and @src, @dst, and @proto are filled in accordingly.
+ * On error, -1 is returned.
+ */
+
+NAVL_API int navl_conn_endpoint_get(navl_handle_t handle, navl_conn_t conn, navl_host_t *src, navl_host_t *dst, unsigned char *proto);
+
+/*
  * Callback signature for navl_futureflow_callback_set()
  *
  * @src         the initiator host info
@@ -281,6 +299,24 @@ NAVL_API const char *navl_proto_get_name(navl_handle_t handle, int index, char *
  ******************************************************************************/
 
 /*
+ * navl_conn_user_set()
+ *
+ * Set opaque data in the navl_conn_t.
+ *
+ * On success, return 0. On error, return -1.
+ */
+NAVL_API int navl_conn_user_set(navl_handle_t handle, navl_conn_t conn, void *user_data);
+
+/*
+ * navl_conn_user_get()
+ *
+ * Get opaque data in the navl_conn_t.
+ *
+ * On success, return 0 and return data in @user_data. On error, return -1.
+ */
+NAVL_API int navl_conn_user_get(navl_handle_t handle, navl_conn_t conn, void **user_data);
+
+/*
  * navl_conn_status_flags_get()
  *
  * Fetch the connection flags enabled for @conn.
@@ -320,6 +356,16 @@ NAVL_API int navl_conn_policy_flags_disable(navl_handle_t handle, navl_conn_t co
 NAVL_API int navl_conn_create(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, navl_conn_t *conn);
 
 /*
+ * navl_conn_lookup()
+ *
+ * Lookup a connection state by 5-tuple.
+ *
+ * On success, 0 is returned and opaque state is attached to @conn. On error, 
+ * -1 is returned.
+ */
+NAVL_API int navl_conn_lookup(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, navl_conn_t *conn);
+
+/*
  * navl_conn_destroy()
  *
  * Releases connection state previously allocated by navl_conn_create().
@@ -347,6 +393,62 @@ NAVL_API int navl_proto_max_index(navl_handle_t handle);
  * On success, returns 0. On error, returns -1.
  */
 NAVL_API int navl_proto_set_index(navl_handle_t handle, const char *name, int index);
+
+
+/*******************************************************************************
+ * Sync Event Management
+ ******************************************************************************/
+
+/*
+* navl_syncevent_get()
+*
+* On success, returns 0, and the buffer @data of size @len will be filled with
+* the oldest outstanding synchronization event, with @len set to the amount of
+* data written. If no more events are ready, @len will be set to zero.
+* On failure, returns -1. If @len was not sufficient to hold the event, @len is
+* set to the required size.
+*
+* Note:
+*
+* No combination of the sync event management functions may be called
+* simultaneously. Each can be called from any thread, but thread-safety MUST be
+* guaranteed by the integrator.
+*/
+NAVL_API int navl_syncevent_get(navl_handle_t h, void *data, unsigned short *len);
+
+/*
+* navl_syncevent_callback
+*
+* This provides the callback signature that the publisher (i.e. the sender)
+* needs to implement if they want to be notified of synchronized events. This
+* is called when a new synchronized event is ready to be read by the user.
+*/
+typedef void (*navl_syncevent_callback_t)(navl_handle_t h, void *arg);
+
+/*
+* navl_syncevent_callback_set()
+*
+* Set the callback to subscribe to synchronized events. The user callback will
+* be invoked for synchronized events with frequency dependent on the
+* notification level.
+*
+* On success, returns 0. On failure -1.
+*/
+NAVL_API int navl_syncevent_callback_set(navl_handle_t h, navl_syncevent_callback_t callback
+	, navl_notification_level_t level);
+
+/*
+* navl_syncevent_push()
+*
+* Pushed a received sync event to the navl instance specified by @handle.
+*
+* On success, return 0. On failure -1.
+*
+* Note: Although synchronized events are typically published by classification
+* threads, a non-classification thread (one that has not called navl_init())
+* may push events to a running instance.
+*/
+NAVL_API int navl_syncevent_push(navl_handle_t h, const void *data, unsigned short len);
 
 
 /*******************************************************************************
@@ -441,9 +543,6 @@ NAVL_API void navl_clock_set(navl_handle_t handle, int64_t msecs);
  * and a requested protocol @index (or zero for auto-assign). 
  *
  * On success, returns protocol index. On error, returns -1.
- *
- * Note: 
- * If the requested @index is already in use, this will return an error.
  */
 NAVL_API int navl_proto_add(navl_handle_t handle, const char *protoname, int index);
 
