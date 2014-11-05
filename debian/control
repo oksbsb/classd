@@ -7,7 +7,7 @@ Standards-Version: 3.7.2
 
 Package: untangle-classd
 Architecture: any
-Depends: libc6 (>= 2.4), libgcc1 (>= 1:4.1.1), libstdc++6 (>= 4.1.1), ${misc:Depends}, ${shlibs:Depends}
+Depends: libc6 (>= 2.4), libgcc1 (>= 1:4.1.1), libstdc++6 (>= 4.1.1), ${misc:Depends}
 Description: The Untangle Traffic Classification Daemon
  A daemon that uses the Vineyard NAVL library to classify network traffic.
 
