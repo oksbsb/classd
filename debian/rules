@@ -9,6 +9,9 @@ ifeq ($(ARCH),x86_64)
 else ifeq ($(ARCH),armv7l)
   LIBDIR := src/vineyard/libarm/
   PLUGDIR := src/vineyard/pluginsarm/
+else ifeq ($(ARCH),armv5tejl)
+  LIBDIR := src/vineyard/libarm/
+  PLUGDIR := src/vineyard/pluginsarm/
 else
   LIBDIR := src/vineyard/lib/
   PLUGDIR := src/vineyard/plugins/
