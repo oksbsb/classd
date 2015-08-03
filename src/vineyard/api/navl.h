@@ -5,8 +5,11 @@
 extern "C" {
 #endif
 
+#ifdef __KERNEL__
+#include <linux/types.h>
+#else
 #include <stdint.h>
-
+#endif
 
 #ifdef _WINDOWS
 #ifdef NAVL_LIBRARY
@@ -38,7 +41,8 @@ typedef enum {
 	NAVL_ENCAP_NONE = 0,     /* When no layer 2-4 transport headers are present */
 	NAVL_ENCAP_ETH  = 1,     /* Buffer under inspection starts at Ethernet header */
 	NAVL_ENCAP_IP   = 2,     /* Buffer under inspection starts at IPv4 header */
-	NAVL_ENCAP_IP6  = 3      /* Buffer under inspection starts at IPv6 header */
+	NAVL_ENCAP_IP6  = 3,     /* Buffer under inspection starts at IPv6 header */
+	NAVL_ENCAP_MPLS = 4      /* Buffer under inspection starts at MPLS header */
 } navl_encap_t;
 
 #define NAVL_AF_UNSPEC  0
@@ -473,6 +477,12 @@ NAVL_API int navl_attr_callback_set(navl_handle_t handle, const char *attr, navl
  */
 NAVL_API int navl_attr_key_get(navl_handle_t handle, const char *attr);
 
+/*
+ * navl_attr_offset_get()
+ *
+ * Returns the offset into the @data passed to navl_classify for this attribute or -1 if the value is not within @data.
+ */
+NAVL_API int navl_attr_offset_get(navl_handle_t handle, const void *attr_value);
 
 /*******************************************************************************
  * Configuration

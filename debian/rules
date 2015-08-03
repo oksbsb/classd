@@ -37,7 +37,7 @@ install: build
 	find $(DESTDIR) -name "\.svn" | xargs rm -rf
 	rsync -aH $(LIBDIR)/ $(DESTDIR)/usr/lib/
 	mkdir -p $(DESTDIR)/usr/share/untangle-classd/plugins
-	find $(PLUGDIR) -name '*.plg' | xargs cp -t $(DESTDIR)/usr/share/untangle-classd/plugins
+	find $(PLUGDIR) -name '*.TXT' | xargs cp -t $(DESTDIR)/usr/share/untangle-classd/plugins
 
 clean:
 	dh_testdir
