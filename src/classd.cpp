@@ -541,6 +541,7 @@ if (size < 1) return(target);
 
 // make a complete search string
 len = sprintf(lookup,"%s=",search);
+if (len < 2) return(target);
 
 find = NULL;
 

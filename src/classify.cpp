@@ -10,7 +10,7 @@
 #define INVALID_VALUE 1234567890
 /*--------------------------------------------------------------------------*/
 // local variables
-static navl_handle_t l_navl_handle = NULL;
+static navl_handle_t l_navl_handle = (navl_handle_t)NULL;
 static int l_navl_logfile = 0;
 
 // vars for the attribute names we track
