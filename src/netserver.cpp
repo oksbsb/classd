@@ -85,7 +85,7 @@ int					ret;
 // set the thread signal semaphore
 sem_post(&ThreadSignal);
 
-// wait for the thread to terminate
+// wait for the thread to finish
 pthread_join(ThreadHandle,NULL);
 
 	// delete any active clients
@@ -213,7 +213,7 @@ sysmessage(LOG_INFO,"The netserver thread is starting\n");
 		}
 	}
 
-sysmessage(LOG_INFO,"The netserver thread has terminated\n");
+sysmessage(LOG_INFO,"The netserver thread has finished\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/

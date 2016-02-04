@@ -41,13 +41,29 @@ void SessionObject::UpdateObject(const char *aApplication,
 	short aConfidence,
 	short aState)
 {
+char	*nextdata;
+char	*lastdata;
+int		len;
+
 ResetTimeout();
 
-application = (char *)realloc(application,strlen(aApplication) + 1);
-strcpy(application,aApplication);
+// allocate, copy, swap, and free for the new application
+len = strlen(aApplication);
+nextdata  = (char *)malloc(len + 1);
+memcpy(nextdata,aApplication,len);
+nextdata[len] = 0;
+lastdata = application;
+application = nextdata;
+if (lastdata != NULL) free(lastdata);
 
-protochain = (char *)realloc(protochain,strlen(aProtochain) + 1);
-strcpy(protochain,aProtochain);
+// allocate, copy, swap, and free for the new protochain
+len = strlen(aProtochain);
+nextdata  = (char *)malloc(len + 1);
+memcpy(nextdata,aProtochain,len);
+nextdata[len] = 0;
+lastdata = protochain;
+protochain = nextdata;
+if (lastdata != NULL) free(lastdata);
 
 confidence = aConfidence;
 state = aState;
@@ -55,8 +71,18 @@ state = aState;
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateDetail(const char *aDetail)
 {
-detail = (char *)realloc(detail,strlen(aDetail) + 1);
-strcpy(detail,aDetail);
+char	*nextdata;
+char	*lastdata;
+int		len;
+
+// allocate, copy, swap, and free for the new detail
+len = strlen(aDetail);
+nextdata  = (char *)malloc(len + 1);
+memcpy(nextdata,aDetail,len);
+nextdata[len] = 0;
+lastdata = detail;
+detail = nextdata;
+if (lastdata != NULL) free(lastdata);
 }
 /*--------------------------------------------------------------------------*/
 int SessionObject::GetObjectSize(void)

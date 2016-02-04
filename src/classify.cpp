@@ -7,7 +7,10 @@
 #include "common.h"
 #include "classd.h"
 
-#define INVALID_VALUE 1234567890
+#define CLIENT_to_SERVER	0
+#define SERVER_to_CLIENT	1
+#define INVALID_VALUE		1234567890
+
 /*--------------------------------------------------------------------------*/
 // local variables
 static navl_handle_t l_navl_handle = (navl_handle_t)NULL;
@@ -129,7 +132,7 @@ sem_post(&g_classify_sem);
 			log_packet(session,0,wagon->buffer,wagon->length);
 
 			// send the traffic to vineyard for classification
-			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,0,navl_callback,session);
+			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,CLIENT_to_SERVER,navl_callback,session);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(CLIENT:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
@@ -153,7 +156,7 @@ sem_post(&g_classify_sem);
 			log_packet(session,1,wagon->buffer,wagon->length);
 
 			// send the traffic to vineyard for classification
-			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,1,navl_callback,session);
+			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,SERVER_to_CLIENT,navl_callback,session);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			break;
 
@@ -172,7 +175,7 @@ sem_post(&g_classify_sem);
 // call our vineyard shutdown function
 vineyard_shutdown();
 
-sysmessage(LOG_INFO,"The classify thread has terminated\n");
+sysmessage(LOG_INFO,"The classify thread has finished\n");
 return(NULL);
 }
 /*--------------------------------------------------------------------------*/
@@ -472,8 +475,8 @@ if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
 work = inet_ntop(AF_INET,&session->serverinfo.in4_addr,serveraddr,sizeof(serveraddr));
 if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
 
-if (direction == 0) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,clientaddr,session->clientinfo.port,serveraddr,session->serverinfo.port);
-if (direction == 1) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,serveraddr,session->serverinfo.port,clientaddr,session->clientinfo.port);
+if (direction == CLIENT_to_SERVER) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,clientaddr,session->clientinfo.port,serveraddr,session->serverinfo.port);
+if (direction == SERVER_to_CLIENT) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,serveraddr,session->serverinfo.port,clientaddr,session->clientinfo.port);
 }
 /*--------------------------------------------------------------------------*/
 

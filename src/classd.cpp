@@ -201,6 +201,7 @@ void sighandler(int sigval)
 	switch(sigval)
 	{
 	case SIGALRM:
+		sysmessage(LOG_WARNING,"Alarm detected while waiting for threads to finish\n");
 		abort();
 		break;
 

@@ -161,7 +161,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 	// if we have a hit return the found result
 	if (local != NULL)
 	{
-	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s [%s|%s|%s|%d|%d]\n",querybuff,
+	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %" PRIu64" [%s|%s|%s|%d|%d]\n",hashcode,
 		local->GetApplication(),
 		local->GetProtochain(),
 		local->GetDetail(),
@@ -169,7 +169,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 		local->GetState());
 
 	replyoff = 0;
-	replyoff+=sprintf(&replybuff[replyoff],"FOUND: %s\r\n",querybuff);
+	replyoff+=sprintf(&replybuff[replyoff],"FOUND: %" PRIu64 "\r\n",hashcode);
 	replyoff+=sprintf(&replybuff[replyoff],"APPLICATION: %s\r\n",local->GetApplication());
 	replyoff+=sprintf(&replybuff[replyoff],"PROTOCHAIN: %s\r\n",local->GetProtochain());
 	replyoff+=sprintf(&replybuff[replyoff],"DETAIL: %s\r\n",local->GetDetail());
@@ -182,7 +182,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 	// otherwise return the empty result
 	else
 	{
-	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %s\n",querybuff);
+	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT EMPTY = %" PRIu64 "\n",hashcode);
 	replyoff = sprintf(replybuff,"EMPTY: %s\r\n\r\n",querybuff);
 	client_misscount++;
 	}
@@ -397,6 +397,16 @@ u_int64_t		hashcode;
 fd_set			tester;
 char			*aa,*bb;
 long			length,ret;
+
+// we receive data to classify from the java code with a simple text header
+// that includes the source, session, and length followed by the raw data
+//
+// SOURCE:SESSIONID:LENGTH
+//
+// example client and server messages
+//
+// CLIENT:95324669281375:191
+// SERVER:95324669281375:370
 
 aa = strchr(querybuff,':');		// points to session id
 if (aa == NULL) return(0);
