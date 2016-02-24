@@ -4,20 +4,24 @@
 	that we display in the Wiki.  It just spits out what it finds
 	in the file, so you may need to tweak the column headers
 	if you don't like the names that Vineyard gave them.
+
+	Recent versions of the file include fields that we don't use
+	so you may have to update the index print statements to
+	get the desired columns.
 */
 
 #include <string.h>
 #include <stdio.h>
 
-char		buffer[10240];
 char		filename[256] = "vineyard.csv";
+char		capture[16][1024];
+char		buffer[10240];
 
 int main(int argc,char *argv[])
 {
 FILE		*file;
-char		capture[8][1024];
 char		*check,*find;
-int			lines,len,x;
+int			fields,lines,len,x;
 int			offset,index;
 int			qflag,eflag;
 
@@ -30,6 +34,7 @@ file = fopen(filename,"r");
 	return(1);
 	}
 
+fields = 1;
 lines = 0;
 
 printf("{| width=100%% border=\"1\" cellpadding=\"2\"\r\n");
@@ -62,6 +67,7 @@ printf("{| width=100%% border=\"1\" cellpadding=\"2\"\r\n");
 			{
 			offset = 0;
 			index++;
+			if (lines == 0) fields++;
 			continue;
 			}
 
@@ -83,7 +89,19 @@ printf("{| width=100%% border=\"1\" cellpadding=\"2\"\r\n");
 		}
 
 	printf("|-\r\n");
-	for(x = 0;x < 6;x++) printf("|%s\r\n",capture[x]);
+
+	printf("|%s\r\n",capture[0]);	// GUID
+//	printf("|%s\r\n",capture[1]);	// Index
+	printf("|%s\r\n",capture[2]);	// Name
+	printf("|%s\r\n",capture[3]);	// Description
+	printf("|%s\r\n",capture[4]);	// Category
+	printf("|%s\r\n",capture[5]);	// Productivity
+	printf("|%s\r\n",capture[6]);	// Risk
+//	printf("|%s\r\n",capture[7]);	// SoftwareFlags
+//	printf("|%s\r\n",capture[8]);	// Reference
+//	printf("|%s\r\n",capture[9]);	// PluginName
+
+	lines++;
 	}
 
 printf("|}\r\n");
