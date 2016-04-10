@@ -36,6 +36,7 @@ setrlimit(RLIMIT_CORE,&core);
 	for(x = 1;x < argc;x++)
 	{
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
+	if (strncasecmp(argv[x],"-M",2) == 0) g_nolimit++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
 
 		if (strncasecmp(argv[x],"-D",2) == 0)
@@ -153,7 +154,7 @@ currtime = lasttime = time(NULL);
 		lasttime = currtime;
 		ret = g_sessiontable->PurgeStaleObjects(currtime);
 		LOGMESSAGE(CAT_LOGIC,LOG_DEBUG,"Removed %d stale objects from session table\n",ret);
-		periodic_checkup();
+		if (g_nolimit == 0) periodic_checkup();
 		}
 
 		if (g_logrecycle != 0)
