@@ -22,8 +22,8 @@
 const unsigned int CAT_LOGIC	= 0x0001;
 const unsigned int CAT_CLIENT	= 0x0002;
 const unsigned int CAT_UPDATE	= 0x0004;
-const unsigned int CAT_PACKET	= 0x0008;
-const unsigned int CAT_SESSION	= 0x0010;
+const unsigned int CAT_SESSION	= 0x0008;
+const unsigned int CAT_VINEYARD	= 0x0010;
 
 const unsigned char MSG_DEBUG		= 'D';
 const unsigned char MSG_CREATE		= 'I';
@@ -275,7 +275,7 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 void vineyard_shutdown(void);
 void vineyard_debug(const char *dumpfile);
 void navl_bind_externals(void);
-void log_packet(SessionObject *session,int direction,void *rawdata,int rawsize);
+void log_vineyard(SessionObject *session,const char *message,int direction,void *rawdata,int rawsize);
 int vineyard_startup(void);
 int vineyard_config(const char *key,int value);
 int	vineyard_logger(const char *level,const char *func,const char *format,...);

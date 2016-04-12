@@ -117,6 +117,7 @@ int NetworkClient::ProcessRequest(void)
 {
 SessionObject		*local;
 u_int64_t			hashcode;
+char				namestr[256];
 
 // first check for all our special queries
 if (strcasecmp(querybuff,"CONFIG") == 0)	{ BuildConfiguration(); return(1); }
@@ -161,12 +162,7 @@ local = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
 	// if we have a hit return the found result
 	if (local != NULL)
 	{
-	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %" PRIu64" [%s|%s|%s|%d|%d]\n",hashcode,
-		local->GetApplication(),
-		local->GetProtochain(),
-		local->GetDetail(),
-		local->GetConfidence(),
-		local->GetState());
+	LOGMESSAGE(CAT_CLIENT,LOG_DEBUG,"NETCLIENT FOUND = %s\n",local->GetObjectString(namestr,sizeof(namestr)));
 
 	replyoff = 0;
 	replyoff+=sprintf(&replybuff[replyoff],"FOUND: %" PRIu64 "\r\n",hashcode);
@@ -242,19 +238,19 @@ int		found = 0;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"-PACKET") == 0)
+	if (strcasecmp(querybuff,"-VINEYARD") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Packet debug logging has been disabled\n");
+	sysmessage(LOG_NOTICE,"Vineyard debug logging has been disabled\n");
 	replyoff = sprintf(replybuff,"%s","Packet debug logging been disabled\r\n\r\n");
-	g_debug&=~CAT_PACKET;
+	g_debug&=~CAT_VINEYARD;
 	found++;
 	}
 
-	if (strcasecmp(querybuff,"+PACKET") == 0)
+	if (strcasecmp(querybuff,"+VINEYARD") == 0)
 	{
-	sysmessage(LOG_NOTICE,"Packet debug logging has been enabled\n");
+	sysmessage(LOG_NOTICE,"Vineyard debug logging has been enabled\n");
 	replyoff = sprintf(replybuff,"%s","Packet debug logging has been enabled\r\n\r\n");
-	g_debug|=CAT_PACKET;
+	g_debug|=CAT_VINEYARD;
 	found++;
 	}
 

@@ -88,7 +88,18 @@ sem_post(&g_classify_sem);
 
 			// create the vineyard connection state object
 			ret = navl_conn_create(l_navl_handle,&session->clientinfo,&session->serverinfo,session->GetNetProtocol(),&session->vinestat);
-			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_create(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+
+				if (ret != 0)
+				{
+				sysmessage(LOG_ERR,"Error %d returned from navl_conn_create(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+				g_sessiontable->DeleteObject(session);
+				}
+
+				else
+				{
+				log_vineyard(session,"CREATE",0,NULL,0);
+				}
+
 			break;
 
 		case MSG_REMOVE:
@@ -107,13 +118,14 @@ sem_post(&g_classify_sem);
 			// destroy the vineyard connection state object
 			ret = navl_conn_destroy(l_navl_handle,session->vinestat);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+			else log_vineyard(session,"DESTROY",0,NULL,0);
 
 			// delete the session object from the hash table
 			g_sessiontable->DeleteObject(session);
 			break;
 
 		case MSG_CLIENT:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %" PRIu64 "\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %" PRIu64 " %d BYTES\n",wagon->index,wagon->length);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -129,15 +141,17 @@ sem_post(&g_classify_sem);
 				break;
 				}
 
-			log_packet(session,0,wagon->buffer,wagon->length);
+			log_vineyard(session,"PRE_c2s",CLIENT_to_SERVER,wagon->buffer,wagon->length);
 
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,CLIENT_to_SERVER,navl_callback,session);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(CLIENT:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+			else log_vineyard(session,"POST_c2s",CLIENT_to_SERVER,wagon->buffer,wagon->length);
+
 			break;
 
 		case MSG_SERVER:
-			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %" PRIu64 "\n",wagon->index);
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %" PRIu64 " %d BYTES\n",wagon->index,wagon->length);
 
 			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
@@ -153,11 +167,13 @@ sem_post(&g_classify_sem);
 				break;
 				}
 
-			log_packet(session,1,wagon->buffer,wagon->length);
+			log_vineyard(session,"PRE_s2c",SERVER_to_CLIENT,wagon->buffer,wagon->length);
 
 			// send the traffic to vineyard for classification
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,SERVER_to_CLIENT,navl_callback,session);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+			else log_vineyard(session,"POST_s2c",SERVER_to_CLIENT,wagon->buffer,wagon->length);
+
 			break;
 
 		case MSG_DEBUG:
@@ -187,6 +203,8 @@ char				protochain[256];
 char				namestr[256];
 int					appid,value;
 int					confidence,idx;
+
+log_vineyard(session,"CALLBACK",0,NULL,0);
 
 // if the session object passed is null we can't update
 // this should never happen but we check just in case
@@ -223,7 +241,7 @@ appid = navl_app_get(handle,result,&confidence);
 // update the session object with the new information
 session->UpdateObject(g_protostats[appid]->protocol_name,protochain,confidence,state);
 
-LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE %s\n",session->GetObjectString(namestr,sizeof(namestr)));
+LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE (V:%" PRIXPTR ") %s\n",conn,session->GetObjectString(namestr,sizeof(namestr)));
 
 // continue tracking the flow
 return(0);
@@ -290,17 +308,15 @@ l_navl_handle = navl_open(cfg_navl_plugins);
 	return(1);
 	}
 
+// disable session timeout for TCP and UDP since we do the session management
+if (vineyard_config("tcp.timeout",0) != 0) return(2);
+if (vineyard_config("udp.timeout",0) != 0) return(3);
+
 // set the vineyard system loglevel parameter
-if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(2);
+if (vineyard_config("system.loglevel",cfg_navl_debug) != 0) return(4);
 
 // set the number of of http request+response pairs to analyze before giving up
-if (vineyard_config("http.maxpersist",cfg_http_limit) != 0) return(3);
-
-// set the TCP session timeout
-if (vineyard_config("tcp.timeout",cfg_tcp_timeout) != 0) return(4);
-
-// set the UDP session timeout
-if (vineyard_config("udp.timeout",cfg_udp_timeout) != 0) return(5);
+if (vineyard_config("http.maxpersist",cfg_http_limit) != 0) return(5);
 
 // enable IP fragment processing
 if (vineyard_config("ip.defrag",cfg_navl_defrag) != 0) return(6);
@@ -456,7 +472,7 @@ write(l_navl_logfile,buffer,len);
 return(len);
 }
 /*--------------------------------------------------------------------------*/
-void log_packet(SessionObject *session,int direction,void *rawdata,int rawsize)
+void log_vineyard(SessionObject *session,const char *message,int direction,void *rawdata,int rawsize)
 {
 const char		*pname;
 const char		*work;
@@ -464,7 +480,7 @@ char			clientaddr[32];
 char			serveraddr[32];
 
 // do nothing if packet logging is not enabled
-if ((g_debug & CAT_PACKET) == 0) return;
+if ((g_debug & CAT_VINEYARD) == 0) return;
 
 if (session->GetNetProtocol() == IPPROTO_TCP) pname = "TCP";
 if (session->GetNetProtocol() == IPPROTO_UDP) pname = "UDP";
@@ -475,8 +491,16 @@ if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
 work = inet_ntop(AF_INET,&session->serverinfo.in4_addr,serveraddr,sizeof(serveraddr));
 if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
 
-if (direction == CLIENT_to_SERVER) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,clientaddr,session->clientinfo.port,serveraddr,session->serverinfo.port);
-if (direction == SERVER_to_CLIENT) LOGMESSAGE(CAT_PACKET,LOG_DEBUG,"PACKET (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",rawsize,session->vinestat,pname,serveraddr,session->serverinfo.port,clientaddr,session->clientinfo.port);
+	if (rawdata != NULL)
+	{
+	if (direction == CLIENT_to_SERVER) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
+	if (direction == SERVER_to_CLIENT) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,serveraddr,ntohs(session->serverinfo.port),clientaddr,ntohs(session->clientinfo.port));
+	}
+
+	else
+	{
+	LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
+	}
 }
 /*--------------------------------------------------------------------------*/
 
