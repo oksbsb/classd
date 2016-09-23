@@ -90,7 +90,6 @@ private:
 
 	void BuildConfiguration(void);
 	void BuildDebugInfo(void);
-	void BuildProtoList(int complete);
 	void BuildHelpPage(void);
 	void DumpEverything(void);
 	void AdjustLogCategory(void);
@@ -263,12 +262,6 @@ public:
 	int						value;
 };
 /*--------------------------------------------------------------------------*/
-struct protostats
-{
-	u_int64_t				packet_count;
-	char					protocol_name[9];
-};
-/*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
 void attr_callback(navl_handle_t handle,navl_conn_t conn,int attr_type,int attr_length,const void *attr_value,int attr_flag,void *arg);
 int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,navl_conn_t conn,void *arg,int error);
@@ -299,7 +292,6 @@ char *pad(char *target,u_int64_t value,int width = 0);
 #define DATALOC extern
 #endif
 /*--------------------------------------------------------------------------*/
-DATALOC protostats			**g_protostats;
 DATALOC pthread_t			g_classify_tid;
 DATALOC sem_t				g_classify_sem;
 DATALOC struct itimerval	g_itimer;

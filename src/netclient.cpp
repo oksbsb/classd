@@ -122,8 +122,6 @@ char				namestr[256];
 // first check for all our special queries
 if (strcasecmp(querybuff,"CONFIG") == 0)	{ BuildConfiguration(); return(1); }
 if (strcasecmp(querybuff,"DEBUG") == 0)		{ BuildDebugInfo(); return(1); }
-if (strcasecmp(querybuff,"PROTO") == 0)		{ BuildProtoList(1); return(1); }
-if (strcasecmp(querybuff,"USED") == 0)		{ BuildProtoList(0); return(1); }
 if (strcasecmp(querybuff,"HELP") == 0)		{ BuildHelpPage(); return(1); }
 if (strcasecmp(querybuff,"DUMP") == 0)		{ DumpEverything(); return(1); }
 if (strcasecmp(querybuff,"EXIT") == 0)		{ return(0); }
@@ -563,20 +561,6 @@ replyoff+=sprintf(&replybuff[replyoff],"  Vineyard Duplicate Iterator ..... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
 /*--------------------------------------------------------------------------*/
-void NetworkClient::BuildProtoList(int complete)
-{
-char	temp[64];
-int		x;
-
-replyoff = sprintf(replybuff,"===== VINEYARD APPLICATION LIST =====\r\n");
-
-	for(x = 0;x < g_protocount;x++)
-	{
-	if ((complete == 0) && (g_protostats[x]->packet_count == 0)) continue;
-	replyoff+=sprintf(&replybuff[replyoff],"%-10s %s\r\n",g_protostats[x]->protocol_name,pad(temp,g_protostats[x]->packet_count));
-	}
-}
-/*--------------------------------------------------------------------------*/
 void NetworkClient::BuildConfiguration(void)
 {
 replyoff = sprintf(replybuff,"========== CLASSD CONFIGURATION ==========\r\n");
@@ -613,8 +597,6 @@ replyoff = sprintf(replybuff,"========== HELP PAGE ==========\r\n");
 
 replyoff+=sprintf(&replybuff[replyoff],"CONFIG = display all daemon configuration values\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"DEBUG = display daemon debug information\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"PROTO = display list of all known protocols\r\n");
-replyoff+=sprintf(&replybuff[replyoff],"USED = display list of detected protocols\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+LOGIC | -LOGIC = enable/disable logic debug logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+CLIENT | -CLIENT = enable/disable netclient request logging\r\n");
 replyoff+=sprintf(&replybuff[replyoff],"+UPDATE | -UPDATE = enable/disable classify status logging\r\n");

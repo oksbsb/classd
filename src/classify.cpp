@@ -200,7 +200,9 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
 char				protochain[256];
+char				application[16];
 char				namestr[256];
+char				work[16];
 int					appid,value;
 int					confidence,idx;
 
@@ -220,26 +222,34 @@ if (session == NULL) return(0);
 	default:		err_unknown++;	break;
 	}
 
-// clear local variables that we fill in while building the protochain
-protochain[0] = 0;
+// get the application id and confidence
 confidence = 0;
-idx = 0;
-
-// get the application and confidence
 appid = navl_app_get(handle,result,&confidence);
 
-	// build the protochain grabbing extra info for certain protocols
+// get the application name
+application[0] = 0;
+navl_proto_get_name(handle,appid,application,sizeof(application));
+
+// clear local variables that we fill in while building the protochain
+protochain[0] = 0;
+idx = 0;
+
+	// build the protochain
 	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
 	{
+	// get the protocol index
 	value = navl_proto_get_index(handle,it);
 
+	// get the name for the protocol
+	work[0] = 0;
+	navl_proto_get_name(handle,value,work,sizeof(work));
+
 	// append the protocol name to the chain
-	idx+=snprintf(&protochain[idx],sizeof(protochain),"/%s",g_protostats[value]->protocol_name);
-	g_protostats[value]->packet_count++;
+	idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s",work);
 	}
 
 // update the session object with the new information
-session->UpdateObject(g_protostats[appid]->protocol_name,protochain,confidence,state);
+session->UpdateObject(application,protochain,confidence,state);
 
 LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE (V:%" PRIXPTR ") %s\n",conn,session->GetObjectString(namestr,sizeof(namestr)));
 
@@ -291,9 +301,8 @@ LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY DETAIL %s\n",session->GetObjectString(
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
 {
-char	work[32];
 int		problem = 0;
-int		ret,x;
+int		ret;
 
 // bind the vineyard external references
 navl_bind_externals();
@@ -356,37 +365,16 @@ ret = navl_proto_max_index(l_navl_handle);
 	return(15);
 	}
 
-// create the array of protocol statistics
-g_protocount = (ret + 1);
-g_protostats = (protostats **)malloc(g_protocount * sizeof(protostats *));
-
-	// get the name of each protocol add create new protolist entry
-	for(x = 0;x < g_protocount;x++)
-	{
-	work[0] = 0;
-	navl_proto_get_name(l_navl_handle,x,work,sizeof(work));
-	if (strlen(work) == 0) strcpy(work,"UNKNOWN");
-	g_protostats[x] = (protostats *)malloc(sizeof(protostats));
-	g_protostats[x]->packet_count = 0;
-	strcpy(g_protostats[x]->protocol_name,work);
-	}
-
 return(0);
 }
 /*--------------------------------------------------------------------------*/
 void vineyard_shutdown(void)
 {
-int		x;
-
 // finalize the vineyard library
 navl_fini(l_navl_handle);
 
 // shut down the vineyard engine
 navl_close(l_navl_handle);
-
-// free the protostats
-for(x = 0;x < g_protocount;x++) free(g_protostats[x]);
-free(g_protostats);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_config(const char *key,int value)
