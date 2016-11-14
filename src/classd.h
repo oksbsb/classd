@@ -340,6 +340,7 @@ DATALOC u_int64_t			msg_totalcount;
 DATALOC u_int64_t			msg_timedrop;
 DATALOC u_int64_t			msg_sizedrop;
 DATALOC int					vineyard_duplicate;
+DATALOC int					vineyard_garbage;
 DATALOC int					client_misscount;
 DATALOC int					client_hitcount;
 /*--------------------------------------------------------------------------*/

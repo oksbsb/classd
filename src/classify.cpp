@@ -205,6 +205,7 @@ char				namestr[256];
 char				work[16];
 int					appid,value;
 int					confidence,idx;
+int					l,x;
 
 log_vineyard(session,"CALLBACK",0,NULL,0);
 
@@ -230,6 +231,16 @@ appid = navl_app_get(handle,result,&confidence);
 application[0] = 0;
 navl_proto_get_name(handle,appid,application,sizeof(application));
 
+// make sure there is no garbage in returned name
+l = strlen(application);
+
+	for(x = 0;x < l;x++)
+	{
+	if (isalnum(application[x]) != 0) continue;
+	application[x] = '.';
+	vineyard_garbage++;
+	}
+
 // clear local variables that we fill in while building the protochain
 protochain[0] = 0;
 idx = 0;
@@ -243,6 +254,16 @@ idx = 0;
 	// get the name for the protocol
 	work[0] = 0;
 	navl_proto_get_name(handle,value,work,sizeof(work));
+
+	// make sure there is no garbage in returned name
+	l = strlen(work);
+
+		for(x = 0;x < l;x++)
+		{
+		if (isalnum(work[x]) != 0) continue;
+		work[x] = '.';
+		vineyard_garbage++;
+		}
 
 	// append the protocol name to the chain
 	idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s",work);

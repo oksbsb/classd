@@ -557,6 +557,7 @@ replyoff+=sprintf(&replybuff[replyoff],"  Vineyard NO CONNECTION Errors ... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard UNKNOWN Errors ......... %s\r\n",pad(temp,err_unknown));
 
 replyoff+=sprintf(&replybuff[replyoff],"  Vineyard Duplicate Iterator ..... %s\r\n",pad(temp,vineyard_duplicate));
+replyoff+=sprintf(&replybuff[replyoff],"  Vineyard Name Garbage ........... %s\r\n",pad(temp,vineyard_garbage));
 
 replyoff+=sprintf(&replybuff[replyoff],"\r\n");
 }
