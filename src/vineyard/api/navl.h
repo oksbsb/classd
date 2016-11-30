@@ -220,6 +220,10 @@ typedef void (*navl_futureflow_callback_t)(navl_handle_t, navl_host_t *src, navl
 /*
  * navl_futureflow_callback_set()
  * 
+ * DEPRECATION WARNING:
+ * This functionality will be removed in a future release. The information is
+ * now available through protocol-specific attributes.
+ *
  * Bind a futureflow handler for the given instance.
  *
  * On sucess, 0 is returned. On error, -1 is returned.
@@ -507,13 +511,21 @@ NAVL_API int navl_config_set(navl_handle_t handle, const char *key, const char *
 NAVL_API int navl_config_get(navl_handle_t handle, const char *key, char *val, int size);
 
 /*
- * navl_config_dump()
+ * navl_config_dump_verbose()
  *
  * Dumps the entire configuration via navl_diag_printf.
  * On success, returns 0. On error, returns -1.
  *
  * Note in order to use this you must bind navl_diag_printf to a valid callback
  * function.
+ */
+NAVL_API int navl_config_dump_verbose(navl_handle_t handle);
+
+/*
+ * navl_config_dump()
+ *
+ * Dumps only configuration which has been modified through navl_config_set.
+ * On success, returns 0. On error, returns -1.
  */
 NAVL_API int navl_config_dump(navl_handle_t handle);
 

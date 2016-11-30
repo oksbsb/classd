@@ -531,6 +531,7 @@ replyoff+=sprintf(&replybuff[replyoff],"  Build ........................... %s\r
 replyoff+=sprintf(&replybuff[replyoff],"  Architecture .................... %d Bit\r\n",(int)sizeof(void*)*8);
 replyoff+=sprintf(&replybuff[replyoff],"  Debug Level ..................... 0x%04X\r\n",g_debug);
 replyoff+=sprintf(&replybuff[replyoff],"  No Fork Flag .................... %d\r\n",g_nofork);
+replyoff+=sprintf(&replybuff[replyoff],"  No Limit Flag ................... %d\r\n",g_nolimit);
 replyoff+=sprintf(&replybuff[replyoff],"  Console Flag .................... %d\r\n",g_console);
 replyoff+=sprintf(&replybuff[replyoff],"  Client Hit Count ................ %s\r\n",pad(temp,client_hitcount));
 replyoff+=sprintf(&replybuff[replyoff],"  Client Miss Count ............... %s\r\n",pad(temp,client_misscount));

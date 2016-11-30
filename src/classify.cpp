@@ -424,7 +424,7 @@ l_navl_logfile = fileno(stream);
 
 fprintf(stream,"========== VINEYARD CONFIG INFO ==========\r\n");
 fflush(stream);
-navl_config_dump(l_navl_handle);
+navl_config_dump_verbose(l_navl_handle);
 
 fprintf(stream,"========== VINEYARD SYSTEM INFO ==========\r\n");
 fflush(stream);
