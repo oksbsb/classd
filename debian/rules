@@ -1,6 +1,7 @@
 #!/usr/bin/make -f
 
 DESTDIR := debian/tmp
+HFLOAT := $(shell cat /proc/cpuinfo | grep -m 1 vfp)
 ARCH := $(shell uname -m | head -c 3)
 # x86_64 -> x86
 # armv7l and armv5tejl -> arm
@@ -10,8 +11,13 @@ ifeq ($(ARCH),x86)
   LIBDIR := src/vineyard/lib64/
   PLUGDIR := src/vineyard/plugins64/
 else ifeq ($(ARCH),arm)
-  LIBDIR := src/vineyard/libarm/
-  PLUGDIR := src/vineyard/pluginsarm/
+  ifneq (,$(findstring vfp,$(HFLOAT)))
+    LIBPATH := src/vineyard/libarmhf/
+    PLUGDIR := src/vineyard/pluginsarmhf/
+  else
+    LIBDIR := src/vineyard/libarm/
+    PLUGDIR := src/vineyard/pluginsarm/
+  endif
 else
   LIBDIR := src/vineyard/lib/
   PLUGDIR := src/vineyard/plugins/
