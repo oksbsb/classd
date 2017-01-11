@@ -10,18 +10,23 @@ SPEED = -O2
 BUILDID := "$(shell date -u "+%G/%m/%d %H:%M:%S UTC")"
 VERSION := $(shell date -u "+%s")
 SYSTEM := $(shell uname)
+HFLOAT := $(shell cat /proc/cpuinfo | grep -m 1 vfp)
 ARCH := $(shell uname -m)
 
 ifeq ($(SYSTEM),Linux)
-  PLATFORM = -D__LINUX__
-  LIBFILES = -lpthread -ldl -lnavl
+    PLATFORM = -D__LINUX__
+    LIBFILES = -lpthread -ldl -lnavl
     ifeq ($(ARCH),x86_64)
-      LIBPATH = -Lsrc/vineyard/lib64
+        LIBPATH = -Lsrc/vineyard/lib64
     else ifneq (,$(findstring arm,$(ARCH)))
-      LIBPATH = -Lsrc/vineyard/libarm
+        ifneq (,$(findstring vfp,$(HFLOAT)))
+            LIBPATH = -Lsrc/vineyard/libarmhf
+	else
+	    LIBPATH = -Lsrc/vineyard/libarm
+	endif
     else
-      LIBPATH = -Lsrc/vineyard/lib
-  endif
+        LIBPATH = -Lsrc/vineyard/lib
+    endif
 else
   $(error ERROR: Unsupported platform '$(SYSTEM)')
 endif

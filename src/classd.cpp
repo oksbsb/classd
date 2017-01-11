@@ -435,32 +435,37 @@ char		*check;
 char		work[1024];
 int			total,len,x;
 
-// open the config file
-cfg = fopen("/etc/default/untangle-classd","r");
-if (cfg == NULL) return;
-
-// allocate an array of pointers to hold each line
-filedata = (char **)calloc(1024,sizeof(char *));
+filedata = NULL;
 total = 0;
 
-	// grab all the data from the config file
-	for(;;)
+// open the config file
+cfg = fopen("/etc/default/untangle-classd","r");
+
+	// if we have the config file load all the data
+	if (cfg != NULL)
 	{
-	check = fgets(work,sizeof(work),cfg);
-	if (check == NULL) break;
+	// allocate an array of pointers to hold each line
+	filedata = (char **)calloc(1024,sizeof(char *));
 
-	// ignore lines that start with hash or space
-	if (check[0] == '#') continue;
-	if (isspace(check[0])) continue;
+		// grab all the data from the config file
+		for(;;)
+		{
+		check = fgets(work,sizeof(work),cfg);
+		if (check == NULL) break;
 
-	// allocate some memory and save the line
-	len = strlen(work);
-	filedata[total] = (char *)malloc(len + 1);
-	strcpy(filedata[total],work);
-	total++;
+		// ignore lines that start with hash or space
+		if (check[0] == '#') continue;
+		if (isspace(check[0])) continue;
+
+		// allocate some memory and save the line
+		len = strlen(work);
+		filedata[total] = (char *)malloc(len + 1);
+		strcpy(filedata[total],work);
+		total++;
+		}
+
+	fclose(cfg);
 	}
-
-fclose(cfg);
 
 grab_config_item(filedata,"CLASSD_LOG_PATH",cfg_log_path,sizeof(cfg_log_path),"/var/log/untangle-classd");
 grab_config_item(filedata,"CLASSD_LOG_FILE",cfg_log_file,sizeof(cfg_log_file),"/var/log/untangle-classd/classd.log");
@@ -519,8 +524,12 @@ cfg_packet_timeout = atoi(work);
 grab_config_item(filedata,"CLASSD_PACKET_MAXIMUM",work,sizeof(work),"1000000");
 cfg_packet_maximum = atoi(work);
 
-for(x = 0;x < total;x++) free(filedata[x]);
-free(filedata);
+	// free the memory allocated for the config file
+	if (filedata != NULL)
+	{
+	for(x = 0;x < total;x++) free(filedata[x]);
+	free(filedata);
+	}
 }
 /*--------------------------------------------------------------------------*/
 const char *grab_config_item(char** const filedata,const char *search,char *target,int size,const char *init)

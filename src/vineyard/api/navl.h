@@ -491,7 +491,14 @@ NAVL_API int navl_attr_offset_get(navl_handle_t handle, const void *attr_value);
 /*******************************************************************************
  * Configuration
  ******************************************************************************/
-
+/*
+ * navl_suppress_ld_errors()
+ *
+ * Enables/disables reporting errors on third party library loading (1 - to suppress, 0 - to allow)
+ * Has no effect if called after navl_open
+ *
+ */
+NAVL_API void navl_suppress_ld_errors(int enable_ld_errors);
 /*
  * navl_config_set()
  *
