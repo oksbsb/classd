@@ -12,7 +12,7 @@ ifeq ($(ARCH),x86)
   PLUGDIR := src/vineyard/plugins64/
 else ifeq ($(ARCH),arm)
   ifneq (,$(findstring vfp,$(HFLOAT)))
-    LIBPATH := src/vineyard/libarmhf/
+    LIBDIR := src/vineyard/libarmhf/
     PLUGDIR := src/vineyard/pluginsarmhf/
   else
     LIBDIR := src/vineyard/libarm/
