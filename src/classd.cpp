@@ -99,9 +99,11 @@ sysmessage(LOG_NOTICE,"STARTUP Untangle CLASSd %d-Bit Version %s Build %s\n",(in
 if (g_console != 0) sysmessage(LOG_NOTICE,"Running on console - Use ENTER or CTRL+C to terminate\n");
 
 // create the main message queue
+sysmessage(LOG_INFO,"Creating system message queue\n");
 g_messagequeue = new MessageQueue();
 
 // create our session table
+sysmessage(LOG_INFO,"Creating session hash table\n");
 g_sessiontable = new HashTable(cfg_hash_buckets);
 
 // start the vineyard classification thread
@@ -172,9 +174,9 @@ g_messagequeue->PushMessage(new MessageWagon(MSG_SHUTDOWN));
 
 // the five second alarm gives all threads time to shut down cleanly
 // if any get stuck the abort() in the signal handler should do the trick
-alarm(5);
+if (g_nolimit == 0) alarm(5);
 pthread_join(g_classify_tid,NULL);
-alarm(0);
+if (g_nolimit == 0) alarm(0);
 
 // clean up the thread semaphores
 sem_destroy(&g_classify_sem);
@@ -183,7 +185,9 @@ sem_destroy(&g_classify_sem);
 delete(g_netserver);
 
 // cleanup all the global objects we created
+sysmessage(LOG_INFO,"Deleting session hash table\n");
 delete(g_sessiontable);
+sysmessage(LOG_INFO,"Deleting system message queue\n");
 delete(g_messagequeue);
 
 sysmessage(LOG_NOTICE,"GOODBYE Untangle CLASSd Version %s Build %s\n",VERSION,BUILDID);

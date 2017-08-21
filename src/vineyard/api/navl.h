@@ -85,6 +85,20 @@ typedef enum {
 	                          * all outstanding events are handled */
 } navl_notification_level_t;
 
+typedef enum {
+	NAVL_INITIATOR_SIDE = 0,   /* Current packet is from initiator side */
+	NAVL_RECIPIENT_SIDE = 1    /* Current packet is from recipient side */
+} navl_packet_side_t;
+
+typedef struct
+{
+   uint64_t software_flags;
+   uint8_t productivity;
+   uint8_t risk;
+   uint16_t category_total;
+   uint16_t categories[32];
+} navl_guid_properties_t;
+
 typedef void *navl_iterator_t;
 typedef void *navl_result_t;
 typedef int navl_handle_t;
@@ -183,6 +197,17 @@ NAVL_API int navl_classify(navl_handle_t handle, navl_encap_t encap, const void 
 NAVL_API navl_conn_id_t navl_conn_id_get(navl_handle_t handle, navl_conn_t conn);
 
 /*
+ * navl_conn_packet_side_get()
+ *
+ * On success, 0 is returned and @side is filled in accordingly.
+ * @side is NAVL_INITIATOR_SIDE if current packet is from initiator side.
+ * @side is NAVL_RECIPIENT_SIDE if current packet is from recipient side.
+ *
+ * On error, -1 is returned.
+ */
+NAVL_API int navl_conn_packet_side_get(navl_conn_t conn, navl_packet_side_t *side);
+
+/*
  * navl_endpoint_get()
  *
  * Provides the endpoint information for the connection. The results always reflect
@@ -239,6 +264,46 @@ NAVL_API int navl_futureflow_callback_set(navl_handle_t, navl_futureflow_callbac
 NAVL_API int navl_app_get(navl_handle_t handle, navl_result_t result, int *confidence);
 
 /*
+ * navl_history_app_get
+ * Get previous classification result for the result along with its confidence level.
+ *
+ * returns the application protocol index (integer > 0) and confidence level from previous classification result
+ * returns -1 if there aren't any previous result available
+ */
+NAVL_API int navl_history_app_get(navl_handle_t handle, navl_result_t result, int *confidence);
+
+/*
+ * navl_history_proto_first
+ *
+ * Returns the first iterator in previous classification result:
+ * The iterator is used to navigate through the protocol stack just like it is done for
+ * the latest classification result stack.
+ */
+NAVL_API navl_iterator_t navl_history_proto_first(navl_handle_t handle, navl_result_t result);
+
+/*
+ * navl_history_proto_valid()
+ *
+ * Returns 1 if the iterator is valid.
+ */
+NAVL_API int navl_history_proto_valid(navl_handle_t handle, navl_iterator_t it);
+
+/*
+ * navl_history_proto_next()
+ *
+ * Returns the next iterator.
+ */
+NAVL_API navl_iterator_t navl_history_proto_next(navl_handle_t handle, navl_iterator_t it);
+
+
+/*
+ * navl_history_proto_get_index()
+ *
+ * Extracts the protocol from the iterator.
+ */
+NAVL_API int navl_history_proto_get_index(navl_handle_t handle, navl_iterator_t it);
+
+/*
  * navl_proto_first()
  *
  * Returns the first iterator in the result.
@@ -293,6 +358,20 @@ NAVL_API int navl_proto_get_index(navl_handle_t handle, navl_iterator_t it);
  * Extracts the protocol from the short name.
  */
 NAVL_API int navl_proto_find_index(navl_handle_t handle, const char *name);
+
+/*
+ * navl_proto_get_properties()
+ *
+ * On success, return 0 and return navl_guid_properties_t in @prop_t. On error, return -1.
+ */
+NAVL_API int navl_proto_get_properties(navl_handle_t handle, int index, navl_guid_properties_t *prop_t);
+
+/*
+ * navl_proto_is_defunct()
+ *
+ * On success, return 1 if the protocol with given index is defunct, otherwise 0. On error, return -1.
+ */
+NAVL_API int navl_proto_is_defunct(navl_handle_t handle, int index);
 
 /*
  * navl_proto_get_name()
@@ -684,6 +763,42 @@ NAVL_API int navl_memory_obj_num(navl_handle_t);
  * On success, 0 is returned. On error, returns -1.
  */
 NAVL_API int navl_memory_obj_name(navl_handle_t, int, char *, int);
+
+/* 6-tuple API
+ *
+ */
+/* Signature for navl_tuple_vlan_callback_set and navl_tuple_mpls_callback_set
+ * @stack_length is the stack size in bytes
+ * @stack_top - an address of first byte of most outer tag/label
+ * @parsed_entry - an address where VLAN tag/MPLS lavel to use is written
+ * returned VLAN tag/MPLS header must be in host order format that is:
+ * for VLAN TPID - 2 bits, user priority - 3 bits, CFI - 1 bit, VLAN ID - 12 bits
+ * for MPLS header: label number - 20 bits, exp bits - 3 bits, bs - 1 bit, ttl - 8 bits
+ * @arg - argument provided on navl_classify call
+ */
+typedef void (*navl_tuple_callback_t)(navl_handle_t, navl_conn_t conn, int stack_length, const void *stack_top, uint32_t *parsed_entry
+	, void *arg);
+
+/*
+ * navl_tuple_vlan_callback_set()
+ *
+ * sets a @callback on a packet if at least one vlan tag is present
+ *
+ * On success 0 is returned. On error returns -1
+ */
+NAVL_API int navl_tuple_vlan_callback_set(navl_handle_t handle, navl_tuple_callback_t callback);
+
+/*
+ * navl_tuple_mpls_callback_set()
+ *
+ * sets a @callback on a packet if at least one MPLS label is present
+ *
+ * On success 0 is returned. On error returns -1
+ */
+NAVL_API int navl_tuple_mpls_callback_set(navl_handle_t handle, navl_tuple_callback_t callback);
+/* *****************************************************************************
+ * End of 6-tuple API
+ *******************************************************************************/
 
 
 /*******************************************************************************

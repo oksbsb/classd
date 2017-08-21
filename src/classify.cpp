@@ -432,10 +432,6 @@ l_navl_logfile = fileno(stream);
 // dump the vineyard diagnostic info and include calls
 // to fflush since we're passing the file descriptor
 
-fprintf(stream,"========== VINEYARD CONFIG INFO ==========\r\n");
-fflush(stream);
-navl_config_dump_verbose(l_navl_handle);
-
 fprintf(stream,"========== VINEYARD SYSTEM INFO ==========\r\n");
 fflush(stream);
 navl_diag(l_navl_handle,"SYSTEM","");
@@ -447,6 +443,10 @@ navl_diag(l_navl_handle,"TCP","");
 fprintf(stream,"========== VINEYARD UDP INFO ==========\r\n");
 fflush(stream);
 navl_diag(l_navl_handle,"UDP","");
+
+fprintf(stream,"========== VINEYARD CONFIG INFO ==========\r\n");
+fflush(stream);
+navl_config_dump_verbose(l_navl_handle);
 
 // clear the file descriptor before we close the file
 l_navl_logfile = 0;
