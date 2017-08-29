@@ -10,8 +10,6 @@
 #define CLIENT_to_SERVER	0
 #define SERVER_to_CLIENT	1
 #define INVALID_VALUE		1234567890
-#define APPLICATION_SIZE	16
-#define PROTOCHAIN_SIZE		256
 
 /*--------------------------------------------------------------------------*/
 // local variables
@@ -201,13 +199,14 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
+const char			*check;
 char				namestr[256];
-char				*application;
-char				*protochain;
+char				application[16];
+char				protochain[256];
 char				work[16];
 int					appid,value;
-int					confidence,idx;
-int					l,x;
+int					confidence;
+int					idx,l,x;
 
 // if the session object passed is null we can't update
 // this should never happen but we check just in case
@@ -216,18 +215,20 @@ if (session == NULL) return(0);
 log_vineyard(session,"CALLBACK",0,NULL,0);
 
 	// keep track of errors returned by vineyard
-	if (error != 0) switch (error)
+	if (error != 0)
 	{
-	case ENOMEM:	err_nomem++;	break;
-	case ENOBUFS:	err_nobufs++;	break;
-	case ENOSR:		err_nosr++;		break;
-	case ENOTCONN:	err_notconn++;	break;
-	default:		err_unknown++;	break;
-	}
+		switch (error)
+		{
+		case ENOMEM:	err_nomem++;	break;
+		case ENOBUFS:	err_nobufs++;	break;
+		case ENOSR:		err_nosr++;		break;
+		case ENOTCONN:	err_notconn++;	break;
+		default:		err_unknown++;	break;
+		}
 
-// allocate memory for application and protochain
-application = (char *)malloc(APPLICATION_SIZE);
-protochain = (char *)malloc(PROTOCHAIN_SIZE);
+	// if there was an error return but keep tracking the session
+	return(0);
+	}
 
 // get the application id and confidence
 confidence = 0;
@@ -235,7 +236,14 @@ appid = navl_app_get(handle,result,&confidence);
 
 // get the application name
 application[0] = 0;
-navl_proto_get_name(handle,appid,application,APPLICATION_SIZE);
+check = navl_proto_get_name(handle,appid,application,sizeof(application));
+
+	// if we don't get a name return but keep tracking the session
+	if (check == NULL)
+	{
+	vineyard_appfail++;
+	return(0);
+	}
 
 // make sure there is no garbage in returned name
 l = strlen(application);
@@ -244,7 +252,7 @@ l = strlen(application);
 	{
 	if (isalnum(application[x]) != 0) continue;
 	application[x] = '.';
-	vineyard_garbage++;
+	vineyard_appjunk++;
 	}
 
 // clear local variables that we fill in while building the protochain
@@ -259,7 +267,15 @@ idx = 0;
 
 	// get the name for the protocol
 	work[0] = 0;
-	navl_proto_get_name(handle,value,work,sizeof(work));
+	check = navl_proto_get_name(handle,value,work,sizeof(work));
+
+		// if we don't get a name just use question marks
+		if (check == NULL)
+		{
+		idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s","???");
+		vineyard_protofail++;
+		continue;
+		}
 
 	// make sure there is no garbage in returned name
 	l = strlen(work);
@@ -268,11 +284,11 @@ idx = 0;
 		{
 		if (isalnum(work[x]) != 0) continue;
 		work[x] = '.';
-		vineyard_garbage++;
+		vineyard_protojunk++;
 		}
 
 	// append the protocol name to the chain
-	idx+=snprintf(&protochain[idx],(PROTOCHAIN_SIZE - idx),"/%s",work);
+	idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s",work);
 	}
 
 // update the session object with the new information
@@ -280,11 +296,7 @@ session->UpdateObject(application,protochain,confidence,state);
 
 LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE (V:%" PRIXPTR ") %s\n",conn,session->GetObjectString(namestr,sizeof(namestr)));
 
-// free memory for application and protochain
-free(application);
-free(protochain);
-
-// continue tracking the flow
+// continue tracking the session
 return(0);
 }
 /*--------------------------------------------------------------------------*/
