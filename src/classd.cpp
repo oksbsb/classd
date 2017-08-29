@@ -35,6 +35,8 @@ setrlimit(RLIMIT_CORE,&core);
 
 	for(x = 1;x < argc;x++)
 	{
+	if (strncasecmp(argv[x],"-H",2) == 0) show_usage();
+	if (strncasecmp(argv[x],"-?",2) == 0) show_usage();
 	if (strncasecmp(argv[x],"-F",2) == 0) g_nofork++;
 	if (strncasecmp(argv[x],"-M",2) == 0) g_nolimit++;
 	if (strncasecmp(argv[x],"-L",2) == 0) g_console++;
@@ -632,6 +634,21 @@ mem = atoi(find);
 
 sysmessage(LOG_ERR,"Setting shutdown flag due to high memory usage of %d kB\n",mem);
 g_shutdown++;
+}
+/*--------------------------------------------------------------------------*/
+void show_usage(void)
+{
+printf("\n");
+printf("/----------------- OPTION SUMMARY -----------------\\\n");
+printf("|  -D[xxxx]  set debug level to all or hex value   |\n");
+printf("|  -F        run as foreground daemon (no fork)    |\n");
+printf("|  -L        run as program rather than daemon     |\n");
+printf("|  -M        disable memory usage limit            |\n");
+printf("\\--------------------------------------------------/\n");
+printf("\n");
+printf("[ CLASSD ] Runtime arguments displayed. Application exiting.\n");
+printf("\n");
+exit(0);
 }
 /*--------------------------------------------------------------------------*/
 
