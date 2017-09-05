@@ -224,9 +224,9 @@ public:
 	void UpdateDetail(const char *aDetail);
 	char *GetObjectString(char *target,int maxlen);
 
-	inline const char *GetApplication(void)	{ return(application); }
-	inline const char *GetProtochain(void)	{ return(protochain); }
-	inline const char *GetDetail(void)		{ return(detail == NULL ? "" : detail); }
+	inline const char *GetApplication(void)	{ return(application_str[application_idx]); }
+	inline const char *GetProtochain(void)	{ return(protochain_str[protochain_idx]); }
+	inline const char *GetDetail(void)		{ return(detail_str[detail_idx] == NULL ? "" : detail_str[detail_idx]); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
 
@@ -240,9 +240,12 @@ private:
 
 	short					state;
 	short					confidence;
-	char					*application;
-	char					*protochain;
-	char					*detail;
+	char					application_str[2][16];
+	char					protochain_str[2][256];
+	char					detail_str[2][256];
+	int						application_idx;
+	int						protochain_idx;
+	int						detail_idx;
 };
 /*--------------------------------------------------------------------------*/
 class Problem

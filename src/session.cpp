@@ -14,9 +14,18 @@ SessionObject::SessionObject(u_int64_t aSession,
 {
 state = 0;
 confidence = 0;
-application = NULL;
-protochain = NULL;
-detail = NULL;
+
+application_str[0][0] = 0;
+application_str[1][0] = 0;
+application_idx = 0;
+
+protochain_str[0][0] = 0;
+protochain_str[1][0] = 0;
+protochain_idx = 0;
+
+detail_str[0][0] = 0;
+detail_str[1][0] = 0;
+detail_idx = 0;
 
 vinestat = NULL;
 
@@ -31,9 +40,6 @@ if (aProtocol == IPPROTO_UDP) UpdateObject("UDP","/UDP",0,NAVL_STATE_INSPECTING)
 /*--------------------------------------------------------------------------*/
 SessionObject::~SessionObject(void)
 {
-if (application != NULL) free(application);
-if (protochain != NULL) free(protochain);
-if (detail != NULL) free(detail);
 }
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateObject(const char *aApplication,
@@ -41,29 +47,27 @@ void SessionObject::UpdateObject(const char *aApplication,
 	short aConfidence,
 	short aState)
 {
-char	*nextdata;
-char	*lastdata;
+int		anext,pnext;
 int		len;
 
 ResetTimeout();
 
-// allocate, copy, swap, and free for the new application
-len = strlen(aApplication);
-nextdata  = (char *)malloc(len + 1);
-memcpy(nextdata,aApplication,len);
-nextdata[len] = 0;
-lastdata = application;
-application = nextdata;
-if (lastdata != NULL) free(lastdata);
+anext = (application_idx ^ 1);
+pnext = (protochain_idx ^ 1);
 
-// allocate, copy, swap, and free for the new protochain
+// copy the updated application to the inactive buffer and toggle the index
+len = strlen(aApplication);
+if (len >= (int)sizeof(application_str[anext])) len = (sizeof(application_str[anext]) - 1);
+memcpy(application_str[anext],aApplication,len);
+application_str[anext][len] = 0;
+application_idx ^= 1;
+
+// copy the updated protochain to the inactive buffer and toggle the index
 len = strlen(aProtochain);
-nextdata  = (char *)malloc(len + 1);
-memcpy(nextdata,aProtochain,len);
-nextdata[len] = 0;
-lastdata = protochain;
-protochain = nextdata;
-if (lastdata != NULL) free(lastdata);
+if (len >= (int)sizeof(protochain_str[pnext])) len = (sizeof(protochain_str[pnext]) - 1);
+memcpy(protochain_str[pnext],aProtochain,len);
+protochain_str[pnext][len] = 0;
+protochain_idx ^= 1;
 
 confidence = aConfidence;
 state = aState;
@@ -71,18 +75,19 @@ state = aState;
 /*--------------------------------------------------------------------------*/
 void SessionObject::UpdateDetail(const char *aDetail)
 {
-char	*nextdata;
-char	*lastdata;
+int		dnext;
 int		len;
 
-// allocate, copy, swap, and free for the new detail
+ResetTimeout();
+
+dnext = (detail_idx ^ 1);
+
+// copy the updated detail to the inactive buffer and toggle the index
 len = strlen(aDetail);
-nextdata  = (char *)malloc(len + 1);
-memcpy(nextdata,aDetail,len);
-nextdata[len] = 0;
-lastdata = detail;
-detail = nextdata;
-if (lastdata != NULL) free(lastdata);
+if (len >= (int)sizeof(detail_str[dnext])) len = (sizeof(detail_str[dnext]) - 1);
+memcpy(detail_str[dnext],aDetail,len);
+detail_str[dnext][len] = 0;
+detail_idx ^= 1;
 }
 /*--------------------------------------------------------------------------*/
 int SessionObject::GetObjectSize(void)
@@ -90,9 +95,6 @@ int SessionObject::GetObjectSize(void)
 int			mysize;
 
 mysize = HashObject::GetObjectSize();
-if (application != NULL) mysize+=(strlen(application) + 1);
-if (protochain != NULL) mysize+=(strlen(protochain) + 1);
-if (detail != NULL) mysize+=(strlen(detail) + 1);
 return(mysize);
 }
 /*--------------------------------------------------------------------------*/
@@ -100,10 +102,10 @@ char *SessionObject::GetObjectString(char *target,int maxlen)
 {
 const char		*local;
 
-if (detail == NULL) local = "";
-else local = detail;
+if (detail_str[detail_idx] == NULL) local = "";
+else local = detail_str[detail_idx];
 
-snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetNetString(),state,confidence,application,protochain,local);
+snprintf(target,maxlen,"%s [%d|%d|%s|%s|%s]",GetNetString(),state,confidence,application_str[application_idx],protochain_str[protochain_idx],local);
 
 return(target);
 }

@@ -249,14 +249,14 @@ protochain[0] = 0;
 		// if the protocol is out of bounds just use question marks
 		if ((value < 0) || (value > g_protocount))
 		{
-		strncat(protochain,"/???",sizeof(protochain));
+		strncat(protochain,"/???",sizeof(protochain)-1);
 		vineyard_protofail++;
 		continue;
 		}
 
 	// append the protocol name to the chain
-	strncat(protochain,"/",sizeof(protochain));
-	strncat(protochain,g_protostats[value]->protocol_name,sizeof(protochain));
+	strncat(protochain,"/",sizeof(protochain)-1);
+	strncat(protochain,g_protostats[value]->protocol_name,sizeof(protochain)-1);
 	g_protostats[value]->packet_count++;
 	}
 
