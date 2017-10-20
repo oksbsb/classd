@@ -199,14 +199,10 @@ int navl_callback(navl_handle_t handle,navl_result_t result,navl_state_t state,n
 {
 navl_iterator_t		it;
 SessionObject		*session = (SessionObject *)arg;
-const char			*check;
 char				namestr[256];
-char				application[16];
 char				protochain[256];
-char				work[16];
 int					appid,value;
 int					confidence;
-int					idx,l,x;
 
 // if the session object passed is null we can't update
 // this should never happen but we check just in case
@@ -234,30 +230,15 @@ log_vineyard(session,"CALLBACK",0,NULL,0);
 confidence = 0;
 appid = navl_app_get(handle,result,&confidence);
 
-// get the application name
-application[0] = 0;
-check = navl_proto_get_name(handle,appid,application,sizeof(application));
-
-	// if we don't get a name return but keep tracking the session
-	if (check == NULL)
+	// if the appid is out of bounds return but keep tracking the session
+	if ((appid < 0) || (appid > g_protocount))
 	{
 	vineyard_appfail++;
 	return(0);
 	}
 
-// make sure there is no garbage in returned name
-l = strlen(application);
-
-	for(x = 0;x < l;x++)
-	{
-	if (isalnum(application[x]) != 0) continue;
-	application[x] = '.';
-	vineyard_appjunk++;
-	}
-
 // clear local variables that we fill in while building the protochain
 protochain[0] = 0;
-idx = 0;
 
 	// build the protochain
 	for(it = navl_proto_first(handle,result);navl_proto_valid(handle,it);navl_proto_next(handle,it))
@@ -265,34 +246,22 @@ idx = 0;
 	// get the protocol index
 	value = navl_proto_get_index(handle,it);
 
-	// get the name for the protocol
-	work[0] = 0;
-	check = navl_proto_get_name(handle,value,work,sizeof(work));
-
-		// if we don't get a name just use question marks
-		if (check == NULL)
+		// if the protocol is out of bounds just use question marks
+		if ((value < 0) || (value > g_protocount))
 		{
-		idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s","???");
+		strncat(protochain,"/???",sizeof(protochain)-1);
 		vineyard_protofail++;
 		continue;
 		}
 
-	// make sure there is no garbage in returned name
-	l = strlen(work);
-
-		for(x = 0;x < l;x++)
-		{
-		if (isalnum(work[x]) != 0) continue;
-		work[x] = '.';
-		vineyard_protojunk++;
-		}
-
 	// append the protocol name to the chain
-	idx+=snprintf(&protochain[idx],(sizeof(protochain) - idx),"/%s",work);
+	strncat(protochain,"/",sizeof(protochain)-1);
+	strncat(protochain,g_protostats[value]->protocol_name,sizeof(protochain)-1);
+	g_protostats[value]->packet_count++;
 	}
 
 // update the session object with the new information
-session->UpdateObject(application,protochain,confidence,state);
+session->UpdateObject(g_protostats[appid]->protocol_name,protochain,confidence,state);
 
 LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY UPDATE (V:%" PRIXPTR ") %s\n",conn,session->GetObjectString(namestr,sizeof(namestr)));
 
@@ -344,8 +313,11 @@ LOGMESSAGE(CAT_UPDATE,LOG_DEBUG,"CLASSIFY DETAIL %s\n",session->GetObjectString(
 /*--------------------------------------------------------------------------*/
 int vineyard_startup(void)
 {
-int		problem = 0;
-int		ret;
+const char	*check;
+char		work[32];
+int			problem = 0;
+int			junk,ret;
+int			l,x,y;
 
 // bind the vineyard external references
 navl_bind_externals();
@@ -408,16 +380,57 @@ ret = navl_proto_max_index(l_navl_handle);
 	return(15);
 	}
 
+// create the array of protocol statistics
+g_protocount = (ret + 1);
+g_protostats = (protostats **)malloc(g_protocount * sizeof(protostats *));
+
+        // get the name of each protocol add create new protolist entry
+        for(x = 0;x < g_protocount;x++)
+        {
+        work[0] = 0;
+        check = navl_proto_get_name(l_navl_handle,x,work,sizeof(work));
+		l = strlen(work);
+		junk = 0;
+
+			if ((check == NULL) || (l == 0))
+			{
+			if (x != 0) sysmessage(LOG_WARNING,"Empty name returned for protocol %d\n",x);
+			strcpy(work,"UNKNOWN");
+			}
+
+			for(y = 0;y < l;y++)
+			{
+			if (isascii(work[y]) != 0) continue;
+			work[y] = '?';
+			junk++;
+			}
+
+			if (junk != 0)
+			{
+			sysmessage(LOG_WARNING,"Invalid name returned for protocol %d (%s)\n",x,work);
+			}
+
+        g_protostats[x] = (protostats *)malloc(sizeof(protostats));
+        strcpy(g_protostats[x]->protocol_name,work);
+        g_protostats[x]->packet_count = 0;
+        }
+
 return(0);
 }
 /*--------------------------------------------------------------------------*/
 void vineyard_shutdown(void)
 {
+int		x;
+
 // finalize the vineyard library
 navl_fini(l_navl_handle);
 
 // shut down the vineyard engine
 navl_close(l_navl_handle);
+
+// free the protostats
+for(x = 0;x < g_protocount;x++) free(g_protostats[x]);
+free(g_protostats);
 }
 /*--------------------------------------------------------------------------*/
 int vineyard_config(const char *key,int value)

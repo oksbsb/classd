@@ -89,6 +89,7 @@ protected:
 private:
 
 	void BuildConfiguration(void);
+	void BuildProtoList(int complete);
 	void BuildDebugInfo(void);
 	void BuildHelpPage(void);
 	void DumpEverything(void);
@@ -223,9 +224,9 @@ public:
 	void UpdateDetail(const char *aDetail);
 	char *GetObjectString(char *target,int maxlen);
 
-	inline const char *GetApplication(void)	{ return(application); }
-	inline const char *GetProtochain(void)	{ return(protochain); }
-	inline const char *GetDetail(void)		{ return(detail == NULL ? "" : detail); }
+	inline const char *GetApplication(void)	{ return(application_str[application_idx]); }
+	inline const char *GetProtochain(void)	{ return(protochain_str[protochain_idx]); }
+	inline const char *GetDetail(void)		{ return(detail_str[detail_idx] == NULL ? "" : detail_str[detail_idx]); }
 	inline short GetConfidence(void)		{ return(confidence); }
 	inline short GetState(void)				{ return(state); }
 
@@ -239,9 +240,12 @@ private:
 
 	short					state;
 	short					confidence;
-	char					*application;
-	char					*protochain;
-	char					*detail;
+	char					application_str[2][16];
+	char					protochain_str[2][256];
+	char					detail_str[2][256];
+	int						application_idx;
+	int						protochain_idx;
+	int						detail_idx;
 };
 /*--------------------------------------------------------------------------*/
 class Problem
@@ -260,6 +264,12 @@ public:
 
 	const char				*string;
 	int						value;
+};
+/*--------------------------------------------------------------------------*/
+struct protostats
+{
+	u_int64_t	packet_count;
+	char		protocol_name[16];
 };
 /*--------------------------------------------------------------------------*/
 void* classify_thread(void *arg);
@@ -293,6 +303,7 @@ char *pad(char *target,u_int64_t value,int width = 0);
 #define DATALOC extern
 #endif
 /*--------------------------------------------------------------------------*/
+DATALOC protostats			**g_protostats;
 DATALOC pthread_t			g_classify_tid;
 DATALOC sem_t				g_classify_sem;
 DATALOC struct itimerval	g_itimer;
@@ -341,9 +352,7 @@ DATALOC u_int64_t			msg_totalcount;
 DATALOC u_int64_t			msg_timedrop;
 DATALOC u_int64_t			msg_sizedrop;
 DATALOC int					vineyard_protofail;
-DATALOC int					vineyard_protojunk;
 DATALOC int					vineyard_appfail;
-DATALOC int					vineyard_appjunk;
 DATALOC int					client_misscount;
 DATALOC int					client_hitcount;
 /*--------------------------------------------------------------------------*/
