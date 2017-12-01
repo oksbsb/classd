@@ -1,5 +1,5 @@
 # Untangle Traffic Classification Daemon
-# Copyright (c) 2011 Untangle, Inc.
+# Copyright (c) 2011-2017 Untangle, Inc.
 # All Rights Reserved
 # Written by Michael A. Hotz
 
