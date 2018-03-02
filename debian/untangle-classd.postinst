@@ -1,31 +1,8 @@
 #!/bin/dash
 
-FLAG_FILE=/tmp/untangle-classd.flag
-LOG_FILE=/var/log/untangle-classd/classd.log
-
-# make sure our directory exists
-mkdir -p `dirname ${LOG_FILE}`
-
-# spew something in the log file
-echo "[`date`] DEBUG untangle-classd installed or upgraded" >> ${LOG_FILE}
-
 # remove old classd iptables file (obsolete)
 rm -f /etc/untangle-netd/iptables-rules.d/825-classd
 
-# if flag file doesn't exist classd wasn't running before so skip restart
-if [ ! -f ${FLAG_FILE} ]; then
-    exit 0
-fi
-
-# get rid of the flag file
-rm -f ${FLAG_FILE}
-
-# if the init script can't be executed just bail
-if [ ! -x "/etc/init.d/untangle-classd" ]; then
-    exit 0
-fi
-
-# start the daemon
-/etc/init.d/untangle-classd start
+#DEBHELPER#
 
 exit 0
