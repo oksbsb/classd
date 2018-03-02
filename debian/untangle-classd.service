@@ -4,7 +4,7 @@ Description=Untangle Classd
 [Service]
 Type=simple
 User=daemon
-ExecStart=/usr/bin/classd
+ExecStart=/usr/bin/classd -F
 Restart=always
 
 [Install]
