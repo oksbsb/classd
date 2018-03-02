@@ -3,6 +3,8 @@
 # remove old classd iptables file (obsolete)
 rm -f /etc/untangle-netd/iptables-rules.d/825-classd
 
+rm -f /etc/init.d/${DPKG_MAINTSCRIPT_PACKAGE}
+
 #DEBHELPER#
 
 exit 0
