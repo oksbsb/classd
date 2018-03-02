@@ -1,0 +1,11 @@
+[Unit]
+Description=Untangle Classd
+
+[Service]
+Type=simple
+User=daemon
+ExecStart=/usr/bin/classd
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
