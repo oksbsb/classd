@@ -192,6 +192,12 @@ removed = 0;
 			// look for stale UDP objects
 			if ((work->netprotocol == IPPROTO_UDP) && (aStamp > work->timeout)) kill++;
 
+			// look for stale IP objects
+			if ((work->netprotocol == IPPROTO_IP) && (aStamp > work->timeout)) kill++;
+
+			// look for stale IPV6 objects
+			if ((work->netprotocol == IPPROTO_IPV6) && (aStamp > work->timeout)) kill++;
+
 			if (kill == 0) continue;
 
 			// if stale post a remove message to the classify thread

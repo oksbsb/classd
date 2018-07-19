@@ -342,6 +342,7 @@ DATALOC int					cfg_navl_debug;
 DATALOC int					cfg_mem_limit;
 DATALOC int					cfg_tcp_timeout;
 DATALOC int					cfg_udp_timeout;
+DATALOC int					cfg_ip_timeout;
 DATALOC int					cfg_client_port;
 DATALOC int					cfg_http_limit;
 DATALOC int					err_notconn;

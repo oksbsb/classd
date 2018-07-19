@@ -42,6 +42,11 @@
 ## interfering but still doing cleanup if sessions get lost somehow.
 #CLASSD_UDP_TIMEOUT=600
 
+## Sets the timeout for IP sessions. The default is the same as the
+## default TCP timeout since that is the longest of the IP session types
+## we expect to see.
+#CLASSD_IP_TIMEOUT=7200
+
 ## Sets the number of HTTP request/response pairs to analyze
 ## before giving up.  Can be 1 thru 99 or 0 for unlimited
 #CLASSD_HTTP_LIMIT=0

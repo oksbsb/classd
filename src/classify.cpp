@@ -121,8 +121,6 @@ sem_post(&g_classify_sem);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_conn_destroy(%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			else log_vineyard(session,"DESTROY",0,NULL,0);
 
-			// delete the session object from the hash table
-			g_sessiontable->DeleteObject(session);
 			break;
 
 		case MSG_CLIENT:
@@ -210,9 +208,20 @@ sem_post(&g_classify_sem);
 				}
 
 			log_vineyard(session,"PRE_pkt",RAW_PACKET,wagon->buffer,wagon->length);
+			ret = 9999;
 
-			// send the traffic to vineyard for classification
-			ret = navl_classify(l_navl_handle,NAVL_ENCAP_ETH,wagon->buffer,wagon->length,NULL,0,navl_callback,session);
+				// send IPv6 traffic to vineyard for classification
+				if (session->GetNetProtocol() == IPPROTO_IPV6)
+				{
+				ret = navl_classify(l_navl_handle,NAVL_ENCAP_IP6,wagon->buffer,wagon->length,NULL,0,navl_callback,session);
+				}
+
+				// send IPv4 traffic to vineyard for classification
+				if (session->GetNetProtocol() == IPPROTO_IP)
+				{
+				ret = navl_classify(l_navl_handle,NAVL_ENCAP_IP,wagon->buffer,wagon->length,NULL,0,navl_callback,session);
+				}
+
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(PACKET:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			else log_vineyard(session,"POST_pkt",RAW_PACKET,wagon->buffer,wagon->length);
 
@@ -570,6 +579,8 @@ if ((g_debug & CAT_VINEYARD) == 0) return;
 
 if (session->GetNetProtocol() == IPPROTO_TCP) pname = "TCP";
 if (session->GetNetProtocol() == IPPROTO_UDP) pname = "UDP";
+if (session->GetNetProtocol() == IPPROTO_IP)  pname = "IP4";
+if (session->GetNetProtocol() == IPPROTO_IPV6) pname = "IP6";
 
 work = inet_ntop(AF_INET,&session->clientinfo.in4_addr,clientaddr,sizeof(clientaddr));
 if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");

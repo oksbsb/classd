@@ -36,6 +36,8 @@ memcpy(&serverinfo,aServer,sizeof(serverinfo));
 // for the classify thread to process the initial chunk of data
 if (aProtocol == IPPROTO_TCP) UpdateObject("TCP","/TCP",0,NAVL_STATE_INSPECTING);
 if (aProtocol == IPPROTO_UDP) UpdateObject("UDP","/UDP",0,NAVL_STATE_INSPECTING);
+if (aProtocol == IPPROTO_IP) UpdateObject("IP","/IP",0,NAVL_STATE_INSPECTING);
+if (aProtocol == IPPROTO_IPV6) UpdateObject("IP6","/IP6",0,NAVL_STATE_INSPECTING);
 }
 /*--------------------------------------------------------------------------*/
 SessionObject::~SessionObject(void)

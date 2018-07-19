@@ -14,8 +14,7 @@ netsession = aSession;
 timeout = time(NULL);
 next = NULL;
 
-if (netprotocol == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
-if (netprotocol == IPPROTO_UDP) timeout+=cfg_udp_timeout;
+ResetTimeout();
 
 snprintf(netstring,sizeof(netstring),"%" PRIu64,netsession);
 }
@@ -35,8 +34,22 @@ return(mysize);
 void HashObject::ResetTimeout(void)
 {
 timeout = time(NULL);
-if (netprotocol == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
-if (netprotocol == IPPROTO_UDP) timeout+=cfg_udp_timeout;
+
+	switch(netprotocol)
+	{
+	case IPPROTO_TCP:
+		timeout+=cfg_tcp_timeout;
+		break;
+	case IPPROTO_UDP:
+		timeout+=cfg_udp_timeout;
+		break;
+	case IPPROTO_IP:
+	case IPPROTO_IPV6:
+		timeout+=cfg_ip_timeout;
+		break;
+	default:
+		timeout+=3600;
+	}
 }
 /*--------------------------------------------------------------------------*/
 

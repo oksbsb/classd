@@ -281,7 +281,7 @@ SessionObject		*session;
 char				*aa,*bb,*cc,*dd,*ee,*ff;
 navl_host_t			client,server;
 u_int64_t			hashcode;
-u_int8_t			protocol;
+u_int16_t			protocol;
 
 // first we extract the connection details from the message
 
@@ -335,11 +335,13 @@ ff = strchr(ee,':');			// points to server port
 
 // get the session id value and set the protocol
 hashcode = ExtractNetworkSession(aa);
-protocol = 0;
+protocol = 1234;
 if (strcmp(bb,"TCP") == 0) protocol = IPPROTO_TCP;
 if (strcmp(bb,"UDP") == 0) protocol = IPPROTO_UDP;
+if (strcmp(bb,"IP4") == 0) protocol = IPPROTO_IP;
+if (strcmp(bb,"IP6") == 0) protocol = IPPROTO_IPV6;
 
-	if (protocol == 0)
+	if (protocol == 1234)
 	{
 	sysmessage(LOG_WARNING,"Invalid protocol in CREATE command\n");
 	return;
@@ -363,8 +365,11 @@ server.port = htons(strtol(ff,NULL,10));
 session = new SessionObject(hashcode,protocol,&client,&server);
 g_sessiontable->InsertObject(session);
 
-// post the create message to the classify thread
-g_messagequeue->PushMessage(new MessageWagon(MSG_CREATE,hashcode));
+	// for TCP and UDP post the create message to the classify thread
+	if ((protocol == IPPROTO_TCP) || (protocol == IPPROTO_UDP))
+	{
+	g_messagequeue->PushMessage(new MessageWagon(MSG_CREATE,hashcode));
+	}
 
 // have to return something even though the node currently does not use it
 replyoff = sprintf(replybuff,"CREATED: %" PRIu64 "\r\n\r\n",hashcode);
@@ -372,16 +377,26 @@ replyoff = sprintf(replybuff,"CREATED: %" PRIu64 "\r\n\r\n",hashcode);
 /*--------------------------------------------------------------------------*/
 void NetworkClient::HandleRemove(void)
 {
-u_int64_t	hashcode;
-char		*aa;
+SessionObject	*session;
+u_int64_t		hashcode;
+char			*aa;
 
 aa = strchr(querybuff,':');		// points to session id
 if (aa == NULL) return;
 *aa++=0;
 hashcode = ExtractNetworkSession(aa);
 
-// post the remove message to the classify thread
-g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
+session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
+if (session == NULL) return;
+
+	// for TCP and UDP post the remove message to the classify thread
+	if ((session->GetNetProtocol() == IPPROTO_TCP) || (session->GetNetProtocol() == IPPROTO_UDP))
+	{
+	g_messagequeue->PushMessage(new MessageWagon(MSG_REMOVE,hashcode));
+	}
+
+// delete the session object from the hash table
+g_sessiontable->DeleteObject(session);
 
 // have to return something even though the node currently does not use it
 replyoff = sprintf(replybuff,"REMOVED: %" PRIu64 "\r\n\r\n",hashcode);
