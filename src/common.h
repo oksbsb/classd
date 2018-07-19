@@ -1,6 +1,6 @@
 // COMMON.H
 // Traffic Classification Engine
-// Copyright (c) 2011-2013 Untangle, Inc.
+// Copyright (c) 2011-2018 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 

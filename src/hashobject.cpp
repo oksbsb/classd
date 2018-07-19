@@ -1,6 +1,6 @@
 // HASHOBJECT.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2013 Untangle, Inc.
+// Copyright (c) 2011-2018 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -17,7 +17,7 @@ next = NULL;
 if (netprotocol == IPPROTO_TCP) timeout+=cfg_tcp_timeout;
 if (netprotocol == IPPROTO_UDP) timeout+=cfg_udp_timeout;
 
-snprintf(netstring,sizeof(netstring),"%"PRIu64,netsession);
+snprintf(netstring,sizeof(netstring),"%" PRIu64,netsession);
 }
 /*--------------------------------------------------------------------------*/
 HashObject::~HashObject(void)

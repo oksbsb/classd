@@ -1,6 +1,6 @@
 // CLASSIFY.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2013 Untangle, Inc.
+// Copyright (c) 2011-2018 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -9,6 +9,7 @@
 
 #define CLIENT_to_SERVER	0
 #define SERVER_to_CLIENT	1
+#define RAW_PACKET			2
 #define INVALID_VALUE		1234567890
 
 /*--------------------------------------------------------------------------*/
@@ -127,9 +128,14 @@ sem_post(&g_classify_sem);
 		case MSG_CLIENT:
 			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION CLIENT %" PRIu64 " %d BYTES\n",wagon->index,wagon->length);
 
-			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
-			if (current > (wagon->timestamp + cfg_packet_timeout)) msg_timedrop++;
+
+				// if data packets are stale we throw them away in hopes of catching up
+				if (current > (wagon->timestamp + cfg_packet_timeout))
+				{
+				msg_timedrop++;
+				break;
+				}
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -153,9 +159,14 @@ sem_post(&g_classify_sem);
 		case MSG_SERVER:
 			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION SERVER %" PRIu64 " %d BYTES\n",wagon->index,wagon->length);
 
-			// if data packets are stale we throw them away in hopes of catching up
 			current = time(NULL);
-			if (current > (wagon->timestamp + cfg_packet_timeout)) msg_timedrop++;
+
+				// if data packets are stale we throw them away in hopes of catching up
+				if (current > (wagon->timestamp + cfg_packet_timeout))
+				{
+				msg_timedrop++;
+				break;
+				}
 
 			// find the session object in the hash table
 			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
@@ -173,6 +184,37 @@ sem_post(&g_classify_sem);
 			ret = navl_classify(l_navl_handle,NAVL_ENCAP_NONE,wagon->buffer,wagon->length,session->vinestat,SERVER_to_CLIENT,navl_callback,session);
 			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(SERVER:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
 			else log_vineyard(session,"POST_s2c",SERVER_to_CLIENT,wagon->buffer,wagon->length);
+
+			break;
+
+		case MSG_PACKET:
+			LOGMESSAGE(CAT_SESSION,LOG_DEBUG,"SESSION PACKET %" PRIu64 " %d BYTES\n",wagon->index,wagon->length);
+
+			current = time(NULL);
+
+				// if data packets are stale we throw them away in hopes of catching up
+				if (current > (wagon->timestamp + cfg_packet_timeout))
+				{
+				msg_timedrop++;
+				break;
+				}
+
+			// find the session object in the hash table
+			session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(wagon->index));
+
+				// missing session means something has gone haywire
+				if (session == NULL)
+				{
+				sysmessage(LOG_WARNING,"MSG_PACKET: Unable to locate %" PRIu64 " in session table\n",wagon->index);
+				break;
+				}
+
+			log_vineyard(session,"PRE_pkt",RAW_PACKET,wagon->buffer,wagon->length);
+
+			// send the traffic to vineyard for classification
+			ret = navl_classify(l_navl_handle,NAVL_ENCAP_ETH,wagon->buffer,wagon->length,NULL,0,navl_callback,session);
+			if (ret != 0) sysmessage(LOG_ERR,"Error %d returned from navl_classify(PACKET:%" PRIu64 ")\n",navl_error_get(l_navl_handle),wagon->index);
+			else log_vineyard(session,"POST_pkt",RAW_PACKET,wagon->buffer,wagon->length);
 
 			break;
 
@@ -539,6 +581,7 @@ if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
 	{
 	if (direction == CLIENT_to_SERVER) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
 	if (direction == SERVER_to_CLIENT) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,serveraddr,ntohs(session->serverinfo.port),clientaddr,ntohs(session->clientinfo.port));
+	if (direction == RAW_PACKET) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --- %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
 	}
 
 	else

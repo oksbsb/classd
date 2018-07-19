@@ -1,6 +1,6 @@
 // CLASSD.H
 // Traffic Classification Engine
-// Copyright (c) 2011-2013 Untangle, Inc.
+// Copyright (c) 2011-2018 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -30,6 +30,7 @@ const unsigned char MSG_CREATE		= 'I';
 const unsigned char MSG_REMOVE		= 'R';
 const unsigned char MSG_CLIENT		= 'C';
 const unsigned char MSG_SERVER		= 'S';
+const unsigned char MSG_PACKET		= 'P';
 const unsigned char MSG_SHUTDOWN	= 'X';
 /*--------------------------------------------------------------------------*/
 class NetworkServer;

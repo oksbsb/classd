@@ -1,6 +1,6 @@
 // NETCLIENT.CPP
 // Traffic Classification Engine
-// Copyright (c) 2011-2013 Untangle, Inc.
+// Copyright (c) 2011-2018 Untangle, Inc.
 // All Rights Reserved
 // Written by Michael A. Hotz
 
@@ -153,6 +153,7 @@ hashcode = 0;
 // client and server data will be passed to the classify message queue
 if (strncasecmp(querybuff,"CLIENT:",7) == 0) hashcode = HandleChunk(MSG_CLIENT);
 if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleChunk(MSG_SERVER);
+if (strncasecmp(querybuff,"PACKET:",7) == 0) hashcode = HandleChunk(MSG_PACKET);
 
 // if we don't have a hashcode yet then this is probably a console query
 if (hashcode == 0) hashcode = ExtractNetworkSession(querybuff);
