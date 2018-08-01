@@ -2,7 +2,7 @@ Source: untangle-classd
 Section: non-free/admin
 Priority: optional
 Maintainer: Michael Hotz <mahotz@untangle.com>
-Build-Depends: ${misc:Depends}, debhelper (>= 10), libc6 (>= 2.3.2), g++, make, fakeroot, subversion, libstdc++-6-dev | libstdc++6-4.4-dev | libstdc++-4.8-dev, rsync
+Build-Depends: debhelper (>= 10), libc6 (>= 2.3.2), g++, make, fakeroot, subversion, libstdc++-6-dev | libstdc++6-4.4-dev | libstdc++-4.8-dev, rsync
 Standards-Version: 3.9.8
 
 Package: untangle-classd
