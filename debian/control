@@ -2,12 +2,12 @@ Source: untangle-classd
 Section: non-free/admin
 Priority: optional
 Maintainer: Michael Hotz <mahotz@untangle.com>
-Build-Depends: debhelper (>= 10), libc6 (>= 2.3.2), g++, make, fakeroot, subversion, libstdc++-6-dev | libstdc++6-4.4-dev | libstdc++-4.8-dev, rsync
+Build-Depends: ${misc:Depends}, debhelper (>= 10), libc6 (>= 2.3.2), g++, make, fakeroot, subversion, libstdc++-6-dev | libstdc++6-4.4-dev | libstdc++-4.8-dev, rsync
 Standards-Version: 3.9.8
 
 Package: untangle-classd
 Architecture: any
-Depends: libc6 (>= 2.4), libgcc1 (>= 1:4.1.1), libstdc++6 (>= 4.1.1), ${misc:Depends}, systemd-sysv
+Depends: ${misc:Depends}, libc6 (>= 2.4), libgcc1 (>= 1:4.1.1), libstdc++6 (>= 4.1.1), ${misc:Depends}, systemd-sysv
 Conflicts: sysvinit-core
 Description: The Untangle Traffic Classification Daemon
  A daemon that uses the Procera NAVL library to classify network traffic.
