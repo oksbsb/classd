@@ -387,7 +387,13 @@ if (aa == NULL) return;
 hashcode = ExtractNetworkSession(aa);
 
 session = dynamic_cast<SessionObject*>(g_sessiontable->SearchObject(hashcode));
-if (session == NULL) return;
+
+	// if we can't find the session return an invalid response
+	if (session == NULL)
+	{
+	replyoff = sprintf(replybuff,"INVALID: %" PRIu64 "\r\n\r\n",hashcode);
+	return;
+	}
 
 	// for TCP and UDP post the remove message to the classify thread
 	if ((session->GetNetProtocol() == IPPROTO_TCP) || (session->GetNetProtocol() == IPPROTO_UDP))
