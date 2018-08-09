@@ -136,13 +136,13 @@ if (strcasecmp(querybuff,"QUIT") == 0) 		{ return(0); }
 	return(1);
 	}
 
-	if (strncasecmp(querybuff,"CREATE:",7) == 0)
+	if (strncasecmp(querybuff,"CREATE|",7) == 0)
 	{
 	HandleCreate();
 	return(1);
 	}
 
-	if (strncasecmp(querybuff,"REMOVE:",7) == 0)
+	if (strncasecmp(querybuff,"REMOVE|",7) == 0)
 	{
 	HandleRemove();
 	return(1);
@@ -151,9 +151,9 @@ if (strcasecmp(querybuff,"QUIT") == 0) 		{ return(0); }
 hashcode = 0;
 
 // client and server data will be passed to the classify message queue
-if (strncasecmp(querybuff,"CLIENT:",7) == 0) hashcode = HandleChunk(MSG_CLIENT);
-if (strncasecmp(querybuff,"SERVER:",7) == 0) hashcode = HandleChunk(MSG_SERVER);
-if (strncasecmp(querybuff,"PACKET:",7) == 0) hashcode = HandleChunk(MSG_PACKET);
+if (strncasecmp(querybuff,"CLIENT|",7) == 0) hashcode = HandleChunk(MSG_CLIENT);
+if (strncasecmp(querybuff,"SERVER|",7) == 0) hashcode = HandleChunk(MSG_SERVER);
+if (strncasecmp(querybuff,"PACKET|",7) == 0) hashcode = HandleChunk(MSG_PACKET);
 
 // if we don't have a hashcode yet then this is probably a console query
 if (hashcode == 0) hashcode = ExtractNetworkSession(querybuff);
@@ -285,7 +285,7 @@ u_int16_t			protocol;
 
 // first we extract the connection details from the message
 
-aa = strchr(querybuff,':');		// points to session id
+aa = strchr(querybuff,'|');		// points to session id
 	if (aa == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing session in CREATE command\n");
@@ -293,7 +293,7 @@ aa = strchr(querybuff,':');		// points to session id
 	}
 *aa++=0;
 
-bb = strchr(aa,':');			// points to protocol
+bb = strchr(aa,'|');			// points to protocol
 	if (bb == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing protocol in CREATE command\n");
@@ -301,7 +301,7 @@ bb = strchr(aa,':');			// points to protocol
 	}
 *bb++=0;
 
-cc = strchr(bb,':');			// points to client address
+cc = strchr(bb,'|');			// points to client address
 	if (cc == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing client_address in CREATE command\n");
@@ -309,7 +309,7 @@ cc = strchr(bb,':');			// points to client address
 	}
 *cc++=0;
 
-dd = strchr(cc,':');			// points to client port
+dd = strchr(cc,'|');			// points to client port
 	if (dd == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing client_port in CREATE command\n");
@@ -317,7 +317,7 @@ dd = strchr(cc,':');			// points to client port
 	}
 *dd++=0;
 
-ee = strchr(dd,':');			// points to server address
+ee = strchr(dd,'|');			// points to server address
 	if (ee == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing server_address in CREATE command\n");
@@ -325,7 +325,7 @@ ee = strchr(dd,':');			// points to server address
 	}
 *ee++=0;
 
-ff = strchr(ee,':');			// points to server port
+ff = strchr(ee,'|');			// points to server port
 	if (ff == NULL)
 	{
 	sysmessage(LOG_WARNING,"Missing server_port in CREATE command\n");
@@ -351,15 +351,29 @@ if (strcmp(bb,"IP6") == 0) protocol = IPPROTO_IPV6;
 memset(&client,0,sizeof(client));
 memset(&server,0,sizeof(server));
 
-// fill the client structure
-client.family = NAVL_AF_INET;
-inet_aton(cc,(in_addr *)&client.in4_addr);
-client.port = htons(strtol(dd,NULL,10));
+	// fill the client structure
+	if (protocol == IPPROTO_IPV6)
+	{
+	client.family = NAVL_AF_INET6;
+	inet_pton(AF_INET6,cc,(in_addr *)&client.in6_addr);
+	client.port = htons(strtol(dd,NULL,10));
+	} else {
+	client.family = NAVL_AF_INET;
+	inet_pton(AF_INET,cc,(in_addr *)&client.in4_addr);
+	client.port = htons(strtol(dd,NULL,10));
+	}
 
-// fill the server structure
-server.family = NAVL_AF_INET;
-inet_aton(ee,(in_addr *)&server.in4_addr);
-server.port = htons(strtol(ff,NULL,10));
+	// fill the server structure
+	if (protocol == IPPROTO_IPV6)
+	{
+	server.family = NAVL_AF_INET6;
+	inet_pton(AF_INET6,ee,(in_addr *)&server.in6_addr);
+	server.port = htons(strtol(ff,NULL,10));
+	} else {
+	server.family = NAVL_AF_INET;
+	inet_pton(AF_INET,ee,(in_addr *)&server.in4_addr);
+	server.port = htons(strtol(ff,NULL,10));
+	}
 
 // insert the new session object in the hashtable
 session = new SessionObject(hashcode,protocol,&client,&server);
@@ -381,7 +395,7 @@ SessionObject	*session;
 u_int64_t		hashcode;
 char			*aa;
 
-aa = strchr(querybuff,':');		// points to session id
+aa = strchr(querybuff,'|');		// points to session id
 if (aa == NULL) return;
 *aa++=0;
 hashcode = ExtractNetworkSession(aa);
@@ -419,18 +433,18 @@ long			length,ret;
 // we receive data to classify from the java code with a simple text header
 // that includes the source, session, and length followed by the raw data
 //
-// SOURCE:SESSIONID:LENGTH
+// SOURCE|SESSIONID|LENGTH
 //
 // example client and server messages
 //
-// CLIENT:95324669281375:191
-// SERVER:95324669281375:370
+// CLIENT|95324669281375|191
+// SERVER|95324669281375|370
 
-aa = strchr(querybuff,':');		// points to session id
+aa = strchr(querybuff,'|');		// points to session id
 if (aa == NULL) return(0);
 *aa++=0;
 
-bb = strchr(aa,':');			// points to data length
+bb = strchr(aa,'|');			// points to data length
 if (bb == NULL) return(0);
 *bb++=0;
 

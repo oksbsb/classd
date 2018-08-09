@@ -571,33 +571,41 @@ void log_vineyard(SessionObject *session,const char *message,int direction,void 
 {
 const char		*pname;
 const char		*work;
-char			clientaddr[32];
-char			serveraddr[32];
+char			clientaddr[64];
+char			serveraddr[64];
 
 // do nothing if packet logging is not enabled
 if ((g_debug & CAT_VINEYARD) == 0) return;
 
+// deterimine the protocol name
 if (session->GetNetProtocol() == IPPROTO_TCP) pname = "TCP";
 if (session->GetNetProtocol() == IPPROTO_UDP) pname = "UDP";
 if (session->GetNetProtocol() == IPPROTO_IP)  pname = "IP4";
 if (session->GetNetProtocol() == IPPROTO_IPV6) pname = "IP6";
 
-work = inet_ntop(AF_INET,&session->clientinfo.in4_addr,clientaddr,sizeof(clientaddr));
-if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
-
-work = inet_ntop(AF_INET,&session->serverinfo.in4_addr,serveraddr,sizeof(serveraddr));
-if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
+	if (session->GetNetProtocol() == IPPROTO_IPV6)
+	{
+	work = inet_ntop(AF_INET6,&session->clientinfo.in6_addr,clientaddr,sizeof(clientaddr));
+	if (work == NULL) strcpy(clientaddr,"XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX");
+	work = inet_ntop(AF_INET6,&session->serverinfo.in6_addr,serveraddr,sizeof(serveraddr));
+	if (work == NULL) strcpy(clientaddr,"XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX:XXXX");
+	} else {
+	work = inet_ntop(AF_INET,&session->clientinfo.in4_addr,clientaddr,sizeof(clientaddr));
+	if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
+	work = inet_ntop(AF_INET,&session->serverinfo.in4_addr,serveraddr,sizeof(serveraddr));
+	if (work == NULL) strcpy(clientaddr,"xxx.xxx.xxx.xxx");
+	}
 
 	if (rawdata != NULL)
 	{
 	if (direction == CLIENT_to_SERVER) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
 	if (direction == SERVER_to_CLIENT) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,serveraddr,ntohs(session->serverinfo.port),clientaddr,ntohs(session->clientinfo.port));
-	if (direction == RAW_PACKET) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " --- %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
+	if (direction == RAW_PACKET) LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (L:%d V:%" PRIXPTR ") = %s %s:%" PRIu16 " <-> %s:%" PRIu16 "\n",message,rawsize,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
 	}
 
 	else
 	{
-	LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (V:%" PRIXPTR ") = %s %s:%" PRIu16 " --> %s:%" PRIu16 "\n",message,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
+	LOGMESSAGE(CAT_VINEYARD,LOG_DEBUG,"VINEYARD %s (V:%" PRIXPTR ") = %s %s:%" PRIu16 " --- %s:%" PRIu16 "\n",message,session->vinestat,pname,clientaddr,ntohs(session->clientinfo.port),serveraddr,ntohs(session->serverinfo.port));
 	}
 }
 /*--------------------------------------------------------------------------*/
