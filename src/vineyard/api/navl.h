@@ -158,7 +158,7 @@ NAVL_API int navl_close(navl_handle_t handle);
 NAVL_API int navl_classify_simple(navl_handle_t handle, const void *data, unsigned short len, int *index);
 
 /* 
- * navl_classify()
+ * navl_classify(), navl_classify_ext()
  *
  * Main classification API
  * On success, the user callback is invoked and 0 is returned. On error, -1 is 
@@ -169,6 +169,8 @@ NAVL_API int navl_classify_simple(navl_handle_t handle, const void *data, unsign
  * The classify_callback signature includes an error parameter. Errors reported
  * in the callback are not considered critical, but provide an indication when
  * results may have been compromised.
+ *
+ * navl_classify_ext(), provides a user defined field sixth_tag as a sixth tuple
  */
 
 typedef int (*navl_classify_callback_t)(navl_handle_t handle, navl_result_t result, navl_state_t state
@@ -176,6 +178,9 @@ typedef int (*navl_classify_callback_t)(navl_handle_t handle, navl_result_t resu
 
 NAVL_API int navl_classify(navl_handle_t handle, navl_encap_t encap, const void *data, unsigned short len
 	, navl_conn_t conn, int direction, navl_classify_callback_t, void *arg);
+
+NAVL_API int navl_classify_ext(navl_handle_t handle, navl_encap_t encap, const void *data, unsigned short len
+	, uint32_t sixth_tag, navl_conn_t conn, int direction, navl_classify_callback_t, void *arg);
 
 
 /*******************************************************************************
@@ -453,9 +458,35 @@ NAVL_API int navl_conn_create(navl_handle_t handle, navl_host_t *shost, navl_hos
 NAVL_API int navl_conn_lookup(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, navl_conn_t *conn);
 
 /*
+ * navl_conn_sixth_tag_create()
+ *
+ * Allocate connection state by 5-tuple plus sixth_tag.
+ *
+ * On success, 0 is returned and opaque state is attached to @conn. On error,
+ * -1 is returned.
+ *
+ * Note:
+ *
+ * The integrator MUST ensure they pair each successful call to navl_connn_sixth_tag_create()
+ * with a call to navl_conn_destroy(). This ensure navl can release all associated
+ * resources.
+ */
+NAVL_API int navl_conn_sixth_tag_create(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, uint32_t sixth_tag, navl_conn_t *conn);
+
+/*
+ * navl_conn_sixth_tag_lookup()
+ *
+ * Lookup a connection state by 5-tuple plus sixth_tag.
+ *
+ * On success, 0 is returned and opaque state is attached to @conn. On error,
+ * -1 is returned.
+ */
+NAVL_API int navl_conn_sixth_tag_lookup(navl_handle_t handle, navl_host_t *shost, navl_host_t *dhost, unsigned char proto, uint32_t sixth_tag, navl_conn_t *conn);
+
+/*
  * navl_conn_destroy()
  *
- * Releases connection state previously allocated by navl_conn_create().
+ * Releases connection state previously allocated by navl_conn_create() or navl_connn_sixth_tag_create().
  *
  * On success, 0 is returned. On error, -1 is returned. 
  */
@@ -799,6 +830,55 @@ NAVL_API int navl_tuple_mpls_callback_set(navl_handle_t handle, navl_tuple_callb
 /* *****************************************************************************
  * End of 6-tuple API
  *******************************************************************************/
+
+
+
+/* *****************************************************************************
+ * Sixth tag / Migration
+ *******************************************************************************/
+
+/*
+ * navl_migration_prepare()
+ *
+ * Gets the size for migration, returns in @buf_size
+ *
+ * On success 0 is returned. On error returns -1
+ */
+NAVL_API int navl_migration_prepare(navl_handle_t handle, uint32_t sixth_tag, uint64_t *buf_size);
+
+
+/*
+ * navl_migration_data_export()
+ *
+ * Exports migration data into buf. After export operation is done export_callback will be invoked to
+ * notify user.
+ *
+ * On success 0 is returned. On error returns -1
+ */
+typedef void (* navl_data_export_callback_t)(navl_handle_t handle, uint32_t sixth_tag, uint8_t *buf,
+		uint64_t buf_size, int error);
+
+NAVL_API int navl_migration_data_export(navl_handle_t  handle, uint8_t *buf, uint64_t buf_size,
+		uint32_t sixth_tag, navl_data_export_callback_t export_callback);
+
+/*
+ * navl_migration_data_import()
+ *
+ * Import the data in buf. During importing, distr_callback will be called to decide if current thread
+ * should take this conn (conn info provided). After import operation is done, import_callback will be
+ * invoked to notify user.
+ *
+ * On success 0 is returned. On error returns -1
+ */
+typedef void (* navl_data_import_callback_t)(navl_handle_t handle, uint8_t *buf, uint64_t buf_size,
+		uint32_t old_sixth_tag, uint32_t new_sixth_tag, int error);
+
+typedef int (* navl_traffic_distr_t)(navl_handle_t handle, navl_host_t* shost, navl_host_t* dhost,
+		unsigned char proto, uint32_t old_sixth_tag, uint32_t new_sixth_tag, uint64_t user_data);
+
+NAVL_API int navl_migration_data_import(navl_handle_t handle, uint8_t *buf, uint64_t buf_size,
+		uint32_t old_sixth_tag, uint32_t new_sixth_tag, navl_traffic_distr_t distr_callback,
+		navl_data_import_callback_t import_callback);
 
 
 /*******************************************************************************
